@@ -45,7 +45,7 @@ namespace _251203_WinForm_Docking
 
             //로그폼 크기 변경
             LogForm logForm = new LogForm();
-            logForm.Show(propForm.Pane, DockAlignment.Bottom, 0.5);
+            logForm.Show(propForm.Pane, DockAlignment.Bottom, 0.4);
 
         }
     }
