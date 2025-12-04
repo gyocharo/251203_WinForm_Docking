@@ -22,7 +22,7 @@ namespace _251203_WinForm_Docking.UIControl
         //현재 줌 배율
         private float _curZoom = 1.0f;
         // 줌 배율 변경 시 확대/축소 단위
-        private float _zoomFacto = 1.1f;
+        private float _zoomFactor = 1.1f;
 
         //줌 최소/최대값 제한
         private float MinZoom = 1.0f;
@@ -34,8 +34,11 @@ namespace _251203_WinForm_Docking.UIControl
         {
             InitializeComponent();
             InitializeCanvas();
+
+            MouseWheel += new MouseEventHandler(ImageViewCtrl_MouseWheel);
         }
 
+        // 더블버퍼링
         private void InitializeCanvas()
         {
             ResizeCanvas();
@@ -138,6 +141,70 @@ namespace _251203_WinForm_Docking.UIControl
                     e.Graphics.DrawImage(Canvas, 0, 0);
                 }
             }
+        }
+
+        private void ZoomMove(float zoom, Point zoomOrigin)
+        {
+            PointF virtualOrigin = ScreenToVirtual(new PointF(zoomOrigin.X, zoomOrigin.Y));
+
+            _curZoom = Math.Max(MinZoom, Math.Min(MaxZoom, zoom));
+            if (_curZoom <= MinZoom)
+                return;
+
+            PointF zoomedOrigin = VirtualToScreen(virtualOrigin);
+
+            float dx = zoomedOrigin.X - zoomOrigin.X;
+            float dy = zoomedOrigin.Y - zoomOrigin.Y;
+
+            ImageRect.X -= dx;
+            ImageRect.Y -= dy;
+        }
+
+        private void ImageViewCtrl_DoubleClick(object sender, EventArgs e)
+        {
+            FitImageToScreen();
+        }
+
+        private void ImageViewCtrl_Resize(object sender, EventArgs e)
+        {
+            ResizeCanvas();
+            Invalidate();
+        }
+
+        private PointF GetScreenOffset()
+        {
+            return new PointF(ImageRect.X, ImageRect.Y);
+        }
+
+        private PointF ScreenToVirtual(PointF screenPos)
+        {
+            PointF offset = GetScreenOffset();
+            return new PointF(
+                (screenPos.X - offset.X) / _curZoom,
+                (screenPos.Y - offset.Y) / _curZoom);
+        }
+
+        private PointF VirtualToScreen(PointF virtualPos)
+        {
+            PointF offset = GetScreenOffset();
+            return new PointF(
+                virtualPos.X * _curZoom + offset.X,
+                virtualPos.Y * _curZoom + offset.Y);
+        }
+
+        private void ImageViewCtrl_MouseWheel(object sender, MouseEventArgs e)
+        {
+            if (e.Delta < 0)
+                ZoomMove(_curZoom / _zoomFactor, e.Location);
+            else
+                ZoomMove(_curZoom * _zoomFactor, e.Location);
+
+            if (_bitmapImage != null)
+            {
+                ImageRect.Width = _bitmapImage.Width * _curZoom;
+                ImageRect.Height = _bitmapImage.Height * _curZoom;
+            }
+            Invalidate();
         }
     }
 }

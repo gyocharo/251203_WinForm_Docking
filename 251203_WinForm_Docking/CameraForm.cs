@@ -27,5 +27,14 @@ namespace _251203_WinForm_Docking
             Image bitmap = Image.FromFile(filePath);
             imageViewer.LoadBitmap((Bitmap)bitmap);
         }
+
+        private void CameraForm_Resize(object sender, EventArgs e)
+        {
+            int margin = 0;
+            imageViewer.Width = this.Width - margin * 2;
+            imageViewer.Height = this.Height - margin * 2;
+
+            imageViewer.Location = new System.Drawing.Point(margin, margin);
+        }
     }
 }
