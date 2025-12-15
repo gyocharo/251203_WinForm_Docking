@@ -1,0 +1,27 @@
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using _251203_WinForm_Docking.Core;
+using WeifenLuo.WinFormsUI.Docking;
+
+namespace _251203_WinForm_Docking
+{
+    public partial class RunForm : DockContent
+    {
+        public RunForm()
+        {
+            InitializeComponent();
+        }
+
+        private void btn_Grab_Click(object sender, EventArgs e)
+        {
+            Global.Inst.InspStage.Grab(0);
+        }
+    }
+}

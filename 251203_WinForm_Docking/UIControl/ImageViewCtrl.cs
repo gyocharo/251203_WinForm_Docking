@@ -206,5 +206,9 @@ namespace _251203_WinForm_Docking.UIControl
             }
             Invalidate();
         }
+        public Bitmap GetCurBitmap()
+        {
+            return _bitmapImage;
+        }
     }
 }

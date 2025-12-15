@@ -1,4 +1,5 @@
-﻿using System;
+﻿using _251203_WinForm_Docking.Core;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -27,6 +28,8 @@ namespace _251203_WinForm_Docking
             _dockPanel.Theme = new VS2015BlueTheme();
 
             LoadDockingWindows();
+
+            Global.Inst.Initialize();
         }
 
         private void LoadDockingWindows()
@@ -35,13 +38,16 @@ namespace _251203_WinForm_Docking
             cameraForm.Show(_dockPanel, DockState.Document);
 
             ResultForm resultForm = new ResultForm();
-            resultForm.Show(cameraForm.Pane, DockAlignment.Bottom, 0.3);
+            resultForm.Show(cameraForm.Pane, DockAlignment.Bottom, 0.2);
 
             PropertiesForm propForm = new PropertiesForm();
             propForm.Show(_dockPanel, DockState.DockRight);
 
             StatisticForm statisticForm = new StatisticForm();
             statisticForm.Show(_dockPanel, DockState.DockRight);
+
+            RunForm runForm = new RunForm();
+            runForm.Show(cameraForm.Pane, DockAlignment.Bottom, 0.2);
 
             //로그폼 크기 변경
             LogForm logForm = new LogForm();
@@ -70,6 +76,11 @@ namespace _251203_WinForm_Docking
                     cameraForm.LoadImage(filePath);
                 }
             }
+        }
+
+        private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            Global.Inst.Dispose();
         }
     }
 }
