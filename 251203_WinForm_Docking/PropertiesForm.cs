@@ -16,7 +16,8 @@ namespace _251203_WinForm_Docking
     public enum PropertyType
     {
         Binary,
-        Filter
+        Filter,
+        Saige
     }
     public partial class PropertiesForm : DockContent
     {
@@ -26,8 +27,9 @@ namespace _251203_WinForm_Docking
         {
             InitializeComponent();
 
-            LoadOptionControl(PropertyType.Filter);
             LoadOptionControl(PropertyType.Binary);
+            LoadOptionControl(PropertyType.Filter);
+            LoadOptionControl(PropertyType.Saige);
         }
 
         private UserControl CreateUserControl(PropertyType propType)
@@ -42,6 +44,10 @@ namespace _251203_WinForm_Docking
                 case PropertyType.Filter:
                     ImageFilterProp filterProp = new ImageFilterProp();
                     curProp = filterProp;
+                    break;
+                case PropertyType.Saige:
+                    SaigeAIProp saigeProp = new SaigeAIProp();
+                    curProp = saigeProp;
                     break;
                 default:
                     MessageBox.Show("유효하지 않은 옵션입니다.");

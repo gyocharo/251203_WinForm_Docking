@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -69,6 +70,7 @@ namespace _251203_WinForm_Docking
             {
                 openFileDialog.Title = "이미지 파일 선택";
                 openFileDialog.Filter = "Image Files |*.bmp;*.jpg;*.jpeg;*.png;*.gif";
+                openFileDialog.InitialDirectory = @"C:\Users\user\Desktop\강의자료\dataset";
                 openFileDialog.Multiselect = false;
                 if(openFileDialog .ShowDialog() == DialogResult.OK)
                 {

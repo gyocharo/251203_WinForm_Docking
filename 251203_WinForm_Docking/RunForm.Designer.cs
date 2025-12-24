@@ -28,24 +28,25 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.btn＿Grab = new System.Windows.Forms.Button();
+            this.btn_Grab = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
-            // btn＿Grab
+            // btn_Grab
             // 
-            this.btn＿Grab.Location = new System.Drawing.Point(12, 12);
-            this.btn＿Grab.Name = "btn＿Grab";
-            this.btn＿Grab.Size = new System.Drawing.Size(155, 71);
-            this.btn＿Grab.TabIndex = 0;
-            this.btn＿Grab.Text = "촬영";
-            this.btn＿Grab.UseVisualStyleBackColor = true;
+            this.btn_Grab.Location = new System.Drawing.Point(12, 12);
+            this.btn_Grab.Name = "btn_Grab";
+            this.btn_Grab.Size = new System.Drawing.Size(155, 71);
+            this.btn_Grab.TabIndex = 0;
+            this.btn_Grab.Text = "촬영";
+            this.btn_Grab.UseVisualStyleBackColor = true;
+            this.btn_Grab.Click += new System.EventHandler(this.btn_Grab_Click);
             // 
             // RunForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 18F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 450);
-            this.Controls.Add(this.btn＿Grab);
+            this.Controls.Add(this.btn_Grab);
             this.Name = "RunForm";
             this.Text = "RunForm";
             this.ResumeLayout(false);
@@ -54,6 +55,6 @@
 
         #endregion
 
-        private System.Windows.Forms.Button btn＿Grab;
+        private System.Windows.Forms.Button btn_Grab;
     }
 }

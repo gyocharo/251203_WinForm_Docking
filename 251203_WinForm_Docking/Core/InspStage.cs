@@ -11,17 +11,16 @@ namespace _251203_WinForm_Docking.Core
 {
     public class InspStage : IDisposable
     {
+        SaigeAI _saigeAI;
+
         public static readonly int MAX_GRAB_BUF = 5;
 
         private ImageSpace _imageSpace = null;
-        private HikRobotCam _grabManager = null;
-        SaigeAI _saigeAI; // SaigeAI 인스턴스
+        //private HikRobotCam _grabManager = null;
+        private GrabModel _grabManager = null;
+        private CameraType _camType = CameraType.WebCam;
 
         public InspStage() { }
-        public ImageSpace ImageSpace
-        {
-            get => _imageSpace;
-        }
 
         public SaigeAI AIModule
         {
@@ -32,13 +31,31 @@ namespace _251203_WinForm_Docking.Core
                 return _saigeAI;
             }
         }
+        public ImageSpace ImageSpace
+        {
+            get => _imageSpace;
+        }
+
 
         public bool Initialize()
         {
             _imageSpace = new ImageSpace();
-            _grabManager = new HikRobotCam();
 
-            if (_grabManager.InitGrab() == true)
+            switch (_camType)
+            {
+                case CameraType.WebCam:
+                    {
+                        _grabManager = new WebCam();
+                        break;
+                    }
+                case CameraType.HikRobot:
+                    {
+                        _grabManager = new HikRobotCam();
+                        break;
+                    }
+            }
+
+            if (_grabManager != null &&_grabManager.InitGrab() == true)
             {
                 _grabManager.TransferCompleted += _multiGrab_TransferCompleted;
 
@@ -162,15 +179,17 @@ namespace _251203_WinForm_Docking.Core
                 if (disposing)
                 {
                     // Dispose managed resources.
-                    if (_saigeAI != null)
-                    {
-                        _saigeAI.Dispose();
-                        _saigeAI = null;
-                    }
+
                     if (_grabManager != null)
                     {
                         _grabManager.Dispose();
                         _grabManager = null;
+                    }
+
+                    if (_saigeAI != null)
+                    {
+                        _saigeAI.Dispose();
+                        _saigeAI = null;
                     }
                 }
 
@@ -179,6 +198,8 @@ namespace _251203_WinForm_Docking.Core
                 disposed = true;
             }
         }
+
+
 
         public void Dispose()
         {

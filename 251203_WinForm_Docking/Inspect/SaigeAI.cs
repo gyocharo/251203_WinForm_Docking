@@ -9,39 +9,43 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using _251203_WinForm_Docking.Property;
 using SaigeVision.Net.V2;
+using SaigeVision.Net.V2.Classification;
 using SaigeVision.Net.V2.Detection;
 using SaigeVision.Net.V2.IAD;
+using SaigeVision.Net.V2.IEN;
+using SaigeVision.Net.V2.OCR;
 using SaigeVision.Net.V2.Segmentation;
 
 namespace _251203_WinForm_Docking
 {
-    public enum AIEngineType
+    public enum EngineType
     {
-        [Description("Anomaly Detection")]
-        AnomalyDetection = 0,
-        [Description("Segmentation")]
-        Segmentation,
-        [Description("Detection")]
-        Detection
+        SEG = 0,
+        DET = 1,
+        IAD = 2,
     }
+
     public class SaigeAI : IDisposable
     {
-        AIEngineType _engineType;
-        IADEngine _iADEngine = null;
-        IADResult _iADResult = null;
+        EngineType _engineType;
         SegmentationEngine _segEngine = null;
         SegmentationResult _segResult = null;
         DetectionEngine _detEngine = null;
         DetectionResult _detResult = null;
+        IADEngine _iadEngine = null;
+        IADResult _iadResult = null;
 
-        Bitmap _inspImage = null;
+        Bitmap _bitmap = null;
+
 
         public SaigeAI()
         {
+
         }
 
-        public void LoadEngine(string modelPath, AIEngineType engineType)
+        public void LoadEngine(string modelPath, EngineType engineType)
         {
             DisposeMode();
 
@@ -49,38 +53,24 @@ namespace _251203_WinForm_Docking
 
             switch (_engineType)
             {
-                case AIEngineType.AnomalyDetection:
-                    LoadIADEngine(modelPath);
+                case EngineType.IAD:
+                    RunIAD(modelPath);
                     break;
-                case AIEngineType.Segmentation:
-                    LoadSegEngine(modelPath);
+                case EngineType.SEG:
+                    RunSEG(modelPath);
                     break;
-                case AIEngineType.Detection:
-                    LoadDetEngine(modelPath);
+                case EngineType.DET:
+                    RunDET(modelPath);
                     break;
                 default:
                     throw new NotSupportedException("지원하지 않는 엔진 타입입니다.");
             }
         }
-
-        public void LoadIADEngine(string modelPath)
+        public void RunSEG(string txt)
         {
-            _iADEngine = new IADEngine(modelPath, 0);
+            DisposeMode();
+            string modelPath = Path.GetFullPath(txt);
 
-            IADOption option = _iADEngine.GetInferenceOption();
-
-            option.CalcScoremap = false;
-            option.CalcHeatmap = false;
-            option.CalcMask = false;
-            option.CalcObject = true;
-            option.CalcObjectAreaAndApplyThreshold = true;
-            option.CalcObjectScoreAndApplyThreshold = true;
-            option.CalcTime = true;
-            _iADEngine.SetInferenceOption(option);
-        }
-
-        public void LoadSegEngine(string modelPath)
-        {
             _segEngine = new SegmentationEngine(modelPath, 0);
 
             SegmentationOption option = _segEngine.GetInferenceOption();
@@ -96,18 +86,43 @@ namespace _251203_WinForm_Docking
             _segEngine.SetInferenceOption(option);
         }
 
-        public void LoadDetEngine(string modelPath)
+        public void RunDET(string txt)
         {
+            DisposeMode();
+            string modelPath = Path.GetFullPath(txt);
+
             _detEngine = new DetectionEngine(modelPath, 0);
 
             DetectionOption option = _detEngine.GetInferenceOption();
 
             option.CalcTime = true;
+
             _detEngine.SetInferenceOption(option);
         }
 
+        public void RunIAD(string txt)
+        {
+            DisposeMode();
+            string modelPath = Path.GetFullPath(txt);
 
-        // 입력된 이미지에서 IAD 검사 진행
+            _iadEngine = new IADEngine(modelPath, 0);
+
+            IADOption option = _iadEngine.GetInferenceOption();
+
+            option.CalcScoremap = false;
+            option.CalcHeatmap = false;
+            option.CalcMask = false;
+            option.CalcObject = true;
+            option.CalcObjectAreaAndApplyThreshold = true;
+            option.CalcObjectScoreAndApplyThreshold = true;
+            option.CalcTime = true;
+            _iadEngine.SetInferenceOption(option);
+
+        }
+
+
+        
+
         public bool InspAIModule(Bitmap bmpImage)
         {
             if (bmpImage is null)
@@ -116,7 +131,7 @@ namespace _251203_WinForm_Docking
                 return false;
             }
 
-            _inspImage = bmpImage;
+            _bitmap = bmpImage;
 
             SrImage srImage = new SrImage(bmpImage);
 
@@ -124,16 +139,15 @@ namespace _251203_WinForm_Docking
 
             switch (_engineType)
             {
-                case AIEngineType.AnomalyDetection:
-                    if (_iADEngine == null)
+                case EngineType.IAD:
+                    if (_iadEngine == null)
                     {
                         MessageBox.Show("엔진이 초기화되지 않았습니다. LoadEngine 메서드를 호출하여 엔진을 초기화하세요.");
                         return false;
                     }
-
-                    _iADResult = _iADEngine.Inspection(srImage);
+                    _iadResult = _iadEngine.Inspection(srImage);
                     break;
-                case AIEngineType.Segmentation:
+                case EngineType.SEG:
                     if (_segEngine == null)
                     {
                         MessageBox.Show("엔진이 초기화되지 않았습니다. LoadEngine 메서드를 호출하여 엔진을 초기화하세요.");
@@ -141,7 +155,7 @@ namespace _251203_WinForm_Docking
                     }
                     _segResult = _segEngine.Inspection(srImage);
                     break;
-                case AIEngineType.Detection:
+                case EngineType.DET:
                     if (_detEngine == null)
                     {
                         MessageBox.Show("엔진이 초기화되지 않았습니다. LoadEngine 메서드를 호출하여 엔진을 초기화하세요.");
@@ -150,14 +164,43 @@ namespace _251203_WinForm_Docking
                     _detResult = _detEngine.Inspection(srImage);
                     break;
             }
+
             sw.Stop();
 
             return true;
         }
-        private void DrawSegResult(SegmentedObject[] segmentedObjects, Bitmap bmp)
+
+        private void DrawSEGResult(SegmentedObject[] segmentedObjects, Bitmap bmp, int size)
         {
             Graphics g = Graphics.FromImage(bmp);
             int step = 10;
+
+            foreach (var prediction in segmentedObjects)
+            {
+                SolidBrush brush = new SolidBrush(Color.FromArgb(127, prediction.ClassInfo.Color));
+                using (GraphicsPath gp = new GraphicsPath())
+                {
+                    if (prediction.Contour.Value.Count < 3) continue;
+                    gp.AddPolygon(prediction.Contour.Value.ToArray());
+                    foreach (var innerValue in prediction.Contour.InnerValue)
+                    {
+                        if(prediction.Area > size)
+                        {
+                            gp.AddPolygon(innerValue.ToArray());
+                        }
+                        
+                    }
+                    g.FillPath(brush, gp);
+                }
+                step += 50;
+            }
+        }
+
+        private void DrawIADResult(SegmentedObject[] segmentedObjects, Bitmap bmp)
+        {
+            Graphics g = Graphics.FromImage(bmp);
+            int step = 10;
+
             foreach (var prediction in segmentedObjects)
             {
                 SolidBrush brush = new SolidBrush(Color.FromArgb(127, prediction.ClassInfo.Color));
@@ -174,12 +217,11 @@ namespace _251203_WinForm_Docking
                 step += 50;
             }
         }
-        private void DrawDetectionResult(DetectionResult result, Bitmap bmp)
+        private void DrawDETResult(DetectionResult result, Bitmap bmp)
         {
             Graphics g = Graphics.FromImage(bmp);
             int step = 10;
 
-            // outline contour
             foreach (var prediction in result.DetectedObjects)
             {
                 SolidBrush brush = new SolidBrush(Color.FromArgb(127, prediction.ClassInfo.Color));
@@ -198,27 +240,29 @@ namespace _251203_WinForm_Docking
 
         public Bitmap GetResultImage()
         {
-            if (_inspImage is null)
+            if (_bitmap is null)
                 return null;
 
-            Bitmap resultImage = _inspImage.Clone(new Rectangle(0, 0, _inspImage.Width, _inspImage.Height), System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+            Bitmap resultImage = _bitmap.Clone(new Rectangle(0, 0, _bitmap.Width, _bitmap.Height), System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+
+            int size = int.Parse(SaigeAIProp.saigeaiprop.txt_Area.Text);
 
             switch (_engineType)
             {
-                case AIEngineType.AnomalyDetection:
-                    if (_iADResult == null)
+                case EngineType.IAD:
+                    if (_iadResult == null)
                         return resultImage;
-                    DrawSegResult(_iADResult.SegmentedObjects, resultImage);
+                    DrawIADResult(_iadResult.SegmentedObjects, resultImage);
                     break;
-                case AIEngineType.Segmentation:
+                case EngineType.SEG:
                     if (_segResult == null)
                         return resultImage;
-                    DrawSegResult(_segResult.SegmentedObjects, resultImage);
+                    DrawSEGResult(_segResult.SegmentedObjects, resultImage, size);
                     break;
-                case AIEngineType.Detection:
+                case EngineType.DET:
                     if (_detResult == null)
                         return resultImage;
-                    DrawDetectionResult(_detResult, resultImage);
+                    DrawDETResult(_detResult, resultImage);
                     break;
             }
 
@@ -227,17 +271,19 @@ namespace _251203_WinForm_Docking
 
         private void DisposeMode()
         {
-            if (_iADEngine != null)
-                _iADEngine.Dispose();
-
             if (_segEngine != null)
+            {
                 _segEngine.Dispose();
-
+            }
             if (_detEngine != null)
+            {
                 _detEngine.Dispose();
+            }
+            if (_iadEngine != null)
+            {
+                _iadEngine.Dispose();
+            }
         }
-
-        #region Disposable
 
         private bool disposed = false;
 
@@ -249,6 +295,7 @@ namespace _251203_WinForm_Docking
                 {
                     DisposeMode();
                 }
+
                 disposed = true;
             }
         }
@@ -257,7 +304,5 @@ namespace _251203_WinForm_Docking
         {
             Dispose(true);
         }
-
-        #endregion
     }
 }
