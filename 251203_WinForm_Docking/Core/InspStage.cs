@@ -5,7 +5,11 @@ using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using _251203_WinForm_Docking.Algorithm;
 using _251203_WinForm_Docking.Grab;
+using _251203_WinForm_Docking.Setting;
+using OpenCvSharp;
+using OpenCvSharp.Extensions;
 
 namespace _251203_WinForm_Docking.Core
 {
@@ -20,6 +24,9 @@ namespace _251203_WinForm_Docking.Core
         private GrabModel _grabManager = null;
         private CameraType _camType = CameraType.WebCam;
 
+        BlobAlgorithm _blobAlgorithm = null;
+        private PreviewImage _previewImage = null;
+
         public InspStage() { }
 
         public SaigeAI AIModule
@@ -31,15 +38,33 @@ namespace _251203_WinForm_Docking.Core
                 return _saigeAI;
             }
         }
+
+        public BlobAlgorithm BlobAlgorithm
+        {
+            get => _blobAlgorithm;
+        }
+
+        public PreviewImage PreView
+        {
+            get => _previewImage;
+        }
+
         public ImageSpace ImageSpace
         {
             get => _imageSpace;
         }
 
+        public bool LiveMode { get; set; } = false;
+
 
         public bool Initialize()
         {
             _imageSpace = new ImageSpace();
+
+            _blobAlgorithm = new BlobAlgorithm();
+            _previewImage = new PreviewImage();
+
+            LoadSetting();
 
             switch (_camType)
             {
@@ -65,6 +90,11 @@ namespace _251203_WinForm_Docking.Core
             return true;
         }
 
+        private void LoadSetting()
+        {
+            _camType = SettingXml.Inst.CamType;
+        }
+
         public void InitModelGrab(int bufferCount)
         {
             if (_grabManager == null)
@@ -85,8 +115,20 @@ namespace _251203_WinForm_Docking.Core
 
             SetBuffer(bufferCount);
 
-            //_grabManager.SetExposureTime(25000);
+            UpdateProperty();
 
+        }
+
+        private void UpdateProperty()
+        {
+            if (BlobAlgorithm is null)
+                return;
+
+            PropertiesForm propertiesForm = MainForm.GetDockForm<PropertiesForm>();
+            if (propertiesForm is null)
+                return;
+
+            propertiesForm.UpdateProperty(BlobAlgorithm);
         }
 
         public void SetBuffer(int bufferCount)
@@ -110,6 +152,43 @@ namespace _251203_WinForm_Docking.Core
             }
         }
 
+        public void TryInspection()
+        {
+            if (_blobAlgorithm is null)
+                return;
+
+            Mat srcImage = Global.Inst.InspStage.GetMat();
+            _blobAlgorithm.SetInspData(srcImage);
+
+            _blobAlgorithm.InspRect = new Rect(0, 0, srcImage.Width, srcImage.Height);
+
+            if (_blobAlgorithm.DoInspect())
+            {
+                DisplayResult();
+            }
+        }
+
+        private bool DisplayResult()
+        {
+            if (_blobAlgorithm is null)
+                return false;
+
+            List<DrawInspectInfo> resultArea = new List<DrawInspectInfo>();
+            int resultCnt = _blobAlgorithm.GetResultRect(out resultArea);
+            if (resultCnt > 0)
+            {
+                //찾은 위치를 이미지상에서 표시
+                var cameraForm = MainForm.GetDockForm<CameraForm>();
+                if (cameraForm != null)
+                {
+                    cameraForm.ResetDisplay();
+                    cameraForm.AddRect(resultArea);
+                }
+            }
+
+            return true;
+        }
+
 
         public void Grab(int bufferIndex)
         {
@@ -120,7 +199,7 @@ namespace _251203_WinForm_Docking.Core
         }
 
         //영상 취득 완료 이벤트 발생시 후처리
-        private void _multiGrab_TransferCompleted(object sender, object e)
+        private async void _multiGrab_TransferCompleted(object sender, object e)
         {
             int bufferIndex = (int)e;
             Console.WriteLine($"_multiGrab_TransferCompleted {bufferIndex}");
@@ -128,6 +207,18 @@ namespace _251203_WinForm_Docking.Core
             _imageSpace.Split(bufferIndex);
 
             DisplayGrabImage(bufferIndex);
+
+            if (_previewImage != null)
+            {
+                Bitmap bitmap = ImageSpace.GetBitmap(0);
+                _previewImage.SetImage(BitmapConverter.ToMat(bitmap));
+            }
+
+            if (LiveMode)
+            {
+                await Task.Delay(100);
+                _grabManager.Grab(bufferIndex, true);
+            }
         }
 
         private void DisplayGrabImage(int bufferIndex)
@@ -166,6 +257,20 @@ namespace _251203_WinForm_Docking.Core
                 return null;
 
             return Global.Inst.InspStage.ImageSpace.GetBitmap();
+        }
+
+        public Mat GetMat()
+        {
+            return Global.Inst.InspStage.ImageSpace.GetMat();
+        }
+
+        public void RedrawMainView()
+        {
+            CameraForm cameraForm = MainForm.GetDockForm<CameraForm>();
+            if(cameraForm != null)
+            {
+                cameraForm.UpdateImageViewer();
+            }
         }
 
         #region Disposable

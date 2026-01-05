@@ -88,15 +88,20 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Algorithm\BlobAlgorithm.cs" />
+    <Compile Include="Algorithm\DrawInspectInfo.cs" />
+    <Compile Include="Algorithm\InspAlgorithm.cs" />
     <Compile Include="CameraForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="CameraForm.Designer.cs">
       <DependentUpon>CameraForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="Core\Define.cs" />
     <Compile Include="Core\Global.cs" />
     <Compile Include="Core\ImageSpace.cs" />
     <Compile Include="Core\InspStage.cs" />
+    <Compile Include="Core\PreviewImage.cs" />
     <Compile Include="Grab\GrabModel.cs" />
     <Compile Include="Grab\HikRobotCam.cs" />
     <Compile Include="Grab\WebCam.cs" />
@@ -151,19 +156,49 @@
     <Compile Include="RunForm.Designer.cs">
       <DependentUpon>RunForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="Setting\CameraSetting.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Setting\CameraSetting.Designer.cs">
+      <DependentUpon>CameraSetting.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Setting\PathSetting.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Setting\PathSetting.Designer.cs">
+      <DependentUpon>PathSetting.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Setting\SettingXml.cs" />
+    <Compile Include="Setting\SetupForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Setting\SetupForm.Designer.cs">
+      <DependentUpon>SetupForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="StatisticForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="StatisticForm.Designer.cs">
       <DependentUpon>StatisticForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="Teach\DiagramEntity.cs" />
+    <Compile Include="Teach\InspWindow.cs" />
+    <Compile Include="Teach\InspWindowFactory.cs" />
+    <Compile Include="Teach\Model.cs" />
     <Compile Include="UIControl\ImageViewCtrl.cs">
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="UIControl\ImageViewCtrl.Designer.cs">
       <DependentUpon>ImageViewCtrl.cs</DependentUpon>
     </Compile>
+    <Compile Include="UIControl\RangeTrackbar.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UIControl\RangeTrackbar.Designer.cs">
+      <DependentUpon>RangeTrackbar.cs</DependentUpon>
+    </Compile>
     <Compile Include="Util\BitmapExtension.cs" />
+    <Compile Include="Util\XmlHelper.cs" />
     <EmbeddedResource Include="CameraForm.resx">
       <DependentUpon>CameraForm.cs</DependentUpon>
     </EmbeddedResource>
@@ -193,6 +228,15 @@
     </EmbeddedResource>
     <EmbeddedResource Include="RunForm.resx">
       <DependentUpon>RunForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Setting\CameraSetting.resx">
+      <DependentUpon>CameraSetting.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Setting\PathSetting.resx">
+      <DependentUpon>PathSetting.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Setting\SetupForm.resx">
+      <DependentUpon>SetupForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="UIControl\ImageViewCtrl.resx">
       <DependentUpon>ImageViewCtrl.cs</DependentUpon>

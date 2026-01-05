@@ -1,4 +1,5 @@
 ﻿using _251203_WinForm_Docking.Core;
+using _251203_WinForm_Docking.Setting;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -20,7 +21,7 @@ namespace _251203_WinForm_Docking
         {
             InitializeComponent();
 
-            _dockPanel = new DockPanel()
+            _dockPanel = new DockPanel
             {
                 Dock = DockStyle.Fill
             };
@@ -38,8 +39,8 @@ namespace _251203_WinForm_Docking
             CameraForm cameraForm = new CameraForm();
             cameraForm.Show(_dockPanel, DockState.Document);
 
-            ResultForm resultForm = new ResultForm();
-            resultForm.Show(cameraForm.Pane, DockAlignment.Bottom, 0.2);
+            /*ResultForm resultForm = new ResultForm();
+            resultForm.Show(cameraForm.Pane, DockAlignment.Bottom, 0.2);*/
 
             PropertiesForm propForm = new PropertiesForm();
             propForm.Show(_dockPanel, DockState.DockRight);
@@ -48,11 +49,11 @@ namespace _251203_WinForm_Docking
             statisticForm.Show(_dockPanel, DockState.DockRight);
 
             RunForm runForm = new RunForm();
-            runForm.Show(cameraForm.Pane, DockAlignment.Bottom, 0.2);
+            runForm.Show(cameraForm.Pane, DockAlignment.Bottom, 0.3);
 
             //로그폼 크기 변경
-            LogForm logForm = new LogForm();
-            logForm.Show(propForm.Pane, DockAlignment.Bottom, 0.4);
+            /*LogForm logForm = new LogForm();
+            logForm.Show(propForm.Pane, DockAlignment.Bottom, 0.4);*/
         }
         public static T GetDockForm<T>() where T : DockContent
         {
@@ -78,6 +79,12 @@ namespace _251203_WinForm_Docking
                     cameraForm.LoadImage(filePath);
                 }
             }
+        }
+
+        private void SetupMenuItem_Click(object sender, EventArgs e)
+        {
+            SetupForm setupForm = new SetupForm();
+            setupForm.ShowDialog();
         }
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)

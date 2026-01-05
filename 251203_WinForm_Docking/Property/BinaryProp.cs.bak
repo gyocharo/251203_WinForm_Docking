@@ -258,7 +258,22 @@ namespace _251203_WinForm_Docking.Property
             UpdateBinary();
         }
 
-        //#8_INSPECT_BINARY#14 이벤트 발생시 값에 반영
+        public class RangeChangedEventArgs : EventArgs
+        {
+            public int LowerValue { get; }
+            public int UpperValue { get; }
+            public bool Invert { get; }
+            public ShowBinaryMode ShowBinMode { get; }
+
+            public RangeChangedEventArgs(int lowerValue, int upperValue, bool invert, ShowBinaryMode showBinaryMode)
+            {
+                LowerValue = lowerValue;
+                UpperValue = upperValue;
+                Invert = invert;
+                ShowBinMode = showBinaryMode;
+            }
+        }
+
         private void dataGridViewFilter_CellValueChanged(object sender, DataGridViewCellEventArgs e)
         {
             if (_updateDataGridView == true)
@@ -304,24 +319,6 @@ namespace _251203_WinForm_Docking.Property
             }
 
             _updateDataGridView = true;
-        }
-
-    }
-
-    //이진화 관련 이벤트 발생시, 전달할 값 추가
-    public class RangeChangedEventArgs : EventArgs
-    {
-        public int LowerValue { get; }
-        public int UpperValue { get; }
-        public bool Invert { get; }
-        public ShowBinaryMode ShowBinMode { get; }
-
-        public RangeChangedEventArgs(int lowerValue, int upperValue, bool invert, ShowBinaryMode showBinaryMode)
-        {
-            LowerValue = lowerValue;
-            UpperValue = upperValue;
-            Invert = invert;
-            ShowBinMode = showBinaryMode;
         }
     }
 }

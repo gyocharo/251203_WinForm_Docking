@@ -23,5 +23,20 @@ namespace _251203_WinForm_Docking
         {
             Global.Inst.InspStage.Grab(0);
         }
+
+        private void btnStart_Click(object sender, EventArgs e)
+        {
+            Global.Inst.InspStage.TryInspection();
+        }
+
+        private void btnLive_Click(object sender, EventArgs e)
+        {
+            Global.Inst.InspStage.LiveMode = !Global.Inst.InspStage.LiveMode;
+
+            if (Global.Inst.InspStage.LiveMode)
+            {
+                Global.Inst.InspStage.Grab(0);
+            }
+        }
     }
 }

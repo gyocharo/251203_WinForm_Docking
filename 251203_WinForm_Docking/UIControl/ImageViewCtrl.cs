@@ -8,6 +8,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using _251203_WinForm_Docking.Algorithm;
+using _251203_WinForm_Docking.Core;
 
 namespace _251203_WinForm_Docking.UIControl
 {
@@ -29,6 +31,8 @@ namespace _251203_WinForm_Docking.UIControl
         private const float MaxZoom = 100.0f;
 
         private bool _isInitialized = false;
+
+        private List<DrawInspectInfo> _rectInfos = new List<DrawInspectInfo>();
 
         public ImageViewCtrl()
         {
@@ -138,8 +142,94 @@ namespace _251203_WinForm_Docking.UIControl
                     g.InterpolationMode = InterpolationMode.NearestNeighbor;
                     g.DrawImage(_bitmapImage, ImageRect);
 
+                    DrawDiagram(g);
+
                     e.Graphics.DrawImage(Canvas, 0, 0);
                 }
+            }
+        }
+
+        private void DrawDiagram(Graphics g)
+        {
+            if (_rectInfos != null)
+            {
+                foreach (DrawInspectInfo rectInfo in _rectInfos)
+                {
+                    Color lineColor = Color.LightCoral;
+                    if (rectInfo.decision == DecisionType.Defect)
+                        lineColor = Color.Red;
+                    else if (rectInfo.decision == DecisionType.Good)
+                        lineColor = Color.LightGreen;
+
+                    Rectangle rect = new Rectangle(rectInfo.rect.X, rectInfo.rect.Y, rectInfo.rect.Width, rectInfo.rect.Height);
+                    Rectangle screenRect = VirtualToScreen(rect);
+
+                    using (Pen pen = new Pen(lineColor, 2))
+                    {
+                        if (rectInfo.UseRotatedRect)
+                        {
+                            PointF[] screenPoints = rectInfo.rotatedPoints
+                                                    .Select(p => VirtualToScreen(new PointF(p.X, p.Y)))
+                                                    .ToArray();
+
+                            if (screenPoints.Length == 4)
+                            {
+                                for (int i = 0; i < 4; i++)
+                                {
+                                    g.DrawLine(pen, screenPoints[i], screenPoints[(i + 1) % 4]);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            g.DrawRectangle(pen, screenRect);
+                        }
+                    }
+
+                    if (rectInfo.info != "")
+                    {
+                        float baseFontSize = 20.0f;
+
+                        if (rectInfo.decision == DecisionType.Info)
+                        {
+                            baseFontSize = 3.0f;
+                            lineColor = Color.LightBlue;
+                        }
+
+                        float fontSize = baseFontSize * _curZoom;
+
+                        string infoText = rectInfo.info;
+                        PointF textPos = new PointF(screenRect.Left, screenRect.Top);
+
+                        if (rectInfo.inspectType == InspectType.InspBinary
+                            && rectInfo.decision != DecisionType.Info)
+                        {
+                            textPos.Y = screenRect.Bottom - fontSize;
+                        }
+
+                        DrawText(g, infoText, textPos, fontSize, lineColor);
+                    }
+                }
+            }
+        }
+
+        private void DrawText(Graphics g, string text, PointF position, float fontSize, Color color)
+        {
+            using (Font font = new Font("Arial", fontSize, FontStyle.Bold))
+            using (Brush outlineBrush = new SolidBrush(Color.Black))
+            using (Brush textBrush = new SolidBrush(color))
+            {
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    for (int dy = -1; dy <= 1; dy++)
+                    {
+                        if (dx == 0 && dy == 0) continue;
+                        PointF borderPos = new PointF(position.X + dx, position.Y + dy);
+                        g.DrawString(text, font, outlineBrush, borderPos);
+                    }
+                }
+
+                g.DrawString(text, font, textBrush, position);
             }
         }
 
@@ -176,6 +266,26 @@ namespace _251203_WinForm_Docking.UIControl
             return new PointF(ImageRect.X, ImageRect.Y);
         }
 
+        private Rectangle ScreenToVirtual(Rectangle screenRect)
+        {
+            PointF offset = GetScreenOffset();
+            return new Rectangle(
+                (int)((screenRect.X - offset.X) / _curZoom + 0.5f),
+                (int)((screenRect.Y - offset.Y) / _curZoom + 0.5f),
+                (int)(screenRect.Width / _curZoom + 0.5f),
+                (int)(screenRect.Height / _curZoom + 0.5f));
+        }
+
+        private Rectangle VirtualToScreen(Rectangle virtualRect)
+        {
+            PointF offset = GetScreenOffset();
+            return new Rectangle(
+                (int)(virtualRect.X * _curZoom + offset.X + 0.5f),
+                (int)(virtualRect.Y * _curZoom + offset.Y + 0.5f),
+                (int)(virtualRect.Width * _curZoom + 0.5f),
+                (int)(virtualRect.Height * _curZoom + 0.5f));
+        }
+
         private PointF ScreenToVirtual(PointF screenPos)
         {
             PointF offset = GetScreenOffset();
@@ -209,6 +319,18 @@ namespace _251203_WinForm_Docking.UIControl
         public Bitmap GetCurBitmap()
         {
             return _bitmapImage;
+        }
+
+        public void AddRect(List<DrawInspectInfo> rectInfos)
+        {
+            _rectInfos.AddRange(rectInfos);
+            Invalidate();
+        }
+
+        public void ResetEntity()
+        {
+            _rectInfos.Clear();
+            Invalidate();
         }
     }
 }

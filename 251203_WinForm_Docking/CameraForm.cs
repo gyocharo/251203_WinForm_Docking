@@ -10,6 +10,8 @@ using System.Windows.Forms;
 using WeifenLuo.WinFormsUI.Docking;
 using System.IO;
 using _251203_WinForm_Docking.Core;
+using OpenCvSharp;
+using _251203_WinForm_Docking.Algorithm;
 
 namespace _251203_WinForm_Docking
 {
@@ -50,6 +52,9 @@ namespace _251203_WinForm_Docking
 
             if (imageViewer != null)
                 imageViewer.LoadBitmap(bitmap);
+
+            Mat curImage = Global.Inst.InspStage.GetMat();
+            Global.Inst.InspStage.PreView.SetImage(curImage);
         }
 
         public Bitmap GetDisplayImage()
@@ -60,6 +65,21 @@ namespace _251203_WinForm_Docking
                 curImage = imageViewer.GetCurBitmap();
 
             return curImage;
+        }
+
+        public void UpdateImageViewer()
+        {
+            imageViewer.Invalidate();
+        }
+
+        public void ResetDisplay()
+        {
+            imageViewer.ResetEntity();
+        }
+
+        public void AddRect(List<DrawInspectInfo> rectInfos)
+        {
+            imageViewer.AddRect(rectInfos);
         }
     }
 }
