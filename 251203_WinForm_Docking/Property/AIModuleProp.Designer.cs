@@ -1,6 +1,6 @@
 ﻿namespace _251203_WinForm_Docking.Property
 {
-    partial class SaigeAIProp
+    partial class AIModuleProp
     {
         /// <summary> 
         /// 필수 디자이너 변수입니다.

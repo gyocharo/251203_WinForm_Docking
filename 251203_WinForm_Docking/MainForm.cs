@@ -51,6 +51,9 @@ namespace _251203_WinForm_Docking
             RunForm runForm = new RunForm();
             runForm.Show(cameraForm.Pane, DockAlignment.Bottom, 0.3);
 
+            var modelTreeWindow = new ModelTreeForm();
+            modelTreeWindow.Show(cameraForm.Pane, DockAlignment.Right, 0.3);
+
             //로그폼 크기 변경
             /*LogForm logForm = new LogForm();
             logForm.Show(propForm.Pane, DockAlignment.Bottom, 0.4);*/

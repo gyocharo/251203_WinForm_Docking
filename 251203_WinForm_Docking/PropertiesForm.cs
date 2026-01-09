@@ -1,6 +1,7 @@
 ﻿using _251203_WinForm_Docking.Algorithm;
 using _251203_WinForm_Docking.Core;
 using _251203_WinForm_Docking.Property;
+using _251203_WinForm_Docking.Teach;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -27,30 +28,28 @@ namespace _251203_WinForm_Docking
         public PropertiesForm()
         {
             InitializeComponent();
-
-            LoadOptionControl(PropertyType.Binary);
-            LoadOptionControl(PropertyType.Filter);
-            LoadOptionControl(PropertyType.Saige);
         }
 
-        private UserControl CreateUserControl(PropertyType propType)
+        private UserControl CreateUserControl(InspectType inspPropType)
         {
             UserControl curProp = null;
-            switch (propType)
+            switch (inspPropType)
             {
-                case PropertyType.Binary:
+                case InspectType.InspBinary:
                     BinaryProp blobProp = new BinaryProp();
+
+                    //#7_BINARY_PREVIEW#8 이진화 속성 변경시 발생하는 이벤트 추가
                     blobProp.RangeChanged += RangeSlider_RangeChanged;
-                    blobProp.PropertyChanged += PropertyChanged;
+                    //blobProp.PropertyChanged += PropertyChanged;
                     curProp = blobProp;
                     break;
-                case PropertyType.Filter:
+                case InspectType.InspFilter:
                     ImageFilterProp filterProp = new ImageFilterProp();
                     curProp = filterProp;
                     break;
-                case PropertyType.Saige:
-                    SaigeAIProp saigeProp = new SaigeAIProp();
-                    curProp = saigeProp;
+                case InspectType.InspAIModule:
+                    AIModuleProp aiModuleProp = new AIModuleProp();
+                    curProp = aiModuleProp;
                     break;
                 default:
                     MessageBox.Show("유효하지 않은 옵션입니다.");
@@ -59,9 +58,9 @@ namespace _251203_WinForm_Docking
             return curProp;
         }
 
-        public void UpdateProperty(BlobAlgorithm blobAlgorithm)
+        public void UpdateProperty(InspWindow window)
         {
-            if (blobAlgorithm is null)
+            if (window is null)
                 return;
 
             foreach (TabPage tabPage in tabPropControl1.TabPages)
@@ -72,44 +71,65 @@ namespace _251203_WinForm_Docking
 
                     if (uc is BinaryProp binaryProp)
                     {
-                        binaryProp.SetAlgorithm(blobAlgorithm);
+                        BlobAlgorithm blobAlgo = (BlobAlgorithm)window.FindInspAlgorithm(InspectType.InspBinary);
+                        if (blobAlgo is null)
+                            continue;
+
+                        binaryProp.SetAlgorithm(blobAlgo);
                     }
                 }
             }
         }
 
-
-        private void LoadOptionControl(PropertyType propType)
+        public void ShowProperty(InspWindow window)
         {
-            string tabName = propType.ToString();
+            foreach (InspAlgorithm algo in window.AlgorithmList)
+            {
+                LoadOptionControl(algo.InspectType);
+            }
+        }
 
-            foreach(TabPage tabPage in tabPropControl1.TabPages)
+        public void ResetProperty()
+        {
+            tabPropControl1.TabPages.Clear();
+        }
+
+        private void LoadOptionControl(InspectType inspType)
+        {
+            string tabName = inspType.ToString();
+
+            // 이미 있는 TabPage인지 확인
+            foreach (TabPage tabPage in tabPropControl1.TabPages)
             {
                 if (tabPage.Text == tabName)
                     return;
             }
-            if(_allTabs.TryGetValue(tabName, out TabPage page))
+
+            // 딕셔너리에 있으면 추가
+            if (_allTabs.TryGetValue(tabName, out TabPage page))
             {
                 tabPropControl1.TabPages.Add(page);
                 return;
             }
 
-            UserControl _inspProp = CreateUserControl(propType);
+            // 새로운 UserControl 생성
+            UserControl _inspProp = CreateUserControl(inspType);
             if (_inspProp == null)
                 return;
 
+            // 새 탭 추가
             TabPage newTab = new TabPage(tabName)
             {
                 Dock = DockStyle.Fill
             };
-
             _inspProp.Dock = DockStyle.Fill;
             newTab.Controls.Add(_inspProp);
             tabPropControl1.TabPages.Add(newTab);
-            tabPropControl1.SelectedTab = newTab;
+            tabPropControl1.SelectedTab = newTab; // 새 탭 선택
 
             _allTabs[tabName] = newTab;
         }
+
         private void RangeSlider_RangeChanged(object sender, RangeChangedEventArgs e)
         {
             int lowerValue = e.LowerValue;

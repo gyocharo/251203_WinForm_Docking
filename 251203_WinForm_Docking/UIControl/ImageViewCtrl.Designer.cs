@@ -37,6 +37,9 @@
             this.Name = "ImageViewCtrl";
             this.Size = new System.Drawing.Size(359, 361);
             this.DoubleClick += new System.EventHandler(this.ImageViewCtrl_DoubleClick);
+            this.MouseDown += new System.Windows.Forms.MouseEventHandler(this.ImageViewCtrl_MouseDown);
+            this.MouseMove += new System.Windows.Forms.MouseEventHandler(this.ImageViewCtrl_MouseMove);
+            this.MouseUp += new System.Windows.Forms.MouseEventHandler(this.ImageViewCtrl_MouseUp);
             this.Resize += new System.EventHandler(this.ImageViewCtrl_Resize);
             this.ResumeLayout(false);
 

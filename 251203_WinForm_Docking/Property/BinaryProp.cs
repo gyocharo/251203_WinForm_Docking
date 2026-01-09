@@ -22,7 +22,6 @@ namespace _251203_WinForm_Docking.Property
     }
     public partial class BinaryProp : UserControl
     {
-        public event EventHandler<EventArgs> PropertyChanged;
         public event EventHandler<RangeChangedEventArgs> RangeChanged;
 
         BlobAlgorithm _blobAlgo = null;

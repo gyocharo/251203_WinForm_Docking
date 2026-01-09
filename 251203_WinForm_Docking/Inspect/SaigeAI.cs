@@ -245,7 +245,7 @@ namespace _251203_WinForm_Docking
 
             Bitmap resultImage = _bitmap.Clone(new Rectangle(0, 0, _bitmap.Width, _bitmap.Height), System.Drawing.Imaging.PixelFormat.Format24bppRgb);
 
-            int size = int.Parse(SaigeAIProp.saigeaiprop.txt_Area.Text);
+            int size = int.Parse(AIModuleProp.saigeaiprop.txt_Area.Text);
 
             switch (_engineType)
             {

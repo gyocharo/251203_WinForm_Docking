@@ -14,14 +14,14 @@ using _251203_WinForm_Docking.Core;
 
 namespace _251203_WinForm_Docking.Property
 {
-    public partial class SaigeAIProp : UserControl
+    public partial class AIModuleProp : UserControl
     {
         SaigeAI _saigeAI;
         string _modelPath;
         EngineType _engineType;
 
-        public static SaigeAIProp saigeaiprop;
-        public SaigeAIProp()
+        public static AIModuleProp saigeaiprop;
+        public AIModuleProp()
         {
             InitializeComponent();
 

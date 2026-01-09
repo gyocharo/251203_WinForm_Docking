@@ -12,7 +12,7 @@ namespace _251203_WinForm_Docking.Algorithm
         InspNone = -1,
         InspBinary,
         InspFilter,
-        InspAIIModule,
+        InspAIModule,
         InspCount
     }
     public abstract class InspAlgorithm
