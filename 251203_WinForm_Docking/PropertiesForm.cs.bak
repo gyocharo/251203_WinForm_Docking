@@ -125,16 +125,6 @@ namespace _251203_WinForm_Docking
 
                         binaryProp.SetAlgorithm(blobAlgo);
                     }
-                    else if (uc is MatchInspProp matchProp)
-                    {
-                        MatchAlgorithm matchAlgo = (MatchAlgorithm)window.FindInspAlgorithm(InspectType.InspMatch);
-                        if (matchAlgo is null)
-                            continue;
-
-                        window.PatternLearn();
-
-                        matchProp.SetAlgorithm(matchAlgo);
-                    }
                 }
             }
         }

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Serialization;
+using _251203_WinForm_Docking.Core;
 using OpenCvSharp;
 
 namespace _251203_WinForm_Docking.Algorithm
@@ -11,10 +13,14 @@ namespace _251203_WinForm_Docking.Algorithm
     {
         InspNone = -1,
         InspBinary,
+        InspMatch,
         InspFilter,
         InspAIModule,
         InspCount
     }
+
+    [XmlInclude(typeof(MatchAlgorithm))]
+    [XmlInclude(typeof(BlobAlgorithm))]
     public abstract class InspAlgorithm
     {
         public InspectType InspectType { get; set; } = InspectType.InspNone;
@@ -26,6 +32,8 @@ namespace _251203_WinForm_Docking.Algorithm
         public Rect TeachRect { get; set; }
 
         public Rect InspRect { get; set; }
+
+        public eImageChannel ImageChannel { get; set; } = eImageChannel.Gray;
 
         protected Mat _srcImage = null;
 

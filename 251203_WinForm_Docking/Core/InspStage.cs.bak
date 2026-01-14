@@ -15,7 +15,6 @@ using _251203_WinForm_Docking.Teach;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
 using System.IO;
-using _251203_WinForm_Docking.Inspect;
 
 namespace _251203_WinForm_Docking.Core
 {
@@ -154,10 +153,12 @@ namespace _251203_WinForm_Docking.Core
 
             if (_imageSpace != null)
             {
-                _imageSpace.SetImageInfo(pixelBpp, imageWidth, imageHeight, imageStride);
+                if (_imageSpace.ImageSize.Width != imageWidth || _imageSpace.ImageSize.Height != imageHeight)
+                {
+                    _imageSpace.SetImageInfo(pixelBpp, imageWidth, imageHeight, imageStride);
+                    SetBuffer(_imageSpace.BufferCount);
+                }
             }
-
-            SetBuffer(1);
 
             int bufferIndex = 0;
 
@@ -202,8 +203,6 @@ namespace _251203_WinForm_Docking.Core
                 return;
 
             InspWindow inspWindow = _selectedInspWindow;
-
-            inspWindow.DelWindowImage(index);
 
             MatchAlgorithm matchAlgo = (MatchAlgorithm)inspWindow.FindInspAlgorithm(InspectType.InspMatch);
             if (matchAlgo != null)
@@ -269,7 +268,7 @@ namespace _251203_WinForm_Docking.Core
 
         public void TryInspection(InspWindow inspWindow = null)
         {
-            if (inspWindow is null)
+            if(inspWindow is null)
             {
                 if (_selectedInspWindow is null)
                     return;
@@ -279,81 +278,56 @@ namespace _251203_WinForm_Docking.Core
 
             UpdateDiagramEntity();
 
-            inspWindow.ResetInspResult();
-
-            List<DrawInspectInfo> totalArea = new List<DrawInspectInfo>();
+            List<DrawInspectInfo> totalArea = new List<DrawInspectInfo> ();
 
             Rect windowArea = inspWindow.WindowArea;
 
-            foreach (var inspAlgo in inspWindow.AlgorithmList)
+            foreach(var inspAlgo in inspWindow.AlgorithmList)
             {
-                if (!inspAlgo.IsUse)
-                    continue;
-
-                //검사 영역 초기화
                 inspAlgo.TeachRect = windowArea;
                 inspAlgo.InspRect = windowArea;
 
-                Mat srcImage = Global.Inst.InspStage.GetMat();
-                inspAlgo.SetInspData(srcImage);
-
-                if (!inspAlgo.DoInspect())
-                    continue;
-
-                List<DrawInspectInfo> resultArea = new List<DrawInspectInfo>();
-                int resultCnt = inspAlgo.GetResultRect(out resultArea);
-                if (resultCnt > 0)
-                {
-                    totalArea.AddRange(resultArea);
-                }
-
                 InspectType inspType = inspAlgo.InspectType;
-
-                string resultInfo = string.Join("\r\n", inspAlgo.ResultString);
-
-                InspResult inspResult = new InspResult
-                {
-                    ObjectID = inspWindow.UID,
-                    InspType = inspAlgo.InspectType,
-                    IsDefect = inspAlgo.IsDefect,
-                    ResultInfos = resultInfo
-                };
 
                 switch (inspType)
                 {
-                    case InspectType.InspMatch:
-                        {
-                            MatchAlgorithm matchAlgo = inspAlgo as MatchAlgorithm;
-                            inspResult.ResultValue = $"{matchAlgo.OutScore}";
-                            break;
-                        }
                     case InspectType.InspBinary:
                         {
                             BlobAlgorithm blobAlgo = (BlobAlgorithm)inspAlgo;
-                            int min = blobAlgo.BlobFilters[blobAlgo.FILTER_COUNT].min;
-                            int max = blobAlgo.BlobFilters[blobAlgo.FILTER_COUNT].max;
-                            inspResult.ResultValue = $"{blobAlgo.OutBlobCount}/{min}~{max}";
+
+                            Mat srcImage = Global.Inst.InspStage.GetMat();
+                            blobAlgo.SetInspData(srcImage);
+
+                            if (blobAlgo.DoInspect())
+                            {
+                                List<DrawInspectInfo> resultArea = new List<DrawInspectInfo> ();
+                                int resultCnt = blobAlgo.GetResultRect(out resultArea);
+                                if(resultCnt > 0)
+                                {
+                                    totalArea.AddRange(resultArea);
+                                }
+                            }
                             break;
                         }
                 }
-
-                inspWindow.AddInspResult(inspResult);
-            }
-
-            if (totalArea.Count > 0)
-            {
-                //찾은 위치를 이미지상에서 표시
-                var cameraForm = MainForm.GetDockForm<CameraForm>();
-                if (cameraForm != null)
+                if (inspAlgo.DoInspect())
                 {
-                    cameraForm.AddRect(totalArea);
+                    List<DrawInspectInfo> resultArea = new List<DrawInspectInfo>();
+                    int resultCnt = inspAlgo.GetResultRect (out resultArea);
+                    if(resultCnt > 0)
+                    {
+                        totalArea.AddRange(resultArea);
+                    }
                 }
             }
 
-            ResultForm resultForm = MainForm.GetDockForm<ResultForm>();
-            if (resultForm != null)
+            if(totalArea.Count > 0)
             {
-                resultForm.AddWindowResult(inspWindow);
+                var cameraForm = MainForm.GetDockForm<CameraForm>();
+                if(cameraForm != null)
+                {
+                    cameraForm.AddRect(totalArea);
+                }
             }
         }
 
