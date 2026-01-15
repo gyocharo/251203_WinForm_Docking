@@ -1,6 +1,5 @@
 ﻿using _251203_WinForm_Docking.Core;
 using _251203_WinForm_Docking.Setting;
-using _251203_WinForm_Docking.Teach;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -43,20 +42,17 @@ namespace _251203_WinForm_Docking
             /*ResultForm resultForm = new ResultForm();
             resultForm.Show(cameraForm.Pane, DockAlignment.Bottom, 0.2);*/
 
-            var resultWindow = new ResultForm();
-            resultWindow.Show(cameraForm.Pane, DockAlignment.Bottom, 0.3);
-
             PropertiesForm propForm = new PropertiesForm();
             propForm.Show(_dockPanel, DockState.DockRight);
 
-            //StatisticForm statisticForm = new StatisticForm();
-            //statisticForm.Show(_dockPanel, DockState.DockRight);
+            StatisticForm statisticForm = new StatisticForm();
+            statisticForm.Show(_dockPanel, DockState.DockRight);
 
             RunForm runForm = new RunForm();
             runForm.Show(cameraForm.Pane, DockAlignment.Bottom, 0.3);
 
             var modelTreeWindow = new ModelTreeForm();
-            modelTreeWindow.Show(runForm.Pane, DockAlignment.Right, 0.3);
+            modelTreeWindow.Show(cameraForm.Pane, DockAlignment.Right, 0.3);
 
             //로그폼 크기 변경
             /*LogForm logForm = new LogForm();
@@ -82,9 +78,8 @@ namespace _251203_WinForm_Docking
                 openFileDialog.Multiselect = false;
                 if(openFileDialog .ShowDialog() == DialogResult.OK)
                 {
-                    string filePath = openFileDialog.FileName;
-                    Global.Inst.InspStage.SetImageBuffer(filePath);
-                    Global.Inst.InspStage.CurModel.InspectImagePath = filePath;
+                    string filePath = openFileDialog .FileName;
+                    cameraForm.LoadImage(filePath);
                 }
             }
         }
@@ -98,72 +93,6 @@ namespace _251203_WinForm_Docking
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             Global.Inst.Dispose();
-        }
-
-        private string GetMdoelTitle(Model curModel)
-        {
-            if (curModel is null)
-                return "";
-
-            string modelName = curModel.ModelName;
-            return $"{Define.PROGRAM_NAME} - MODEL : {modelName}";
-        }
-
-        private void modelNewMenuItem_Click(object sender, EventArgs e)
-        {
-            NewModel newModel = new NewModel();
-            newModel.ShowDialog();
-
-            Model curModel = Global.Inst.InspStage.CurModel;
-            if (curModel != null)
-            {
-                this.Text = GetMdoelTitle(curModel);
-            }
-        }
-
-        private void modelOpenMenuItem_Click(object sender, EventArgs e)
-        {
-            using (OpenFileDialog openFileDialog = new OpenFileDialog())
-            {
-                openFileDialog.Title = "모델 파일 선택";
-                openFileDialog.Filter = "Model Files|*.xml;";
-                openFileDialog.Multiselect = false;
-                openFileDialog.InitialDirectory = SettingXml.Inst.ModelDir;
-                if (openFileDialog.ShowDialog() == DialogResult.OK)
-                {
-                    string filePath = openFileDialog.FileName;
-                    if (Global.Inst.InspStage.LoadModel(filePath))
-                    {
-                        Model curModel = Global.Inst.InspStage.CurModel;
-                        if (curModel != null)
-                        {
-                            this.Text = GetMdoelTitle(curModel);
-                        }
-                    }
-                }
-            }
-        }
-
-        private void modelSaveMenuItem_Click(object sender, EventArgs e)
-        {
-            Global.Inst.InspStage.SaveModel("");
-        }
-
-        private void modelSaveAsMenuItem_Click(object sender, EventArgs e)
-        {
-            using (SaveFileDialog saveFileDialog = new SaveFileDialog())
-            {
-                saveFileDialog.InitialDirectory = SettingXml.Inst.ModelDir;
-                saveFileDialog.Title = "모델 파일 선택";
-                saveFileDialog.Filter = "Model Files|*.xml;";
-                saveFileDialog.DefaultExt = "xml";
-
-                if (saveFileDialog.ShowDialog() == DialogResult.OK)
-                {
-                    string filePath = saveFileDialog.FileName;
-                    Global.Inst.InspStage.SaveModel(filePath);
-                }
-            }
         }
     }
 }

@@ -15,6 +15,12 @@ using WeifenLuo.WinFormsUI.Docking;
 
 namespace _251203_WinForm_Docking
 {
+    public enum PropertyType
+    {
+        Binary,
+        Filter,
+        Saige
+    }
     public partial class PropertiesForm : DockContent
     {
 
@@ -22,6 +28,70 @@ namespace _251203_WinForm_Docking
         public PropertiesForm()
         {
             InitializeComponent();
+        }
+
+        private UserControl CreateUserControl(InspectType inspPropType)
+        {
+            UserControl curProp = null;
+            switch (inspPropType)
+            {
+                case InspectType.InspBinary:
+                    BinaryProp blobProp = new BinaryProp();
+
+                    //#7_BINARY_PREVIEW#8 이진화 속성 변경시 발생하는 이벤트 추가
+                    blobProp.RangeChanged += RangeSlider_RangeChanged;
+                    //blobProp.PropertyChanged += PropertyChanged;
+                    curProp = blobProp;
+                    break;
+                case InspectType.InspFilter:
+                    ImageFilterProp filterProp = new ImageFilterProp();
+                    curProp = filterProp;
+                    break;
+                case InspectType.InspAIModule:
+                    AIModuleProp aiModuleProp = new AIModuleProp();
+                    curProp = aiModuleProp;
+                    break;
+                default:
+                    MessageBox.Show("유효하지 않은 옵션입니다.");
+                    return null;
+            }
+            return curProp;
+        }
+
+        public void UpdateProperty(InspWindow window)
+        {
+            if (window is null)
+                return;
+
+            foreach (TabPage tabPage in tabPropControl1.TabPages)
+            {
+                if (tabPage.Controls.Count > 0)
+                {
+                    UserControl uc = tabPage.Controls[0] as UserControl;
+
+                    if (uc is BinaryProp binaryProp)
+                    {
+                        BlobAlgorithm blobAlgo = (BlobAlgorithm)window.FindInspAlgorithm(InspectType.InspBinary);
+                        if (blobAlgo is null)
+                            continue;
+
+                        binaryProp.SetAlgorithm(blobAlgo);
+                    }
+                }
+            }
+        }
+
+        public void ShowProperty(InspWindow window)
+        {
+            foreach (InspAlgorithm algo in window.AlgorithmList)
+            {
+                LoadOptionControl(algo.InspectType);
+            }
+        }
+
+        public void ResetProperty()
+        {
+            tabPropControl1.TabPages.Clear();
         }
 
         private void LoadOptionControl(InspectType inspType)
@@ -58,85 +128,6 @@ namespace _251203_WinForm_Docking
             tabPropControl1.SelectedTab = newTab; // 새 탭 선택
 
             _allTabs[tabName] = newTab;
-        }
-
-        private UserControl CreateUserControl(InspectType inspPropType)
-        {
-            UserControl curProp = null;
-            switch (inspPropType)
-            {
-                case InspectType.InspBinary:
-                    BinaryProp blobProp = new BinaryProp();
-
-                    //#7_BINARY_PREVIEW#8 이진화 속성 변경시 발생하는 이벤트 추가
-                    blobProp.RangeChanged += RangeSlider_RangeChanged;
-                    //blobProp.PropertyChanged += PropertyChanged;
-                    curProp = blobProp;
-                    break;
-                case InspectType.InspMatch:
-                    MatchInspProp matchProp = new MatchInspProp();
-                    matchProp.PropertyChanged += PropertyChanged;
-                    curProp = matchProp;
-                    break;
-                case InspectType.InspFilter:
-                    ImageFilterProp filterProp = new ImageFilterProp();
-                    curProp = filterProp;
-                    break;
-                case InspectType.InspAIModule:
-                    AIModuleProp aiModuleProp = new AIModuleProp();
-                    curProp = aiModuleProp;
-                    break;
-                default:
-                    MessageBox.Show("유효하지 않은 옵션입니다.");
-                    return null;
-            }
-            return curProp;
-        }
-
-        public void ShowProperty(InspWindow window)
-        {
-            foreach (InspAlgorithm algo in window.AlgorithmList)
-            {
-                LoadOptionControl(algo.InspectType);
-            }
-        }
-
-        public void ResetProperty()
-        {
-            tabPropControl1.TabPages.Clear();
-        }
-
-        public void UpdateProperty(InspWindow window)
-        {
-            if (window is null)
-                return;
-
-            foreach (TabPage tabPage in tabPropControl1.TabPages)
-            {
-                if (tabPage.Controls.Count > 0)
-                {
-                    UserControl uc = tabPage.Controls[0] as UserControl;
-
-                    if (uc is BinaryProp binaryProp)
-                    {
-                        BlobAlgorithm blobAlgo = (BlobAlgorithm)window.FindInspAlgorithm(InspectType.InspBinary);
-                        if (blobAlgo is null)
-                            continue;
-
-                        binaryProp.SetAlgorithm(blobAlgo);
-                    }
-                    else if (uc is MatchInspProp matchProp)
-                    {
-                        MatchAlgorithm matchAlgo = (MatchAlgorithm)window.FindInspAlgorithm(InspectType.InspMatch);
-                        if (matchAlgo is null)
-                            continue;
-
-                        window.PatternLearn();
-
-                        matchProp.SetAlgorithm(matchAlgo);
-                    }
-                }
-            }
         }
 
         private void RangeSlider_RangeChanged(object sender, RangeChangedEventArgs e)

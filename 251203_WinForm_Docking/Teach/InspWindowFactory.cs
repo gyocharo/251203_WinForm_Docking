@@ -56,15 +56,12 @@ namespace _251203_WinForm_Docking.Teach
             switch(inspWindow.InspWindowType)
             {
                 case InspWindowType.Base:
-                    inspWindow.AddInspAlgorithm(InspectType.InspMatch);
                     inspWindow.AddInspAlgorithm(InspectType.InspBinary);
                     break;
                 case InspWindowType.Body:
-                    inspWindow.AddInspAlgorithm(InspectType.InspMatch);
                     inspWindow.AddInspAlgorithm(InspectType.InspBinary);
                     break;
                 case InspWindowType.Sub:
-                    inspWindow.AddInspAlgorithm(InspectType.InspMatch);
                     inspWindow.AddInspAlgorithm(InspectType.InspBinary);
                     break;
             }

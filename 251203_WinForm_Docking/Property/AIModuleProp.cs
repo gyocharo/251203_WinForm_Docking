@@ -39,7 +39,7 @@ namespace _251203_WinForm_Docking.Property
                 return;
             }
 
-            Bitmap bitmap = Global.Inst.InspStage.GetBitmap();
+            Bitmap bitmap = Global.Inst.InspStage.GetCurrentImage();
             if (bitmap is null)
             {
                 MessageBox.Show("현재 이미지가 없습니다.", "오류", MessageBoxButtons.OK, MessageBoxIcon.Error);

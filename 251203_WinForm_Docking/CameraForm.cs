@@ -94,9 +94,14 @@ namespace _251203_WinForm_Docking
             Global.Inst.InspStage.PreView.SetImage(curImage);
         }
 
-        public Mat GetDisplayImage()
+        public Bitmap GetDisplayImage()
         {
-            return Global.Inst.InspStage.ImageSpace.GetMat();
+            Bitmap curImage = null;
+
+            if (imageViewer != null)
+                curImage = imageViewer.GetCurBitmap();
+
+            return curImage;
         }
 
         public void UpdateImageViewer()
@@ -149,11 +154,6 @@ namespace _251203_WinForm_Docking
         public void AddRoi(InspWindowType inspWindowType)
         {
             imageViewer.NewRoi(inspWindowType);
-        }
-
-        public void SetInspResultCount(int totalArea, int okCnt, int ngCnt)
-        {
-            imageViewer.SetInspResultCount(new InspectResultCount(totalArea, okCnt, ngCnt));
         }
     }
 }

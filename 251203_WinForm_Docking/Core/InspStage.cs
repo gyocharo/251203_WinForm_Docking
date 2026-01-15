@@ -5,7 +5,6 @@ using System.Deployment.Application;
 using System.Drawing;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using _251203_WinForm_Docking.Algorithm;
@@ -14,8 +13,6 @@ using _251203_WinForm_Docking.Setting;
 using _251203_WinForm_Docking.Teach;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
-using System.IO;
-using _251203_WinForm_Docking.Inspect;
 
 namespace _251203_WinForm_Docking.Core
 {
@@ -30,6 +27,7 @@ namespace _251203_WinForm_Docking.Core
         private GrabModel _grabManager = null;
         private CameraType _camType = CameraType.WebCam;
 
+        BlobAlgorithm _blobAlgorithm = null;
         private PreviewImage _previewImage = null;
 
         private Model _model = null;
@@ -37,11 +35,6 @@ namespace _251203_WinForm_Docking.Core
         private InspWindow _selectedInspWindow = null;
 
         public InspStage() { }
-
-        public ImageSpace ImageSpace
-        {
-            get => _imageSpace;
-        }
 
         public SaigeAI AIModule
         {
@@ -51,6 +44,11 @@ namespace _251203_WinForm_Docking.Core
                     _saigeAI = new SaigeAI();
                 return _saigeAI;
             }
+        }
+
+        public BlobAlgorithm BlobAlgorithm
+        {
+            get => _blobAlgorithm;
         }
 
         public PreviewImage PreView
@@ -63,20 +61,24 @@ namespace _251203_WinForm_Docking.Core
             get => _model;
         }
 
+        public ImageSpace ImageSpace
+        {
+            get => _imageSpace;
+        }
+
         public bool LiveMode { get; set; } = false;
-
-        public int SelBufferIndex { get; set; } = 0;
-
-        public eImageChannel SelImageChannel { get; set; } = eImageChannel.Gray;
 
 
         public bool Initialize()
         {
             _imageSpace = new ImageSpace();
 
+            _blobAlgorithm = new BlobAlgorithm();
             _previewImage = new PreviewImage();
 
             _model = new Model();
+
+            LoadSetting();
 
             switch (_camType)
             {
@@ -131,54 +133,9 @@ namespace _251203_WinForm_Docking.Core
 
         }
 
-        public void SetImageBuffer(string filePath)
-        {
-            Mat matImage = Cv2.ImRead(filePath);
-
-            int pixelBpp = 8;
-            int imageWidth;
-            int imageHeight;
-            int imageStride;
-
-            if (matImage.Type() == MatType.CV_8UC3)
-                pixelBpp = 24;
-
-            imageWidth = (matImage.Width + 3) / 4 * 4;
-            imageHeight = matImage.Height;
-
-            // 4바이트 정렬된 새로운 Mat 생성
-            Mat alignedMat = new Mat();
-            Cv2.CopyMakeBorder(matImage, alignedMat, 0, 0, 0, imageWidth - matImage.Width, BorderTypes.Constant, Scalar.Black);
-
-            imageStride = imageWidth * matImage.ElemSize();
-
-            if (_imageSpace != null)
-            {
-                _imageSpace.SetImageInfo(pixelBpp, imageWidth, imageHeight, imageStride);
-            }
-
-            SetBuffer(1);
-
-            int bufferIndex = 0;
-
-            // Mat의 데이터를 byte 배열로 복사
-            int bufSize = (int)(alignedMat.Total() * alignedMat.ElemSize());
-            Marshal.Copy(alignedMat.Data, ImageSpace.GetInspectionBuffer(bufferIndex), 0, bufSize);
-
-            _imageSpace.Split(bufferIndex);
-
-            DisplayGrabImage(bufferIndex);
-
-            if (_previewImage != null)
-            {
-                Bitmap bitmap = ImageSpace.GetBitmap(0);
-                _previewImage.SetImage(BitmapConverter.ToMat(bitmap));
-            }
-        }
-
         private void UpdateProperty(InspWindow inspWindow)
         {
-            if (inspWindow is null)
+            if (BlobAlgorithm is null)
                 return;
 
             PropertiesForm propertiesForm = MainForm.GetDockForm<PropertiesForm>();
@@ -188,88 +145,30 @@ namespace _251203_WinForm_Docking.Core
             propertiesForm.UpdateProperty(inspWindow);
         }
 
-        public void UpdateTeachingImage(int index)
-        {
-            if(_selectedInspWindow is null)
-                return;
-
-            SetTeachingImage(_selectedInspWindow, index);
-        }
-
-        public void DelTeachingImage(int index)
-        {
-            if (_selectedInspWindow is null)
-                return;
-
-            InspWindow inspWindow = _selectedInspWindow;
-
-            inspWindow.DelWindowImage(index);
-
-            MatchAlgorithm matchAlgo = (MatchAlgorithm)inspWindow.FindInspAlgorithm(InspectType.InspMatch);
-            if (matchAlgo != null)
-            {
-                UpdateProperty(inspWindow);
-            }
-        }
-
-        public void SetTeachingImage(InspWindow inspWindow, int index = -1)
-        {
-            if (inspWindow is null)
-                return;
-
-            CameraForm cameraForm = MainForm.GetDockForm<CameraForm>();
-            if (cameraForm is null)
-                return;
-
-            Mat curImage = cameraForm.GetDisplayImage();
-            if (curImage is null)
-                return;
-
-            if (inspWindow.WindowArea.Right >= curImage.Width ||
-                inspWindow.WindowArea.Bottom >= curImage.Height)
-            {
-                Console.Write("ROI 영역이 잘못되었습니다!");
-                return;
-            }
-
-            Mat windowImage = curImage[inspWindow.WindowArea];
-
-            if (index < 0)
-                inspWindow.AddWindowImage(windowImage);
-            else
-                inspWindow.SetWindowImage(windowImage, index);
-
-            inspWindow.IsPatternLearn = false;
-
-            MatchAlgorithm matchAlgo = (MatchAlgorithm)inspWindow.FindInspAlgorithm(InspectType.InspMatch);
-            if (matchAlgo != null)
-            {
-                UpdateProperty(inspWindow);
-            }
-        }
-
         public void SetBuffer(int bufferCount)
         {
+            if (_grabManager == null)
+                return;
+
+            if (_imageSpace.BufferCount == bufferCount)
+                return;
+
             _imageSpace.InitImageSpace(bufferCount);
+            _grabManager.InitBuffer(bufferCount);
 
-            if (_grabManager != null)
+            for (int i = 0; i < bufferCount; i++)
             {
-                _grabManager.InitBuffer(bufferCount);
-
-                for (int i = 0; i < bufferCount; i++)
-                {
-                    _grabManager.SetBuffer(
-                        _imageSpace.GetInspectionBuffer(i),
-                        _imageSpace.GetnspectionBufferPtr(i),
-                        _imageSpace.GetInspectionBufferHandle(i),
-                        i);
-                }
+                _grabManager.SetBuffer(
+                    _imageSpace.GetInspectionBuffer(i),
+                    _imageSpace.GetnspectionBufferPtr(i),
+                    _imageSpace.GetInspectionBufferHandle(i),
+                    i);
             }
         }
 
         public void TryInspection(InspWindow inspWindow = null)
         {
-            if (inspWindow is null)
+            if(inspWindow is null)
             {
                 if (_selectedInspWindow is null)
                     return;
@@ -279,81 +178,56 @@ namespace _251203_WinForm_Docking.Core
 
             UpdateDiagramEntity();
 
-            inspWindow.ResetInspResult();
-
-            List<DrawInspectInfo> totalArea = new List<DrawInspectInfo>();
+            List<DrawInspectInfo> totalArea = new List<DrawInspectInfo> ();
 
             Rect windowArea = inspWindow.WindowArea;
 
-            foreach (var inspAlgo in inspWindow.AlgorithmList)
+            foreach(var inspAlgo in inspWindow.AlgorithmList)
             {
-                if (!inspAlgo.IsUse)
-                    continue;
-
-                //검사 영역 초기화
                 inspAlgo.TeachRect = windowArea;
                 inspAlgo.InspRect = windowArea;
 
-                Mat srcImage = Global.Inst.InspStage.GetMat();
-                inspAlgo.SetInspData(srcImage);
-
-                if (!inspAlgo.DoInspect())
-                    continue;
-
-                List<DrawInspectInfo> resultArea = new List<DrawInspectInfo>();
-                int resultCnt = inspAlgo.GetResultRect(out resultArea);
-                if (resultCnt > 0)
-                {
-                    totalArea.AddRange(resultArea);
-                }
-
                 InspectType inspType = inspAlgo.InspectType;
-
-                string resultInfo = string.Join("\r\n", inspAlgo.ResultString);
-
-                InspResult inspResult = new InspResult
-                {
-                    ObjectID = inspWindow.UID,
-                    InspType = inspAlgo.InspectType,
-                    IsDefect = inspAlgo.IsDefect,
-                    ResultInfos = resultInfo
-                };
 
                 switch (inspType)
                 {
-                    case InspectType.InspMatch:
-                        {
-                            MatchAlgorithm matchAlgo = inspAlgo as MatchAlgorithm;
-                            inspResult.ResultValue = $"{matchAlgo.OutScore}";
-                            break;
-                        }
                     case InspectType.InspBinary:
                         {
                             BlobAlgorithm blobAlgo = (BlobAlgorithm)inspAlgo;
-                            int min = blobAlgo.BlobFilters[blobAlgo.FILTER_COUNT].min;
-                            int max = blobAlgo.BlobFilters[blobAlgo.FILTER_COUNT].max;
-                            inspResult.ResultValue = $"{blobAlgo.OutBlobCount}/{min}~{max}";
+
+                            Mat srcImage = Global.Inst.InspStage.GetMat();
+                            blobAlgo.SetInspData(srcImage);
+
+                            if (blobAlgo.DoInspect())
+                            {
+                                List<DrawInspectInfo> resultArea = new List<DrawInspectInfo> ();
+                                int resultCnt = blobAlgo.GetResultRect(out resultArea);
+                                if(resultCnt > 0)
+                                {
+                                    totalArea.AddRange(resultArea);
+                                }
+                            }
                             break;
                         }
                 }
-
-                inspWindow.AddInspResult(inspResult);
-            }
-
-            if (totalArea.Count > 0)
-            {
-                //찾은 위치를 이미지상에서 표시
-                var cameraForm = MainForm.GetDockForm<CameraForm>();
-                if (cameraForm != null)
+                if (inspAlgo.DoInspect())
                 {
-                    cameraForm.AddRect(totalArea);
+                    List<DrawInspectInfo> resultArea = new List<DrawInspectInfo>();
+                    int resultCnt = inspAlgo.GetResultRect (out resultArea);
+                    if(resultCnt > 0)
+                    {
+                        totalArea.AddRange(resultArea);
+                    }
                 }
             }
 
-            ResultForm resultForm = MainForm.GetDockForm<ResultForm>();
-            if (resultForm != null)
+            if(totalArea.Count > 0)
             {
-                resultForm.AddWindowResult(inspWindow);
+                var cameraForm = MainForm.GetDockForm<CameraForm>();
+                if(cameraForm != null)
+                {
+                    cameraForm.AddRect(totalArea);
+                }
             }
         }
 
@@ -385,8 +259,6 @@ namespace _251203_WinForm_Docking.Core
 
             inspWindow.WindowArea = rect;
             inspWindow.IsTeach = false;
-
-            SetTeachingImage(inspWindow);
             UpdateProperty(inspWindow);
             UpdateDiagramEntity();
 
@@ -439,9 +311,10 @@ namespace _251203_WinForm_Docking.Core
             UpdateProperty(inspWindow);
         }
 
+        //#MODEL#11 InspWindow 삭제하기
         public void DelInspWindow(InspWindow inspWindow)
         {
-            _model.DelInspWindow(inspWindow);
+            _model.DelInpWindow(inspWindow);
             UpdateDiagramEntity();
         }
 
@@ -451,6 +324,43 @@ namespace _251203_WinForm_Docking.Core
             _model.DelInspWindowList(inspWindowList);
             UpdateDiagramEntity();
         }
+
+        public void UpdateDiagramEntity()
+        {
+            CameraForm cameraForm = MainForm.GetDockForm<CameraForm>();
+            if(cameraForm != null)
+            {
+                cameraForm.UpdateDiagramEntity();
+            }
+
+            ModelTreeForm modelTreeForm = MainForm.GetDockForm<ModelTreeForm>();
+            if(modelTreeForm != null)
+            {
+                modelTreeForm.UpdateDiagramEntity();
+            }
+        }
+
+        private bool DisplayResult()
+        {
+            if (_blobAlgorithm is null)
+                return false;
+
+            List<DrawInspectInfo> resultArea = new List<DrawInspectInfo>();
+            int resultCnt = _blobAlgorithm.GetResultRect(out resultArea);
+            if (resultCnt > 0)
+            {
+                //찾은 위치를 이미지상에서 표시
+                var cameraForm = MainForm.GetDockForm<CameraForm>();
+                if (cameraForm != null)
+                {
+                    cameraForm.ResetDisplay();
+                    cameraForm.AddRect(resultArea);
+                }
+            }
+
+            return true;
+        }
+
 
         public void Grab(int bufferIndex)
         {
@@ -501,6 +411,18 @@ namespace _251203_WinForm_Docking.Core
             }
         }
 
+        public Bitmap GetCurrentImage()
+        {
+            Bitmap bitmap = null;
+            var cameraForm = MainForm.GetDockForm<CameraForm>();
+            if (cameraForm != null)
+            {
+                bitmap = cameraForm.GetDisplayImage();
+            }
+
+            return bitmap;
+        }
+
         public Bitmap GetBitmap(int bufferIndex = -1)
         {
             if (Global.Inst.InspStage.ImageSpace is null)
@@ -509,34 +431,11 @@ namespace _251203_WinForm_Docking.Core
             return Global.Inst.InspStage.ImageSpace.GetBitmap();
         }
 
-        public Mat GetMat(int bufferIndex = -1, eImageChannel imageChannel = eImageChannel.None)
+        public Mat GetMat()
         {
-            if(bufferIndex >= 0)
-                SelBufferIndex = bufferIndex;
-
-            if(imageChannel != eImageChannel.None)
-                SelImageChannel = imageChannel;
-
-            return Global.Inst.InspStage.ImageSpace.GetMat(SelBufferIndex, SelImageChannel);
+            return Global.Inst.InspStage.ImageSpace.GetMat();
         }
 
-        //#10_INSPWINDOW#14 변경된 모델 정보 갱신하여, ImageViewer와 모델트리에 반영
-        public void UpdateDiagramEntity()
-        {
-            CameraForm cameraForm = MainForm.GetDockForm<CameraForm>();
-            if (cameraForm != null)
-            {
-                cameraForm.UpdateDiagramEntity();
-            }
-
-            ModelTreeForm modelTreeForm = MainForm.GetDockForm<ModelTreeForm>();
-            if (modelTreeForm != null)
-            {
-                modelTreeForm.UpdateDiagramEntity();
-            }
-        }
-
-        //#7_BINARY_PREVIEW#5 이진화 임계값 변경시, 프리뷰 갱신
         public void RedrawMainView()
         {
             CameraForm cameraForm = MainForm.GetDockForm<CameraForm>();
@@ -544,40 +443,6 @@ namespace _251203_WinForm_Docking.Core
             {
                 cameraForm.UpdateImageViewer();
             }
-        }
-
-        public bool LoadModel(string filePath)
-        {
-            Console.Write($"모델 로딩:{filePath}");
-
-            _model = _model.Load(filePath);
-
-            if (_model is null)
-            {
-                Console.Write($"모델 로딩 실패:{filePath}");
-                return false;
-            }
-
-            string inspImagePath = _model.InspectImagePath;
-            if (File.Exists(inspImagePath))
-            {
-                Global.Inst.InspStage.SetImageBuffer(inspImagePath);
-            }
-
-            UpdateDiagramEntity();
-
-            return true;
-        }
-
-        public void SaveModel(string filePath)
-        {
-            Console.Write($"모델 저장:{filePath}");
-
-            //입력 경로가 없으면 현재 모델 저장
-            if (string.IsNullOrEmpty(filePath))
-                Global.Inst.InspStage.CurModel.Save();
-            else
-                Global.Inst.InspStage.CurModel.SaveAs(filePath);
         }
 
         #region Disposable

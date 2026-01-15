@@ -34,11 +34,6 @@
             this.imageSaveToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.setupToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.setupToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
-            this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
-            this.modelNewMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.modelOpenMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.modelSaveMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.modelSaveAsMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.mainMenu.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -58,11 +53,6 @@
             // fileToolStripMenuItem
             // 
             this.fileToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.modelNewMenuItem,
-            this.modelOpenMenuItem,
-            this.modelSaveMenuItem,
-            this.modelSaveAsMenuItem,
-            this.toolStripSeparator1,
             this.imageOpenToolStripMenuItem,
             this.imageSaveToolStripMenuItem});
             this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
@@ -72,14 +62,14 @@
             // imageOpenToolStripMenuItem
             // 
             this.imageOpenToolStripMenuItem.Name = "imageOpenToolStripMenuItem";
-            this.imageOpenToolStripMenuItem.Size = new System.Drawing.Size(270, 34);
+            this.imageOpenToolStripMenuItem.Size = new System.Drawing.Size(215, 34);
             this.imageOpenToolStripMenuItem.Text = "image Open";
             this.imageOpenToolStripMenuItem.Click += new System.EventHandler(this.imageOpenToolStripMenuItem_Click);
             // 
             // imageSaveToolStripMenuItem
             // 
             this.imageSaveToolStripMenuItem.Name = "imageSaveToolStripMenuItem";
-            this.imageSaveToolStripMenuItem.Size = new System.Drawing.Size(270, 34);
+            this.imageSaveToolStripMenuItem.Size = new System.Drawing.Size(215, 34);
             this.imageSaveToolStripMenuItem.Text = "image Save";
             // 
             // setupToolStripMenuItem
@@ -93,42 +83,9 @@
             // setupToolStripMenuItem1
             // 
             this.setupToolStripMenuItem1.Name = "setupToolStripMenuItem1";
-            this.setupToolStripMenuItem1.Size = new System.Drawing.Size(161, 34);
+            this.setupToolStripMenuItem1.Size = new System.Drawing.Size(270, 34);
             this.setupToolStripMenuItem1.Text = "Setup";
             this.setupToolStripMenuItem1.Click += new System.EventHandler(this.SetupMenuItem_Click);
-            // 
-            // toolStripSeparator1
-            // 
-            this.toolStripSeparator1.Name = "toolStripSeparator1";
-            this.toolStripSeparator1.Size = new System.Drawing.Size(267, 6);
-            // 
-            // modelNewMenuItem
-            // 
-            this.modelNewMenuItem.Name = "modelNewMenuItem";
-            this.modelNewMenuItem.Size = new System.Drawing.Size(270, 34);
-            this.modelNewMenuItem.Text = "Model New";
-            this.modelNewMenuItem.Click += new System.EventHandler(this.modelNewMenuItem_Click);
-            // 
-            // modelOpenMenuItem
-            // 
-            this.modelOpenMenuItem.Name = "modelOpenMenuItem";
-            this.modelOpenMenuItem.Size = new System.Drawing.Size(270, 34);
-            this.modelOpenMenuItem.Text = "Model Open";
-            this.modelOpenMenuItem.Click += new System.EventHandler(this.modelOpenMenuItem_Click);
-            // 
-            // modelSaveMenuItem
-            // 
-            this.modelSaveMenuItem.Name = "modelSaveMenuItem";
-            this.modelSaveMenuItem.Size = new System.Drawing.Size(270, 34);
-            this.modelSaveMenuItem.Text = "Model Save";
-            this.modelSaveMenuItem.Click += new System.EventHandler(this.modelSaveMenuItem_Click);
-            // 
-            // modelSaveAsMenuItem
-            // 
-            this.modelSaveAsMenuItem.Name = "modelSaveAsMenuItem";
-            this.modelSaveAsMenuItem.Size = new System.Drawing.Size(270, 34);
-            this.modelSaveAsMenuItem.Text = "Model Save As";
-            this.modelSaveAsMenuItem.Click += new System.EventHandler(this.modelSaveAsMenuItem_Click);
             // 
             // MainForm
             // 
@@ -154,10 +111,5 @@
         private System.Windows.Forms.ToolStripMenuItem imageSaveToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem setupToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem setupToolStripMenuItem1;
-        private System.Windows.Forms.ToolStripMenuItem modelNewMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem modelOpenMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem modelSaveMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem modelSaveAsMenuItem;
-        private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
     }
 }

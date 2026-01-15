@@ -14,13 +14,12 @@ namespace _251203_WinForm_Docking.Core
 {
     public enum eImageChannel : int
     {
-        None = -1,
         Color,
         Gray,
         Red,
         Green,
         Blue,
-        ChannelCount,
+        ChannelCount = 5,
     }
     public class ImageSpace : IDisposable
     {
@@ -193,9 +192,6 @@ namespace _251203_WinForm_Docking.Core
                 return;
 
             Dispose();
-
-            _imageByChannel.Clear();
-            _imageInfo.Clear();
 
             Func<int, ImageInfo> newImageInfo = (x) =>
             {
@@ -387,7 +383,7 @@ namespace _251203_WinForm_Docking.Core
             if (_imageInfo.Count <= index)
                 return null;
 
-            if (channel == eImageChannel.Color)
+            if (channel == eImageChannel.Gray)
             {
                 return _imageInfo[index].ToMat();
             }

@@ -28,25 +28,9 @@ namespace _251203_WinForm_Docking.UIControl
         DeleteList,
         UpdateImage
     }
-
-    public struct InspectResultCount
-    {
-        public int Total { get; set; }
-        public int OK { get; set; }
-        public int NG { get; set; }
-
-        public InspectResultCount(int _totalCount, int _okCount, int _ngCount)
-        {
-            Total = _totalCount;
-            OK = _okCount;
-            NG = _ngCount;
-        }
-    }
     public partial class ImageViewCtrl : UserControl
     {
         public event EventHandler<DiagramEntityEventArgs> DiagramEntityEvent;
-
-        private bool _isInitialized = false;
 
         private Bitmap _bitmapImage = null;
 
@@ -63,9 +47,9 @@ namespace _251203_WinForm_Docking.UIControl
         private float MinZoom = 1.0f;
         private const float MaxZoom = 100.0f;
 
-        private List<DrawInspectInfo> _rectInfos = new List<DrawInspectInfo>();
+        private bool _isInitialized = false;
 
-        private InspectResultCount _inspectResultCount = new InspectResultCount();
+        private List<DrawInspectInfo> _rectInfos = new List<DrawInspectInfo>();
 
         private Point _roiStart = Point.Empty;
         private Rectangle _roiRect = Rectangle.Empty;
@@ -82,7 +66,7 @@ namespace _251203_WinForm_Docking.UIControl
         private List<DiagramEntity> _diagramEntityList = new List<DiagramEntity>();
 
         private List<DiagramEntity> _multiSelectedEntities = new List<DiagramEntity>();
-        private List<DiagramEntity> _copyBuffer = new List<DiagramEntity>();
+        private List<DiagramEntity> _copyBuffer = new List<DiagramEntity> ();
         private Point _mousePos;
 
         private DiagramEntity _selEntity;
@@ -107,7 +91,6 @@ namespace _251203_WinForm_Docking.UIControl
             _contextMenu.Items.Add(new ToolStripSeparator());
             _contextMenu.Items.Add("Teaching", null, OnTeachingClicked);
             _contextMenu.Items.Add("Unlock", null, OnUnlockClicked);
-            _contextMenu.Items.Add("Auto_Teaching", null, OnAuto_TeachingClicked);
 
             MouseWheel += new MouseEventHandler(ImageViewCtrl_MouseWheel);
         }
@@ -122,7 +105,7 @@ namespace _251203_WinForm_Docking.UIControl
 
         public Color GetWindowColor(InspWindowType inspWindowType)
         {
-            Color color = Color.LightBlue;
+            Color color = Color.White;
 
             switch (inspWindowType)
             {
@@ -165,6 +148,41 @@ namespace _251203_WinForm_Docking.UIControl
             ImageRect = new RectangleF(offsetX, offsetY, virtualWidth, virtualHeight);
         }
 
+        private void FitImageToScreen()
+        {
+            RecalcZoomRatio();
+
+            float NewWidth = _bitmapImage.Width * _curZoom;
+            float NewHeight = _bitmapImage.Height * _curZoom;
+
+            ImageRect = new RectangleF((Width - NewWidth) / 2, (Height - NewHeight) / 2, NewWidth, NewHeight);
+        }
+
+        private void RecalcZoomRatio()
+        {
+            if (_bitmapImage == null || Width <= 0 || Height <= 0)
+                return;
+
+            Size imageSize = new Size(_bitmapImage.Width, _bitmapImage.Height);
+
+            float aspectRatio = (float)imageSize.Height / (float)imageSize.Width;
+            float clinetAspect = (float)Height / (float)Width;
+
+            float ratio;
+            if (aspectRatio <= clinetAspect)
+                ratio = (float)Width / (float)imageSize.Width;
+            else
+                ratio = (float)Height / (float)imageSize.Height;
+
+            float minZoom = ratio;
+
+            MinZoom = minZoom;
+
+            _curZoom = Math.Max(MinZoom, Math.Min(MaxZoom, ratio));
+
+            Invalidate();
+        }
+
         public void LoadBitmap(Bitmap bitmap)
         {
             if (_bitmapImage != null)
@@ -189,52 +207,6 @@ namespace _251203_WinForm_Docking.UIControl
             }
 
             FitImageToScreen();
-        }
-
-        private void FitImageToScreen()
-        {
-            if (_bitmapImage is null)
-                return;
-
-            RecalcZoomRatio();
-
-            float NewWidth = _bitmapImage.Width * _curZoom;
-            float NewHeight = _bitmapImage.Height * _curZoom;
-
-            // 이미지가 UserControl 중앙에 배치되도록 정렬
-            ImageRect = new RectangleF(
-                (Width - NewWidth) / 2, // UserControl 너비에서 이미지 너비를 뺀 후, 절반을 왼쪽 여백으로 설정하여 중앙 정렬
-                (Height - NewHeight) / 2,
-                NewWidth,
-                NewHeight
-            );
-
-            Invalidate();
-        }
-
-        private void RecalcZoomRatio()
-        {
-            if (_bitmapImage == null || Width <= 0 || Height <= 0)
-                return;
-
-            Size imageSize = new Size(_bitmapImage.Width, _bitmapImage.Height);
-
-            float aspectRatio = (float)imageSize.Height / (float)imageSize.Width;
-            float clientAspect = (float)Height / (float)Width;
-
-            float ratio;
-            if (aspectRatio <= clientAspect)
-                ratio = (float)Width / (float)imageSize.Width;
-            else
-                ratio = (float)Height / (float)imageSize.Height;
-
-            float minZoom = ratio;
-
-            MinZoom = minZoom;
-
-            _curZoom = Math.Max(MinZoom, Math.Min(MaxZoom, ratio));
-
-            Invalidate();
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -320,11 +292,6 @@ namespace _251203_WinForm_Docking.UIControl
                 }
             }
 
-            if(_multiSelectedEntities.Count <= 1 && _selEntity != null)
-            {
-                DrawInspParam(g, _selEntity.LinkedWindow);
-            }
-
             if (_isBoxSelecting && !_selectionBox.IsEmpty)
             {
                 using (Pen pen = new Pen(Color.LightSkyBlue, 3))
@@ -395,16 +362,6 @@ namespace _251203_WinForm_Docking.UIControl
                     }
                 }
             }
-
-            if(_inspectResultCount.Total > 0)
-            {
-                string resultText = $"Total: {_inspectResultCount.Total}\r\nOK: {_inspectResultCount.OK}\r\nNG: {_inspectResultCount.NG}";
-
-                float fontSize = 12.0f;
-                Color resultColor = Color.FromArgb(255, 255, 255);
-                PointF textPos = new PointF(Width - 80, 10);
-                DrawText(g, resultText, textPos, fontSize, resultColor);
-            }
         }
 
         private void DrawText(Graphics g, string text, PointF position, float fontSize, Color color)
@@ -424,44 +381,6 @@ namespace _251203_WinForm_Docking.UIControl
                 }
 
                 g.DrawString(text, font, textBrush, position);
-            }
-        }
-
-        public void UpdateInspParam()
-        {
-            _extSize.Width = _extSize.Height = 0;
-
-            if (_selEntity is null)
-                return;
-
-            InspWindow window = _selEntity.LinkedWindow;
-            if (window is null)
-                return;
-
-            MatchAlgorithm matchAlgo = (MatchAlgorithm)window.FindInspAlgorithm(InspectType.InspMatch);
-            if(matchAlgo != null)
-            {
-                _extSize.Width = matchAlgo.ExtSize.Width;
-                _extSize.Height = matchAlgo.ExtSize.Height;
-            }
-        }
-
-        private void DrawInspParam(Graphics g, InspWindow window)
-        {
-            if (_extSize.Width > 0 || _extSize.Height > 0)
-            {
-                Rectangle extArea = new Rectangle(_roiRect.Left - _extSize.Width,
-                    _roiRect.Top - _extSize.Height,
-                    _roiRect.Width + _extSize.Width * 2,
-                    _roiRect.Height + _extSize.Height * 2);
-                Rectangle screenRect = VirtualToScreen(extArea);
-
-                using (Pen pen = new Pen(Color.White, 2))
-                {
-                    pen.DashStyle = DashStyle.Dot;
-                    pen.Width = 2;
-                    g.DrawRectangle(pen, screenRect);
-                }
             }
         }
 
@@ -526,8 +445,6 @@ namespace _251203_WinForm_Docking.UIControl
                         _roiRect = entity.EntityROI;
                         _isMovingRoi = true;
                         _moveStart = e.Location;
-
-                        UpdateInspParam();
                         break;
                     }
 
@@ -837,20 +754,6 @@ namespace _251203_WinForm_Docking.UIControl
             _roiRect = ScreenToVirtual(roi);
         }
 
-        private void ImageViewCtrl_MouseWheel(object sender, MouseEventArgs e)
-        {
-            if (e.Delta < 0)
-                ZoomMove(_curZoom / _zoomFactor, e.Location);
-            else
-                ZoomMove(_curZoom * _zoomFactor, e.Location);
-
-            if (_bitmapImage != null)
-            {
-                ImageRect.Width = _bitmapImage.Width * _curZoom;
-                ImageRect.Height = _bitmapImage.Height * _curZoom;
-            }
-            Invalidate();
-        }
         private void ZoomMove(float zoom, Point zoomOrigin)
         {
             PointF virtualOrigin = ScreenToVirtual(new PointF(zoomOrigin.X, zoomOrigin.Y));
@@ -920,7 +823,20 @@ namespace _251203_WinForm_Docking.UIControl
                 virtualPos.Y * _curZoom + offset.Y);
         }
 
-        
+        private void ImageViewCtrl_MouseWheel(object sender, MouseEventArgs e)
+        {
+            if (e.Delta < 0)
+                ZoomMove(_curZoom / _zoomFactor, e.Location);
+            else
+                ZoomMove(_curZoom * _zoomFactor, e.Location);
+
+            if (_bitmapImage != null)
+            {
+                ImageRect.Width = _bitmapImage.Width * _curZoom;
+                ImageRect.Height = _bitmapImage.Height * _curZoom;
+            }
+            Invalidate();
+        }
         public Bitmap GetCurBitmap()
         {
             return _bitmapImage;
@@ -936,90 +852,6 @@ namespace _251203_WinForm_Docking.UIControl
         {
             _rectInfos.Clear();
             Invalidate();
-        }
-
-        public void SetInspResultCount(InspectResultCount inspectResultCount)
-        {
-            _inspectResultCount = inspectResultCount;
-        }
-
-        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
-        {
-            _isCtrlPressed = keyData == Keys.Control;
-
-            if (keyData == (Keys.Control | Keys.C))
-            {
-                CopySelectedROIs();
-            }
-            else if (keyData == (Keys.Control | Keys.V))
-            {
-                PasteROIsAt();
-            }
-            else
-            {
-                switch (keyData)
-                {
-                    case Keys.Delete:
-                        {
-                            if (_selEntity != null)
-                            {
-                                DeleteSelEntity();
-                            }
-                        }
-                        break;
-                    case Keys.Enter:
-                        {
-                            InspWindow selWindow = null;
-                            if (_selEntity != null)
-                                selWindow = _selEntity.LinkedWindow;
-
-                            DiagramEntityEvent?.Invoke(this, new DiagramEntityEventArgs(EntityActionType.Inspect, selWindow));
-                        }
-                        break;
-                }
-            }
-
-            return base.ProcessCmdKey(ref msg, keyData);
-        }
-        // ─── 복사(Ctrl+C) ----------------------------------------------------------
-        private void CopySelectedROIs() // #ROI COPYPASTE#
-        {
-            _copyBuffer.Clear();
-            for (int i = 0; i < _multiSelectedEntities.Count; i++)
-            {
-                _copyBuffer.Add(_multiSelectedEntities[i]);
-            }
-        }
-
-        // ─── 붙여넣기(Ctrl+V) ------------------------------------------------------
-        private void PasteROIsAt() // #ROI COPYPASTE#
-        {
-            if (_copyBuffer.Count == 0)
-                return;
-
-            // ① 기준점(마우스)을 Virtual 좌표로 변환
-            PointF virtBase = ScreenToVirtual(_mousePos);
-
-            foreach (var entity in _copyBuffer)
-            {
-                int dx = (int)(virtBase.X - entity.EntityROI.Left + 0.5f);
-                int dy = (int)(virtBase.Y - entity.EntityROI.Top + 0.5f);
-                var newRect = entity.EntityROI;
-
-                DiagramEntityEvent?.Invoke(this,
-                    new DiagramEntityEventArgs(EntityActionType.Copy, entity.LinkedWindow,
-                                                entity.LinkedWindow?.InspWindowType ?? InspWindowType.None,
-                                                newRect, new Point(dx, dy)));
-            }
-            Invalidate();
-        }
-
-        protected override void OnKeyUp(KeyEventArgs e)
-        {
-            if (e.KeyCode == Keys.Control)
-                _isCtrlPressed = false;
-
-            base.OnKeyUp(e);
         }
 
         public bool SetDiagramEntityList(List<DiagramEntity> diagramEntityList)
@@ -1078,11 +910,6 @@ namespace _251203_WinForm_Docking.UIControl
                 return;
 
             _selEntity.IsHold = false;
-        }
-
-        private void OnAuto_TeachingClicked(object sender, EventArgs e)
-        {
-
         }
 
         private void DeleteSelEntity()
