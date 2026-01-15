@@ -70,7 +70,8 @@ namespace _251203_WinForm_Docking
 
                     //#7_BINARY_PREVIEW#8 이진화 속성 변경시 발생하는 이벤트 추가
                     blobProp.RangeChanged += RangeSlider_RangeChanged;
-                    //blobProp.PropertyChanged += PropertyChanged;
+
+                    blobProp.ImageChannelChanged += ImageChannelChanged;
                     curProp = blobProp;
                     break;
                 case InspectType.InspMatch:
@@ -151,6 +152,11 @@ namespace _251203_WinForm_Docking
         private void PropertyChanged(object sender, EventArgs e)
         {
             Global.Inst.InspStage.RedrawMainView();
+        }
+
+        private void ImageChannelChanged(object sender, ImageChannelEventArgs e)
+        {
+            Global.Inst.InspStage.SetPreviewImage(e.Channel);
         }
     }
 }

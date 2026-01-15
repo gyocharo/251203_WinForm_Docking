@@ -43,8 +43,6 @@ namespace _251203_WinForm_Docking.Algorithm
             target.IsInspected = this.IsInspected;
             target.TeachRect = this.TeachRect;
             target.InspRect = this.InspRect;
-            target.ImageChannel = this.ImageChannel;
-            // NOTE: _srcImage 는 런타임 검사용이라 복사하지 않음
         }
 
         public virtual void SetInspData(Mat srcImage)

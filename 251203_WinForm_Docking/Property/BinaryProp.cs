@@ -22,6 +22,8 @@ namespace _251203_WinForm_Docking.Property
     }
     public partial class BinaryProp : UserControl
     {
+        public event EventHandler<ImageChannelEventArgs> ImageChannelChanged;
+
         public event EventHandler<RangeChangedEventArgs> RangeChanged;
 
         BlobAlgorithm _blobAlgo = null;
@@ -46,6 +48,12 @@ namespace _251203_WinForm_Docking.Property
 
             binRangeTrackbar.ValueLeft = 0;
             binRangeTrackbar.ValueRight = 128;
+
+            cmbChannel.Items.Add("Gray");
+            cmbChannel.Items.Add("Red");
+            cmbChannel.Items.Add("Green");
+            cmbChannel.Items.Add("Blue");
+            cmbChannel.SelectedIndex = 0;
 
             cmbHighlight.Items.Add("사용안함");
             cmbHighlight.Items.Add("빨간색");
@@ -254,6 +262,11 @@ namespace _251203_WinForm_Docking.Property
 
         private void cmbHighlight_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (_blobAlgo is null)
+                return;
+
+            _blobAlgo.ImageChannel = (eImageChannel)cmbChannel.SelectedIndex + 1;
+            ImageChannelChanged?.Invoke(this, new ImageChannelEventArgs(_blobAlgo.ImageChannel));
             UpdateBinary();
         }
 
@@ -305,6 +318,27 @@ namespace _251203_WinForm_Docking.Property
             _updateDataGridView = true;
         }
 
+        private void cmbChannel_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_blobAlgo is null)
+                return;
+
+            _blobAlgo.ImageChannel = (eImageChannel)cmbChannel.SelectedIndex + 1;
+            ImageChannelChanged?.Invoke(this, new ImageChannelEventArgs(_blobAlgo.ImageChannel));
+        }
+    }
+
+    public class ImageChannelEventArgs : EventArgs
+    {
+        public eImageChannel Channel { get; }
+        public int UpperValue { get; }
+        public bool Invert { get; }
+        public ShowBinaryMode ShowBinMode { get; }
+
+        public ImageChannelEventArgs(eImageChannel channel)
+        {
+            Channel = channel;
+        }
     }
 
     //이진화 관련 이벤트 발생시, 전달할 값 추가

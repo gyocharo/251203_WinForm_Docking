@@ -76,15 +76,10 @@ namespace _251203_WinForm_Docking
             imageViewer.LoadBitmap((Bitmap)bitmap);
         }
 
-        public Mat GetDisplayImage()
-        {
-            return Global.Inst.InspStage.ImageSpace.GetMat(0, _currentImageChannel);
-        }
-
         private void CameraForm_Resize(object sender, EventArgs e)
         {
             int margin = 0;
-            imageViewer.Width = this.Width - mainViewToolbar.Width - margin * 2;
+            imageViewer.Width = this.Width - margin * 2;
             imageViewer.Height = this.Height - margin * 2;
 
             imageViewer.Location = new System.Drawing.Point(margin, margin);
@@ -95,7 +90,7 @@ namespace _251203_WinForm_Docking
             if (bitmap == null)
             {
                 //#6_INSP_STAGE#3 업데이트시 bitmap이 없다면 InspSpace에서 가져온다
-                bitmap = Global.Inst.InspStage.GetBitmap(0, _currentImageChannel);
+                bitmap = Global.Inst.InspStage.GetBitmap(0);
                 if (bitmap == null)
                     return;
             }
@@ -104,9 +99,13 @@ namespace _251203_WinForm_Docking
                 imageViewer.LoadBitmap(bitmap);
         }
 
+        public Mat GetDisplayImage()
+        {
+            return Global.Inst.InspStage.ImageSpace.GetMat();
+        }
+
         public void UpdateImageViewer()
         {
-            imageViewer.UpdateInspParam();
             imageViewer.Invalidate();
         }
 

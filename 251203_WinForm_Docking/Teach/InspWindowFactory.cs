@@ -67,6 +67,9 @@ namespace _251203_WinForm_Docking.Teach
                     inspWindow.AddInspAlgorithm(InspectType.InspMatch);
                     inspWindow.AddInspAlgorithm(InspectType.InspBinary);
                     break;
+                case InspWindowType.ID:
+                    inspWindow.AddInspAlgorithm(InspectType.InspMatch);
+                    break;
             }
             return true;
         }
@@ -88,6 +91,10 @@ namespace _251203_WinForm_Docking.Teach
                 case InspWindowType.Sub:
                     name = "Sub";
                     prefix = "SUB";
+                    break;
+                case InspWindowType.ID:
+                    name = "ID";
+                    prefix = "ID";
                     break;
                 default:
                     return false;

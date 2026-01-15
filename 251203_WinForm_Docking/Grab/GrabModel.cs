@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using _251203_WinForm_Docking.Util;
 
 namespace _251203_WinForm_Docking.Grab
 {
@@ -60,12 +61,18 @@ namespace _251203_WinForm_Docking.Grab
 
         internal bool InitGrab()
         {
+            SLogger.Write("Grab 초기화 시작!");
+
             if (!Create())
                 return false;
 
             if (!Open())
-                return false;
+            {
+                if (!Reconnect())
+                    return false;
+            }
 
+            SLogger.Write("Grab 초기화 성공!");
             return true;
         }
 

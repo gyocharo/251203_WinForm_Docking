@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using _251203_WinForm_Docking.Grab;
+using _251203_WinForm_Docking.Util;
 
 namespace _251203_WinForm_Docking.Setting
 {
@@ -32,6 +33,8 @@ namespace _251203_WinForm_Docking.Setting
             SettingXml.Inst.CamType = (CameraType)cbCameraType.SelectedIndex;
 
             SettingXml.Save();
+
+            SLogger.Write($"카메라 설정 저장");
         }
 
         private void btnApply_Click(object sender, EventArgs e)

@@ -1,6 +1,7 @@
 ﻿using _251203_WinForm_Docking.Core;
 using _251203_WinForm_Docking.Setting;
 using _251203_WinForm_Docking.Teach;
+using _251203_WinForm_Docking.Util;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -33,6 +34,8 @@ namespace _251203_WinForm_Docking
             LoadDockingWindows();
 
             Global.Inst.Initialize();
+
+            LoadSetting();
         }
 
         private void LoadDockingWindows()
@@ -58,10 +61,19 @@ namespace _251203_WinForm_Docking
             var modelTreeWindow = new ModelTreeForm();
             modelTreeWindow.Show(runForm.Pane, DockAlignment.Right, 0.3);
 
+            var logForm = new LogForm();
+            logForm.Show(propForm.Pane, DockAlignment.Bottom, 0.3);
+
             //로그폼 크기 변경
             /*LogForm logForm = new LogForm();
             logForm.Show(propForm.Pane, DockAlignment.Bottom, 0.4);*/
         }
+
+        private void LoadSetting()
+        {
+            cycleModeMenuItem.Checked = SettingXml.Inst.CycleMode;
+        }
+
         public static T GetDockForm<T>() where T : DockContent
         {
             var findForm = _dockPanel.Contents.OfType<T>().FirstOrDefault();
@@ -91,6 +103,7 @@ namespace _251203_WinForm_Docking
 
         private void SetupMenuItem_Click(object sender, EventArgs e)
         {
+            SLogger.Write($"환경설정창 열기");
             SetupForm setupForm = new SetupForm();
             setupForm.ShowDialog();
         }
@@ -164,6 +177,12 @@ namespace _251203_WinForm_Docking
                     Global.Inst.InspStage.SaveModel(filePath);
                 }
             }
+        }
+
+        private void cycleModeMenuItem_Click(object sender, EventArgs e)
+        {
+            bool isChecked = cycleModeMenuItem.Checked;
+            SettingXml.Inst.CycleMode = isChecked;
         }
     }
 }

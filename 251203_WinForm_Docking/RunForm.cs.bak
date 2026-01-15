@@ -27,8 +27,6 @@ namespace _251203_WinForm_Docking
 
         private void btnStart_Click(object sender, EventArgs e)
         {
-            //#15_INSP_WORKER#10 카메라 타입에 따라 자동 검사 모드 설정
-
             string serialID = $"{DateTime.Now:MM-dd HH:mm:ss}";
             Global.Inst.InspStage.InspectReady("LOT_NUMBER", serialID);
 

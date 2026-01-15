@@ -8,6 +8,7 @@ using OpenCvSharp;
 using System.Windows.Forms;
 using System.Data;
 using System.Xml.Serialization;
+using _251203_WinForm_Docking.Util;
 
 namespace _251203_WinForm_Docking.Algorithm
 {
@@ -35,6 +36,50 @@ namespace _251203_WinForm_Docking.Algorithm
         public MatchAlgorithm()
         {
             InspectType = InspectType.InspMatch;
+        }
+
+        public class AutoTeachResult
+        {
+            public Point Location { get; set; }
+            public float Score { get; set; }
+        }
+
+        public List<AutoTeachResult> AutoTeaching(
+            Mat image,
+            Point leftTopPos,
+            int minScore,
+            int maxCount)
+        {
+            List<AutoTeachResult> results = new List<AutoTeachResult>();
+
+            if (_templateImages.Count <= 0)
+                return results;
+
+            Mat result = new Mat();
+            float threshold = minScore / 100.0f;
+
+            Cv2.MatchTemplate(image, _templateImages[0], result, TemplateMatchModes.CCoeffNormed);
+
+            for (int y = 0; y < result.Rows; y += _scanStep)
+            {
+                for (int x = 0; x < result.Cols; x += _scanStep)
+                {
+                    float score = result.At<float>(y, x);
+                    if (score < threshold)
+                        continue;
+
+                    results.Add(new AutoTeachResult()
+                    {
+                        Location = new Point(x + leftTopPos.X, y + leftTopPos.Y),
+                        Score = score
+                    });
+                }
+            }
+
+            return results
+                .OrderByDescending(r => r.Score)
+                .Take(maxCount)
+                .ToList();
         }
 
         public override InspAlgorithm Clone()
@@ -101,7 +146,7 @@ namespace _251203_WinForm_Docking.Algorithm
             OutScore = (int)(maxScore * 100);
             OutPoint = maxLoc + leftTopPos;
 
-            Console.Write($"최적 매칭 위치 : {maxLoc}, 신뢰도 : {maxScore:F2}");
+            SLogger.Write($"최적 매칭 위치 : {maxLoc}, 신뢰도 : {maxScore:F2}");
 
             return true;
         }

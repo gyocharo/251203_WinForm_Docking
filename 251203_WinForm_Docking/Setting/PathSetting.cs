@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using _251203_WinForm_Docking.Util;
 
 namespace _251203_WinForm_Docking.Setting
 {
@@ -31,6 +32,8 @@ namespace _251203_WinForm_Docking.Setting
             SettingXml.Inst.ImageDir = txtImageDir.Text;
 
             SettingXml.Save();
+
+            SLogger.Write($"경로 설정 저장");
         }
 
         private void btnSelModelDir_Click(object sender, EventArgs e)

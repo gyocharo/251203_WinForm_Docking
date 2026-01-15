@@ -216,10 +216,12 @@ namespace _251203_WinForm_Docking.Algorithm
 
         private bool InspBlobFilter(Mat binImage)
         {
+            // 컨투어 찾기
             Point[][] contours;
             HierarchyIndex[] hierarchy;
             Cv2.FindContours(binImage, out contours, out hierarchy, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
 
+            // 필터링된 객체를 담을 리스트
             Mat filteredImage = Mat.Zeros(binImage.Size(), MatType.CV_8UC1);
 
             if (_findArea is null)
@@ -240,10 +242,12 @@ namespace _251203_WinForm_Docking.Algorithm
                 int showHeight = 0;
 
                 BlobFilter areaFilter = BlobFilters[FILTER_AREA];
+
                 if (areaFilter.isUse)
                 {
                     if (areaFilter.min > 0 && area < areaFilter.min)
                         continue;
+
                     if (areaFilter.max > 0 && area > areaFilter.max)
                         continue;
 
@@ -254,11 +258,14 @@ namespace _251203_WinForm_Docking.Algorithm
                 RotatedRect rotatedRect = Cv2.MinAreaRect(contour);
                 Size2d blobSize = new Size2d(boundingRect.Width, boundingRect.Height);
 
+                // RotatedRect 정보 계산
                 if (UseRotatedRect)
                 {
+                    // 너비와 높이 가져오기
                     float width = rotatedRect.Size.Width;
                     float height = rotatedRect.Size.Height;
 
+                    // 장축과 단축 구분
                     blobSize.Width = Math.Max(width, height);
                     blobSize.Height = Math.Min(width, height);
                 }
@@ -266,9 +273,10 @@ namespace _251203_WinForm_Docking.Algorithm
                 BlobFilter widthFilter = BlobFilters[FILTER_WIDTH];
                 if (widthFilter.isUse)
                 {
-                    if(widthFilter.min > 0 && blobSize.Width < widthFilter.min)
+                    if (widthFilter.min > 0 && blobSize.Width < widthFilter.min)
                         continue;
-                    if(widthFilter.max > 0 && blobSize.Width > widthFilter.max)
+
+                    if (widthFilter.max > 0 && blobSize.Width > widthFilter.max)
                         continue;
 
                     showWidth = (int)(blobSize.Width + 0.5f);
@@ -279,11 +287,15 @@ namespace _251203_WinForm_Docking.Algorithm
                 {
                     if (heightFilter.min > 0 && blobSize.Height < heightFilter.min)
                         continue;
-                    if(heightFilter.max > 0 && blobSize.Height > heightFilter.max)
+
+                    if (heightFilter.max > 0 && blobSize.Height > heightFilter.max)
                         continue;
 
                     showHeight = (int)(blobSize.Height + 0.5f);
                 }
+
+                // 필터링된 객체를 이미지에 그림
+                //Cv2.DrawContours(filteredImage, new Point[][] { contour }, -1, Scalar.White, -1);
 
                 findBlobCount++;
                 Rect blobRect = boundingRect + InspRect.TopLeft;
@@ -305,13 +317,15 @@ namespace _251203_WinForm_Docking.Algorithm
                     if (featureInfo != "")
                         featureInfo += "\r\n";
 
-                    featureInfo += $"H : {showHeight}";
+                    featureInfo += $"H:{showHeight}";
                 }
 
+                //검사된 정보를 문자열로 저장
                 string blobInfo;
                 blobInfo = $"Blob X:{blobRect.X}, Y:{blobRect.Y}, Size({blobRect.Width},{blobRect.Height})";
                 ResultString.Add(blobInfo);
 
+                //검사된 영역 정보를 DrawInspectInfo로 저장
                 DrawInspectInfo rectInfo = new DrawInspectInfo(blobRect, featureInfo, InspectType.InspBinary, DecisionType.Info);
 
                 if (UseRotatedRect)
@@ -335,6 +349,11 @@ namespace _251203_WinForm_Docking.Algorithm
                     IsDefect = true;
 
                 if (IsDefect == false && countFilter.max > 0 && findBlobCount > countFilter.max)
+                    IsDefect = true;
+            }
+            else
+            {
+                if (_findArea.Count > 0)
                     IsDefect = true;
             }
 
