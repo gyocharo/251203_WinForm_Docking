@@ -173,7 +173,7 @@ namespace _251203_WinForm_Docking.Core
             }
         }
         public bool UseImageSplit { get; set; } = true;
-        public int BufferCount { get; set; } = 0;
+        public int BufferCount { get; set; } = 1;
 
         public ImageSpace()
         {

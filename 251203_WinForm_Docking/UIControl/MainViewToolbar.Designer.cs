@@ -1,4 +1,4 @@
-﻿namespace JidamVision4.UIControl
+﻿namespace _251203_WinForm_Docking.UIControl
 {
     partial class MainViewToolbar
     {
@@ -50,10 +50,11 @@
             // 
             // MainViewToolbar
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 12F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 18F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.Name = "MainViewToolbar";
-            this.Size = new System.Drawing.Size(109, 418);
+            this.Size = new System.Drawing.Size(155, 553);
             this.ResumeLayout(false);
 
         }

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using _251203_WinForm_Docking.Grab;
+using _251203_WinForm_Docking.Sequence;
 using Common.Util.Helpers;
 
 namespace _251203_WinForm_Docking.Setting
@@ -81,7 +82,7 @@ namespace _251203_WinForm_Docking.Setting
 
         public SettingXml() { }
 
-        public string MachineName { get; set; } = "Jidam";
+        public string MachineName { get; set; } = "VISION02";
 
         public string ModelDir { get; set; } = "";
         public string ImageDir { get; set; } = "";
@@ -89,5 +90,9 @@ namespace _251203_WinForm_Docking.Setting
         public CameraType CamType { get; set; } = CameraType.WebCam;
 
         public bool CycleMode { get; set; } = false;
+
+        public CommunicatorType CommType { get; set; }
+
+        public string CommIP { get; set; } = "127.0.0.1";
     }
 }

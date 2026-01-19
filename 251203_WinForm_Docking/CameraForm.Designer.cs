@@ -29,7 +29,7 @@
         private void InitializeComponent()
         {
             this.imageViewer = new _251203_WinForm_Docking.UIControl.ImageViewCtrl();
-            this.mainViewToolbar = new JidamVision4.UIControl.MainViewToolbar();
+            this.mainViewToolbar = new _251203_WinForm_Docking.UIControl.MainViewToolbar();
             this.SuspendLayout();
             // 
             // imageViewer
@@ -67,6 +67,6 @@
         #endregion
 
         private UIControl.ImageViewCtrl imageViewer;
-        private JidamVision4.UIControl.MainViewToolbar mainViewToolbar;
+        private _251203_WinForm_Docking.UIControl.MainViewToolbar mainViewToolbar;
     }
 }

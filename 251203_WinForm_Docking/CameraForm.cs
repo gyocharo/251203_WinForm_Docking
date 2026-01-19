@@ -15,7 +15,6 @@ using _251203_WinForm_Docking.Algorithm;
 using _251203_WinForm_Docking.Teach;
 using _251203_WinForm_Docking.UIControl;
 using _251203_WinForm_Docking.Util;
-using JidamVision4.UIControl;
 
 namespace _251203_WinForm_Docking
 {

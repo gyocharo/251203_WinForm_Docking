@@ -32,6 +32,9 @@ namespace _251203_WinForm_Docking.Setting
             PathSetting pathSetting = new PathSetting();
             AddTabControl(pathSetting, "path");
 
+            CommunicatorSetting commSetting = new CommunicatorSetting();
+            AddTabControl(commSetting, "Communicator");
+
             tabSetting.SelectTab(0);
         }
         private void AddTabControl(UserControl control, string tabName)

@@ -19,6 +19,7 @@ using _251203_WinForm_Docking.Inspect;
 using Microsoft.Win32;
 using _251203_WinForm_Docking.Util;
 using System.Windows.Forms;
+using _251203_WinForm_Docking.Sequence;
 
 namespace _251203_WinForm_Docking.Core
 {
@@ -53,8 +54,15 @@ namespace _251203_WinForm_Docking.Core
 
         public bool UseCamera { get; set; } = false;
 
+        public bool SaveCamImage { get; set; } = false;
+        public int SaveImageIndex { get; set; } = 0;
+
+        private string _capturePath = "";
+
         private string _lotNumber;
         private string _serialID;
+
+        private bool _isInspectMode = false;
 
         public InspStage() { }
 
@@ -98,6 +106,8 @@ namespace _251203_WinForm_Docking.Core
 
         public bool Initialize()
         {
+            LoadSetting();
+
             SLogger.Write("InspStage 초기화!");
             _imageSpace = new ImageSpace();
 
@@ -108,9 +118,11 @@ namespace _251203_WinForm_Docking.Core
             _imageLoader = new ImageLoader();
 
             //#16_LAST_MODELOPEN#2 REGISTRY 키 생성
-            _regKey = Registry.CurrentUser.CreateSubKey("Software\\JidamVision");
+            _regKey = Registry.CurrentUser.CreateSubKey("Software\\WinDocking");
 
             _model = new Model();
+
+            LoadSetting();
 
             switch (_camType)
             {
@@ -132,6 +144,9 @@ namespace _251203_WinForm_Docking.Core
 
                 InitModelGrab(MAX_GRAB_BUF);
             }
+
+            VisionSequence.Inst.InitSequence();
+            VisionSequence.Inst.SeqCommand += SeqCommand;
 
             //#16_LAST_MODELOPEN#5 마지막 모델 열기 여부 확인
             if (!LastestModelOpen())
@@ -450,6 +465,18 @@ namespace _251203_WinForm_Docking.Core
 
             _imageSpace.Split(bufferIndex);
 
+            if (SaveCamImage && Directory.Exists(_capturePath))
+            {
+                Mat curImage = GetMat(0, eImageChannel.Color);
+
+                if (curImage != null)
+                {
+                    string imageName = $"{++SaveImageIndex:D4}.png";
+                    string savePath = Path.Combine(_capturePath, imageName);
+                    curImage.SaveImage(savePath);
+                }
+            }
+
             DisplayGrabImage(bufferIndex);
 
             //#8_LIVE#2 LIVE 모드일때, Grab을 계속 실행하여, 반복되도록 구현
@@ -460,6 +487,9 @@ namespace _251203_WinForm_Docking.Core
                 await Task.Delay(100);
                 _grabManager.Grab(bufferIndex, true);
             }
+
+            if (_isInspectMode)
+                RunInspect();
         }
 
         private void DisplayGrabImage(int bufferIndex)
@@ -667,6 +697,9 @@ namespace _251203_WinForm_Docking.Core
             if (_inspWorker != null)
                 _inspWorker.Stop();
 
+            VisionSequence.Inst.StopAutoRun();
+            _isInspectMode = false;
+
             SetWorkingState(WorkingState.NONE);
         }
 
@@ -688,6 +721,64 @@ namespace _251203_WinForm_Docking.Core
             return true;
         }
 
+        private void SeqCommand(object sender, SeqCmd seqCmd, object Param)
+        {
+            switch (seqCmd)
+            {
+                case SeqCmd.InspStart:
+                    {
+                        SLogger.Write("MMI : InspStart", SLogger.LogType.Info);
+
+                        string errMsg;
+
+                        if(UseCamera)
+                        {
+                            if (!Grab(0))
+                            {
+                                errMsg = string.Format("Failed to grab");
+                                SLogger.Write(errMsg, SLogger.LogType.Error);
+                            }
+                        }
+                        else
+                        {
+                            if (!VirtualGrab())
+                            {
+                                errMsg = string.Format("Failed to virtual grab");
+                                SLogger.Write(errMsg, SLogger.LogType.Error);
+                            }
+                        }
+                    }
+                    break;
+                case SeqCmd.InspEnd:
+                    {
+                        SLogger.Write("MMI : InspEnd", SLogger.LogType.Info);
+
+                        string errMsg = "";
+
+                        SLogger.Write("검사 종료");
+
+                        VisionSequence.Inst.VisionCommand(Vision2Mmi.InspEnd, errMsg);
+                    }
+                    break;
+            }
+        }
+
+        private void RunInspect()
+        {
+            ResetDisplay();
+
+            bool isDefect = false;
+            if (!_inspWorker.RunInspect(out isDefect))
+            {
+                string errMsg = string.Format("Failed to inspect");
+                SLogger.Write(errMsg, SLogger.LogType.Error);
+            }
+
+            //#WCF_FSM#6 비젼 -> 제어에 검사 완료 및 결과 전송
+            VisionSequence.Inst.VisionCommand(Vision2Mmi.InspDone, isDefect);
+        }
+
+
         //검사를 위한 준비 작업
         public bool InspectReady(string lotNumber, string serialID)
         {
@@ -707,6 +798,32 @@ namespace _251203_WinForm_Docking.Core
         public bool StartAutoRun()
         {
             SLogger.Write("Action : StartAutoRun");
+            
+            if (SaveCamImage && _model != null)
+            {
+                SaveImageIndex = 0;
+
+                _capturePath = Path.Combine(Path.GetDirectoryName(_model.ModelPath), "Capture");
+                if (!Directory.Exists(_capturePath))
+                {
+                    Directory.CreateDirectory(_capturePath);
+                }
+                else
+                {
+                    string[] files = Directory.GetFiles(_capturePath);
+                    foreach (string file in files)
+                    {
+                        try
+                        {
+                            File.Delete(file);
+                        }
+                        catch (Exception ex)
+                        {
+                            SLogger.Write($"Failed to delete file: {file}. Exception: {ex.Message}", SLogger.LogType.Error);
+                        }
+                    }
+                }
+            }
 
             string modelPath = CurModel.ModelPath;
             if (modelPath == "")
@@ -721,6 +838,10 @@ namespace _251203_WinForm_Docking.Core
 
             SetWorkingState(WorkingState.INSPECT);
 
+            string modelName = Path.GetFileNameWithoutExtension(modelPath);
+            VisionSequence.Inst.StartAutoRun(modelName);
+            _isInspectMode = true;
+
             return true;
         }
 
@@ -734,6 +855,15 @@ namespace _251203_WinForm_Docking.Core
             }
         }
 
+        public void SetExposure(long exposureTime)
+        {
+            if (_grabManager != null)
+            {
+                _grabManager.SetExposureTime(exposureTime);
+            }
+        }
+
+
         #region Disposable
 
         private bool disposed = false; // to detect redundant calls
@@ -745,6 +875,8 @@ namespace _251203_WinForm_Docking.Core
                 if (disposing)
                 {
                     // Dispose managed resources.
+
+                    VisionSequence.Inst.SeqCommand -= SeqCommand;
 
                     if (_grabManager != null)
                     {
@@ -767,7 +899,6 @@ namespace _251203_WinForm_Docking.Core
                 disposed = true;
             }
         }
-
 
 
         public void Dispose()

@@ -14,15 +14,16 @@ using System.IO;
 using _251203_WinForm_Docking.Setting;
 using System.Runtime.Remoting.Channels;
 
-namespace JidamVision4.UIControl
+namespace _251203_WinForm_Docking.UIControl
 {
+
     /*
     #18_IMAGE_CHANNEL# - <<<이미지 채널 설정 기능>>> 
     검사에서 이미지 채널을 사용할 수 있도록 설정 기능 추가
     1) UIControl / MainViewToolbar 유저컨트롤 생성
     2) CameraFrom에 MainViewToolbar 컨트롤 추가
     3) #18_IMAGE_CHANNEL#1 ~ 14
-   */
+    */
 
     public enum ToolbarButton
     {
@@ -126,9 +127,9 @@ namespace JidamVision4.UIControl
             // ───────────────── Assemble ─────────────────
             bar.Items.AddRange(new ToolStripItem[]
             {
-                _showROIButton,
-                new ToolStripSeparator(),
-                _dropDownButton
+            _showROIButton,
+            new ToolStripSeparator(),
+            _dropDownButton
             });
 
             Controls.Add(bar);
@@ -188,5 +189,4 @@ namespace JidamVision4.UIControl
             IsChecked = isChecked;
         }
     }
-
 }

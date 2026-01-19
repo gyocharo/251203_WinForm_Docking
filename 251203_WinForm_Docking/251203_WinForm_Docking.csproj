@@ -57,6 +57,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\ExternalLib\DLL\Log4Net\log4net.dll</HintPath>
     </Reference>
+    <Reference Include="MessagingLibrary">
+      <HintPath>..\ExternalLib\DLL\MessagingLibrary\MessagingLibrary.dll</HintPath>
+    </Reference>
     <Reference Include="MvCameraControl.Net">
       <HintPath>..\ExternalLib\DLL\HikRobot\MvCameraControl.Net.dll</HintPath>
     </Reference>
@@ -78,6 +81,7 @@
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.ServiceModel" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -191,11 +195,19 @@
     <Compile Include="RunForm.Designer.cs">
       <DependentUpon>RunForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="Sequence\Communicator.cs" />
+    <Compile Include="Sequence\VisionSequence.cs" />
     <Compile Include="Setting\CameraSetting.cs">
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="Setting\CameraSetting.Designer.cs">
       <DependentUpon>CameraSetting.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Setting\CommunicatorSetting.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Setting\CommunicatorSetting.Designer.cs">
+      <DependentUpon>CommunicatorSetting.cs</DependentUpon>
     </Compile>
     <Compile Include="Setting\PathSetting.cs">
       <SubType>UserControl</SubType>
@@ -249,9 +261,6 @@
     <Compile Include="Util\ImageLoader.cs" />
     <Compile Include="Util\SLogger.cs" />
     <Compile Include="Util\XmlHelper.cs" />
-    <EmbeddedResource Include="Auto_Teaching.resx">
-      <DependentUpon>Auto_Teaching.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="CameraForm.resx">
       <DependentUpon>CameraForm.cs</DependentUpon>
     </EmbeddedResource>
@@ -298,6 +307,9 @@
     <EmbeddedResource Include="Setting\CameraSetting.resx">
       <DependentUpon>CameraSetting.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="Setting\CommunicatorSetting.resx">
+      <DependentUpon>CommunicatorSetting.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Setting\PathSetting.resx">
       <DependentUpon>PathSetting.cs</DependentUpon>
     </EmbeddedResource>
@@ -335,6 +347,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\trash.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadata Include="Connected Services\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
