@@ -147,6 +147,10 @@ namespace PureGate.Property
                 return;
             }
 
+
+            lv_Result.Items.Clear();
+            lbx_ResultDetail.Items.Clear();
+
             _saigeAI.InspAIModule(bitmap);
 
             Bitmap resultImage = _saigeAI.GetResultImage();

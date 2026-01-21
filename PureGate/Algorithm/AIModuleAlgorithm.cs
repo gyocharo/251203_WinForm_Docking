@@ -61,13 +61,11 @@ namespace PureGate.Algorithm
             if (_saigeAI == null)
                 _saigeAI = Global.Inst.InspStage.AIModule;
 
-            Bitmap roiBmp;
             using (Mat roiMat = new Mat(_srcImage, InspRect))
+            using (Bitmap roiBmp = BitmapConverter.ToBitmap(roiMat))
             {
-                roiBmp = BitmapConverter.ToBitmap(roiMat);
+                _saigeAI.InspAIModule(roiBmp);
             }
-
-            _saigeAI.InspAIModule(roiBmp);
 
             var result = _saigeAI.GetResult();
             if (result == null)

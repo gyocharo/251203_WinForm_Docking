@@ -76,7 +76,7 @@ namespace PureGate.Setting
         private static SettingXml CreateDefaultInstance()
         {
             SettingXml setting = new SettingXml();
-            setting.ModelDir = @"d:\model";
+            setting.ModelDir = @"c:\Model";
             return setting;
         }
 

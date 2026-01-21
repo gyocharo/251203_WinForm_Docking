@@ -28,157 +28,181 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.mainMenu = new System.Windows.Forms.MenuStrip();
-            this.fileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.modelNewMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.modelOpenMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.modelSaveMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.modelSaveAsMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
-            this.imageOpenToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.imageSaveToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.setupToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.setupToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
-            this.inspectToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.cycleModeMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.mainMenu.SuspendLayout();
+            this.components = new System.ComponentModel.Container();
+            this.SideMenu = new System.Windows.Forms.Panel();
+            this.btnCycleMode = new System.Windows.Forms.Button();
+            this.btnSetUp = new System.Windows.Forms.Button();
+            this.btnSetROI = new System.Windows.Forms.Button();
+            this.btnImage = new System.Windows.Forms.Button();
+            this.btnModel = new System.Windows.Forms.Button();
+            this.checkBoxHide = new System.Windows.Forms.CheckBox();
+            this.btnOverview = new System.Windows.Forms.Button();
+            this.pictureBox1 = new System.Windows.Forms.PictureBox();
+            this.timerSliding = new System.Windows.Forms.Timer(this.components);
+            this.SideMenu.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.SuspendLayout();
             // 
-            // mainMenu
+            // SideMenu
             // 
-            this.mainMenu.GripMargin = new System.Windows.Forms.Padding(2, 2, 0, 2);
-            this.mainMenu.ImageScalingSize = new System.Drawing.Size(24, 24);
-            this.mainMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.fileToolStripMenuItem,
-            this.setupToolStripMenuItem,
-            this.inspectToolStripMenuItem});
-            this.mainMenu.Location = new System.Drawing.Point(0, 0);
-            this.mainMenu.Name = "mainMenu";
-            this.mainMenu.Size = new System.Drawing.Size(1978, 33);
-            this.mainMenu.TabIndex = 0;
-            this.mainMenu.Text = "menuStrip1";
+            this.SideMenu.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(224)))), ((int)(((byte)(224)))), ((int)(((byte)(224)))));
+            this.SideMenu.Controls.Add(this.btnCycleMode);
+            this.SideMenu.Controls.Add(this.btnSetUp);
+            this.SideMenu.Controls.Add(this.btnSetROI);
+            this.SideMenu.Controls.Add(this.btnImage);
+            this.SideMenu.Controls.Add(this.btnModel);
+            this.SideMenu.Controls.Add(this.checkBoxHide);
+            this.SideMenu.Controls.Add(this.btnOverview);
+            this.SideMenu.Controls.Add(this.pictureBox1);
+            this.SideMenu.Location = new System.Drawing.Point(0, 0);
+            this.SideMenu.Name = "SideMenu";
+            this.SideMenu.Size = new System.Drawing.Size(261, 1444);
+            this.SideMenu.TabIndex = 3;
             // 
-            // fileToolStripMenuItem
+            // btnCycleMode
             // 
-            this.fileToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.modelNewMenuItem,
-            this.modelOpenMenuItem,
-            this.modelSaveMenuItem,
-            this.modelSaveAsMenuItem,
-            this.toolStripSeparator1,
-            this.imageOpenToolStripMenuItem,
-            this.imageSaveToolStripMenuItem});
-            this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
-            this.fileToolStripMenuItem.Size = new System.Drawing.Size(55, 29);
-            this.fileToolStripMenuItem.Text = "File";
+            this.btnCycleMode.Dock = System.Windows.Forms.DockStyle.Top;
+            this.btnCycleMode.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnCycleMode.Font = new System.Drawing.Font("굴림", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(129)));
+            this.btnCycleMode.ForeColor = System.Drawing.Color.Black;
+            this.btnCycleMode.Location = new System.Drawing.Point(0, 373);
+            this.btnCycleMode.Name = "btnCycleMode";
+            this.btnCycleMode.Size = new System.Drawing.Size(261, 67);
+            this.btnCycleMode.TabIndex = 11;
+            this.btnCycleMode.Text = "Cycle Mode";
+            this.btnCycleMode.UseVisualStyleBackColor = true;
+            this.btnCycleMode.Click += new System.EventHandler(this.btnCycleMode_Click);
             // 
-            // modelNewMenuItem
+            // btnSetUp
             // 
-            this.modelNewMenuItem.Name = "modelNewMenuItem";
-            this.modelNewMenuItem.Size = new System.Drawing.Size(237, 34);
-            this.modelNewMenuItem.Text = "Model New";
-            this.modelNewMenuItem.Click += new System.EventHandler(this.modelNewMenuItem_Click);
+            this.btnSetUp.Dock = System.Windows.Forms.DockStyle.Bottom;
+            this.btnSetUp.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnSetUp.Font = new System.Drawing.Font("굴림", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(129)));
+            this.btnSetUp.ForeColor = System.Drawing.Color.Black;
+            this.btnSetUp.Location = new System.Drawing.Point(0, 1344);
+            this.btnSetUp.Name = "btnSetUp";
+            this.btnSetUp.Size = new System.Drawing.Size(261, 67);
+            this.btnSetUp.TabIndex = 10;
+            this.btnSetUp.Text = "SetUp";
+            this.btnSetUp.UseVisualStyleBackColor = true;
+            this.btnSetUp.Click += new System.EventHandler(this.btnSetUp_Click);
             // 
-            // modelOpenMenuItem
+            // btnSetROI
             // 
-            this.modelOpenMenuItem.Name = "modelOpenMenuItem";
-            this.modelOpenMenuItem.Size = new System.Drawing.Size(237, 34);
-            this.modelOpenMenuItem.Text = "Model Open";
-            this.modelOpenMenuItem.Click += new System.EventHandler(this.modelOpenMenuItem_Click);
+            this.btnSetROI.Dock = System.Windows.Forms.DockStyle.Top;
+            this.btnSetROI.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnSetROI.Font = new System.Drawing.Font("굴림", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(129)));
+            this.btnSetROI.ForeColor = System.Drawing.Color.Black;
+            this.btnSetROI.Location = new System.Drawing.Point(0, 306);
+            this.btnSetROI.Name = "btnSetROI";
+            this.btnSetROI.Size = new System.Drawing.Size(261, 67);
+            this.btnSetROI.TabIndex = 9;
+            this.btnSetROI.Text = "Set ROI";
+            this.btnSetROI.UseVisualStyleBackColor = true;
+            this.btnSetROI.Click += new System.EventHandler(this.btnSetROI_Click);
             // 
-            // modelSaveMenuItem
+            // btnImage
             // 
-            this.modelSaveMenuItem.Name = "modelSaveMenuItem";
-            this.modelSaveMenuItem.Size = new System.Drawing.Size(237, 34);
-            this.modelSaveMenuItem.Text = "Model Save";
-            this.modelSaveMenuItem.Click += new System.EventHandler(this.modelSaveMenuItem_Click);
+            this.btnImage.Dock = System.Windows.Forms.DockStyle.Top;
+            this.btnImage.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnImage.Font = new System.Drawing.Font("굴림", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(129)));
+            this.btnImage.ForeColor = System.Drawing.Color.Black;
+            this.btnImage.Location = new System.Drawing.Point(0, 239);
+            this.btnImage.Name = "btnImage";
+            this.btnImage.Size = new System.Drawing.Size(261, 67);
+            this.btnImage.TabIndex = 13;
+            this.btnImage.Text = "Image";
+            this.btnImage.UseVisualStyleBackColor = true;
+            this.btnImage.Click += new System.EventHandler(this.btnImage_Click);
             // 
-            // modelSaveAsMenuItem
+            // btnModel
             // 
-            this.modelSaveAsMenuItem.Name = "modelSaveAsMenuItem";
-            this.modelSaveAsMenuItem.Size = new System.Drawing.Size(237, 34);
-            this.modelSaveAsMenuItem.Text = "Model Save As";
-            this.modelSaveAsMenuItem.Click += new System.EventHandler(this.modelSaveAsMenuItem_Click);
+            this.btnModel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(224)))), ((int)(((byte)(224)))), ((int)(((byte)(224)))));
+            this.btnModel.Dock = System.Windows.Forms.DockStyle.Top;
+            this.btnModel.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnModel.Font = new System.Drawing.Font("굴림", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(129)));
+            this.btnModel.ForeColor = System.Drawing.Color.Black;
+            this.btnModel.Location = new System.Drawing.Point(0, 172);
+            this.btnModel.Name = "btnModel";
+            this.btnModel.Size = new System.Drawing.Size(261, 67);
+            this.btnModel.TabIndex = 8;
+            this.btnModel.Text = "Model";
+            this.btnModel.UseVisualStyleBackColor = false;
+            this.btnModel.Click += new System.EventHandler(this.btnModel_Click);
             // 
-            // toolStripSeparator1
+            // checkBoxHide
             // 
-            this.toolStripSeparator1.Name = "toolStripSeparator1";
-            this.toolStripSeparator1.Size = new System.Drawing.Size(234, 6);
+            this.checkBoxHide.Appearance = System.Windows.Forms.Appearance.Button;
+            this.checkBoxHide.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(224)))), ((int)(((byte)(224)))), ((int)(((byte)(224)))));
+            this.checkBoxHide.Dock = System.Windows.Forms.DockStyle.Bottom;
+            this.checkBoxHide.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.checkBoxHide.Font = new System.Drawing.Font("굴림", 11F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(129)));
+            this.checkBoxHide.ForeColor = System.Drawing.Color.Black;
+            this.checkBoxHide.Location = new System.Drawing.Point(0, 1411);
+            this.checkBoxHide.Name = "checkBoxHide";
+            this.checkBoxHide.Size = new System.Drawing.Size(261, 33);
+            this.checkBoxHide.TabIndex = 6;
+            this.checkBoxHide.Text = "<";
+            this.checkBoxHide.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.checkBoxHide.UseVisualStyleBackColor = false;
+            this.checkBoxHide.Click += new System.EventHandler(this.checkBoxHide_CheckedChanged);
             // 
-            // imageOpenToolStripMenuItem
+            // btnOverview
             // 
-            this.imageOpenToolStripMenuItem.Name = "imageOpenToolStripMenuItem";
-            this.imageOpenToolStripMenuItem.Size = new System.Drawing.Size(237, 34);
-            this.imageOpenToolStripMenuItem.Text = "image Open";
-            this.imageOpenToolStripMenuItem.Click += new System.EventHandler(this.imageOpenToolStripMenuItem_Click);
+            this.btnOverview.Dock = System.Windows.Forms.DockStyle.Top;
+            this.btnOverview.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnOverview.Font = new System.Drawing.Font("굴림", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(129)));
+            this.btnOverview.ForeColor = System.Drawing.Color.Black;
+            this.btnOverview.Location = new System.Drawing.Point(0, 105);
+            this.btnOverview.Name = "btnOverview";
+            this.btnOverview.Size = new System.Drawing.Size(261, 67);
+            this.btnOverview.TabIndex = 2;
+            this.btnOverview.Text = "Overview";
+            this.btnOverview.UseVisualStyleBackColor = true;
+            this.btnOverview.Click += new System.EventHandler(this.btnOverview_Click);
             // 
-            // imageSaveToolStripMenuItem
+            // pictureBox1
             // 
-            this.imageSaveToolStripMenuItem.Name = "imageSaveToolStripMenuItem";
-            this.imageSaveToolStripMenuItem.Size = new System.Drawing.Size(237, 34);
-            this.imageSaveToolStripMenuItem.Text = "image Save";
+            this.pictureBox1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(224)))), ((int)(((byte)(224)))), ((int)(((byte)(224)))));
+            this.pictureBox1.Dock = System.Windows.Forms.DockStyle.Top;
+            this.pictureBox1.Image = global::PureGate.Properties.Resources.이미지;
+            this.pictureBox1.Location = new System.Drawing.Point(0, 0);
+            this.pictureBox1.Name = "pictureBox1";
+            this.pictureBox1.Size = new System.Drawing.Size(261, 105);
+            this.pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
+            this.pictureBox1.TabIndex = 12;
+            this.pictureBox1.TabStop = false;
             // 
-            // setupToolStripMenuItem
+            // timerSliding
             // 
-            this.setupToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.setupToolStripMenuItem1});
-            this.setupToolStripMenuItem.Name = "setupToolStripMenuItem";
-            this.setupToolStripMenuItem.Size = new System.Drawing.Size(75, 29);
-            this.setupToolStripMenuItem.Text = "Setup";
-            // 
-            // setupToolStripMenuItem1
-            // 
-            this.setupToolStripMenuItem1.Name = "setupToolStripMenuItem1";
-            this.setupToolStripMenuItem1.Size = new System.Drawing.Size(161, 34);
-            this.setupToolStripMenuItem1.Text = "Setup";
-            this.setupToolStripMenuItem1.Click += new System.EventHandler(this.SetupMenuItem_Click);
-            // 
-            // inspectToolStripMenuItem
-            // 
-            this.inspectToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.cycleModeMenuItem});
-            this.inspectToolStripMenuItem.Name = "inspectToolStripMenuItem";
-            this.inspectToolStripMenuItem.Size = new System.Drawing.Size(87, 29);
-            this.inspectToolStripMenuItem.Text = "Inspect";
-            // 
-            // cycleModeMenuItem
-            // 
-            this.cycleModeMenuItem.CheckOnClick = true;
-            this.cycleModeMenuItem.Name = "cycleModeMenuItem";
-            this.cycleModeMenuItem.Size = new System.Drawing.Size(270, 34);
-            this.cycleModeMenuItem.Text = "Cycle Mode";
-            this.cycleModeMenuItem.Click += new System.EventHandler(this.cycleModeMenuItem_Click);
+            this.timerSliding.Interval = 10;
+            this.timerSliding.Tick += new System.EventHandler(this.timerSliding_Tick);
             // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 18F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1978, 1444);
-            this.Controls.Add(this.mainMenu);
-            this.MainMenuStrip = this.mainMenu;
             this.Name = "MainForm";
-            this.Text = "MainForm";
-            this.mainMenu.ResumeLayout(false);
-            this.mainMenu.PerformLayout();
+            this.Text = "PureGate";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.MainForm_FormClosing);
+            this.SideMenu.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
             this.ResumeLayout(false);
-            this.PerformLayout();
 
         }
 
         #endregion
 
-        private System.Windows.Forms.MenuStrip mainMenu;
-        private System.Windows.Forms.ToolStripMenuItem fileToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem imageOpenToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem imageSaveToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem setupToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem setupToolStripMenuItem1;
-        private System.Windows.Forms.ToolStripMenuItem modelNewMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem modelOpenMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem modelSaveMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem modelSaveAsMenuItem;
-        private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
-        private System.Windows.Forms.ToolStripMenuItem inspectToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem cycleModeMenuItem;
+        private System.Windows.Forms.Panel SideMenu;
+        private System.Windows.Forms.Button btnCycleMode;
+        private System.Windows.Forms.Button btnSetUp;
+        private System.Windows.Forms.Button btnSetROI;
+        private System.Windows.Forms.Button btnModel;
+        private System.Windows.Forms.CheckBox checkBoxHide;
+        private System.Windows.Forms.Button btnOverview;
+        private System.Windows.Forms.PictureBox pictureBox1;
+        private System.Windows.Forms.Timer timerSliding;
+        private System.Windows.Forms.Button btnImage;
     }
 }
