@@ -96,6 +96,8 @@ namespace PureGate
 
         public void ShowProperty(InspWindow window)
         {
+            LoadOptionControl(InspectType.InspAIModule);
+
             foreach (InspAlgorithm algo in window.AlgorithmList)
             {
                 LoadOptionControl(algo.InspectType);

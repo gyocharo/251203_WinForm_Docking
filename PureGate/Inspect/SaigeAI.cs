@@ -245,7 +245,11 @@ namespace PureGate
 
             Bitmap resultImage = _bitmap.Clone(new Rectangle(0, 0, _bitmap.Width, _bitmap.Height), System.Drawing.Imaging.PixelFormat.Format24bppRgb);
 
-            int size = int.Parse(AIModuleProp.saigeaiprop.txt_Area.Text);
+            int size = 0; // 기본값
+            var text = AIModuleProp.saigeaiprop?.txt_Area?.Text?.Trim();
+
+            if (!int.TryParse(text, out size))
+                size = 0;
 
             switch (_engineType)
             {
