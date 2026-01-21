@@ -1008,7 +1008,9 @@ namespace PureGate.UIControl
         {
             lock (_lock)
             {
+                _diagramEntityList.Clear();
                 _rectInfos.Clear();
+                _selEntity = null;
             }
             Invalidate();
         }
