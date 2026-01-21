@@ -12,6 +12,7 @@ namespace PureGate.Algorithm
 
     [XmlInclude(typeof(MatchAlgorithm))]
     [XmlInclude(typeof(BlobAlgorithm))]
+    [XmlInclude(typeof(AIModuleAlgorithm))]
     public abstract class InspAlgorithm
     {
         public InspectType InspectType { get; set; } = InspectType.InspNone;

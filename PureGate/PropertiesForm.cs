@@ -2,6 +2,9 @@
 using PureGate.Core;
 using PureGate.Property;
 using PureGate.Teach;
+using PureGate.UIControl;
+using OpenCvSharp;
+using OpenCvSharp.Extensions;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -60,7 +63,7 @@ namespace PureGate
             _allTabs[tabName] = newTab;
         }
 
-        private UserControl CreateUserControl(InspectType inspPropType)
+        private UserControl CreateUserControl(InspectType inspPropType, InspAlgorithm algo = null)
         {
             UserControl curProp = null;
             switch (inspPropType)
@@ -70,10 +73,11 @@ namespace PureGate
 
                     //#7_BINARY_PREVIEW#8 이진화 속성 변경시 발생하는 이벤트 추가
                     blobProp.RangeChanged += RangeSlider_RangeChanged;
-
+                    //#18_IMAGE_CHANNEL#13 이미지 채널 변경시 이벤트 추가
                     blobProp.ImageChannelChanged += ImageChannelChanged;
                     curProp = blobProp;
                     break;
+                //#11_MATCHING#5 패턴매칭 속성창 추가
                 case InspectType.InspMatch:
                     MatchInspProp matchProp = new MatchInspProp();
                     matchProp.PropertyChanged += PropertyChanged;

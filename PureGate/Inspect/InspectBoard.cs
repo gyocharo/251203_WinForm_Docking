@@ -1,11 +1,11 @@
-﻿using System;
+﻿using PureGate.Algorithm;
+using PureGate.Core;
+using PureGate.Teach;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using PureGate.Algorithm;
-using PureGate.Teach;
-using PureGate.Core;
 using OpenCvSharp;
 
 namespace PureGate.Inspect
@@ -60,6 +60,9 @@ namespace PureGate.Inspect
                         int max = blobAlgo.BlobFilters[blobAlgo.FILTER_COUNT].max;
 
                         inspResult.ResultValue = $"{blobAlgo.OutBlobCount}/{min}~{max}";
+                        break;
+                    case InspectType.InspAIModule:
+                        AIModuleAlgorithm AIModuleAlgo = algo as AIModuleAlgorithm;
                         break;
                 }
 
