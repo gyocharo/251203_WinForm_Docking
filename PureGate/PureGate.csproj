@@ -67,7 +67,7 @@
       <HintPath>..\ExternalLib\DLL\ObjectListView\ObjectListView.dll</HintPath>
     </Reference>
     <Reference Include="OpenCvSharp">
-      <HintPath>..\..\251124_NuGet\library\OpenCvSharp.dll</HintPath>
+      <HintPath>..\ExternalLib\DLL\OpenCv\OpenCvSharp.dll</HintPath>
     </Reference>
     <Reference Include="OpenCvSharp.Extensions">
       <HintPath>..\ExternalLib\DLL\OpenCv\OpenCvSharp.Extensions.dll</HintPath>
