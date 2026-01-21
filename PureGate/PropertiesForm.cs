@@ -22,6 +22,15 @@ namespace PureGate
         public PropertiesForm()
         {
             InitializeComponent();
+
+            ShowAIModuleOnly();
+        }
+
+        // AIModuleProp만 출력하기 위함
+        public void ShowAIModuleOnly()
+        {
+            ResetProperty();
+            LoadOptionControl(InspectType.InspAIModule);
         }
 
         private void LoadOptionControl(InspectType inspType)

@@ -358,8 +358,10 @@ namespace PureGate.Core
             var propForm = MainForm.GetDockForm<PropertiesForm>();
             if(propForm != null)
             {
-                if(inspWindow is null){
-                    propForm.ResetProperty();
+                if (inspWindow is null)
+                {
+                    // ROI 선택 전에는 AIModuleProp만 표시
+                    propForm.ShowAIModuleOnly();
                     return;
                 }
 
