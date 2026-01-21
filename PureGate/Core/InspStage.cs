@@ -687,11 +687,35 @@ namespace PureGate.Core
 
             ResetDisplay();
 
+            // ✅ ROI(검사 윈도우)가 하나도 없으면: AIModuleProp의 "적용"과 동일 흐름으로 검사
+            //    (검사 버튼 누를 때마다 다음 이미지로 넘어가는 VirtualGrab/Grab 흐름은 그대로 유지됨)
+            if (CurModel != null && (CurModel.InspWindowList == null || CurModel.InspWindowList.Count == 0))
+            {
+                // 모델/엔진이 로드된 경우에만 실행 (안전 가드)
+                if (AIModule != null && AIModule.IsEngineLoaded)
+                {
+                    Bitmap bitmap = GetBitmap();
+                    if (bitmap != null)
+                    {
+                        AIModule.InspAIModule(bitmap);
+                        Bitmap resultImage = AIModule.GetResultImage();
+                        UpdateDisplay(resultImage);
+                        return true;
+                    }
+                }
+
+                // 엔진이 없거나 이미지가 없으면 "검사 실패"로 처리하지 않고,
+                // 다음 검사 버튼에서 계속 다음 이미지로 넘어가도록 true 유지
+                return true;
+            }
+
+            // ✅ ROI가 있으면 기존 검사 로직 그대로
             bool isDefect;
             if (!_inspWorker.RunInspect(out isDefect))
                 return false;
 
             return true;
+
         }
 
         public void StopCycle()

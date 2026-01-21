@@ -66,6 +66,24 @@ namespace PureGate
                     throw new NotSupportedException("지원하지 않는 엔진 타입입니다.");
             }
         }
+
+        public bool IsEngineLoaded
+        {
+            get
+            {
+                switch (_engineType)
+                {
+                    case EngineType.IAD:
+                        return _iadEngine != null;
+                    case EngineType.SEG:
+                        return _segEngine != null;
+                    case EngineType.DET:
+                        return _detEngine != null;
+                    default:
+                        return false;
+                }
+            }
+        }
         public void RunSEG(string txt)
         {
             DisposeMode();
