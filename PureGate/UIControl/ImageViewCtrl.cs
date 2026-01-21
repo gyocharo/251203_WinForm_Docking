@@ -79,6 +79,12 @@ namespace PureGate.UIControl
         private int _resizeDirection = -1;
         private const int _ResizeHandleSize = 10;
 
+        //Pan기능을 위한 필드 추가
+        private bool _isPanning = false;
+        private Point _panStart = Point.Empty;
+        private PointF _panImageStart = PointF.Empty;
+
+
         private InspWindowType _newRoiType = InspWindowType.None;
 
         private List<DiagramEntity> _diagramEntityList = new List<DiagramEntity>();
@@ -505,6 +511,17 @@ namespace PureGate.UIControl
         {
             _isCtrlPressed = (ModifierKeys & Keys.Control) == Keys.Control;
 
+            if (e.Button == MouseButtons.Middle)
+            {
+                _isPanning = true;
+                _panStart = e.Location;
+                _panImageStart = new PointF(ImageRect.X, ImageRect.Y);
+
+                Cursor = Cursors.Hand;
+                Capture = true;          // 컨트롤 밖으로 나가도 드래그 유지
+                return;                  // 기존 좌클릭/우클릭 로직 영향 X
+            }
+
             if (e.Button == MouseButtons.Left)
             {
                 if (_newRoiType != InspWindowType.None)
@@ -587,7 +604,19 @@ namespace PureGate.UIControl
         {
             _mousePos = e.Location;
 
-            if(e.Button == MouseButtons.Left)
+            if (_isPanning)
+            {
+                int dx = e.X - _panStart.X;
+                int dy = e.Y - _panStart.Y;
+
+                ImageRect.X = _panImageStart.X + dx;
+                ImageRect.Y = _panImageStart.Y + dy;
+
+                Invalidate();
+                return; // 기존 ROI 이동/리사이즈/박스셀렉트 로직 영향 X
+            }
+
+            if (e.Button == MouseButtons.Left)
             {
                 if (_isSelectingRoi)
                 {
@@ -675,6 +704,13 @@ namespace PureGate.UIControl
 
         private void ImageViewCtrl_MouseUp(object sender, MouseEventArgs e)
         {
+            if (e.Button == MouseButtons.Middle && _isPanning)
+            {
+                _isPanning = false;
+                Capture = false;
+                Cursor = Cursors.Arrow;
+                return; // 기존 좌클릭 MouseUp 로직 영향 X
+            }
             if (e.Button == MouseButtons.Left)
             {
                 if (_isSelectingRoi)
