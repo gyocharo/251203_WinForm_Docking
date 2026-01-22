@@ -68,6 +68,9 @@ namespace PureGate.Property
                 case EngineType.DET:
                     filter = "Detection Files|*.saigedet;";
                     break;
+                case EngineType.CLS:
+                    filter = "Classification Files|*.saigecls;";
+                    break;
             }
 
             using (OpenFileDialog openFileDialog = new OpenFileDialog())
