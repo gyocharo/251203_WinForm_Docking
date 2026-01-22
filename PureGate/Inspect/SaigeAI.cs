@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Drawing.Imaging;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -156,6 +157,7 @@ namespace PureGate
 
             ClassificationOption option = _clsEngine.GetInferenceOption();
             option.CalcTime = true;
+            option.CalcClassActivationMap = false;
 
             _clsEngine.SetInferenceOption(option);
         }
