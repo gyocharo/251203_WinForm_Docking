@@ -1121,13 +1121,7 @@ namespace PureGate.UIControl
 
         private void OnAuto_TeachingClicked(object sender, EventArgs e)
         {
-            if (_selEntity is null)
-                return;
-
-            InspWindow window = _selEntity.LinkedWindow;
-
-            Auto_Teaching auto_Teaching = new Auto_Teaching();
-            auto_Teaching.ShowDialog();
+            
         }
 
         private void DeleteSelEntity()
@@ -1152,6 +1146,15 @@ namespace PureGate.UIControl
                 DiagramEntityEvent?.Invoke(this, new DiagramEntityEventArgs(EntityActionType.Delete, linkedWindow));
             }
         }
+
+        public void CancelNewRoi()
+        {
+            _newRoiType = InspWindowType.None;
+            _isSelectingRoi = false;
+            Cursor = Cursors.Arrow;
+            Invalidate();
+        }
+
     }
     public class DiagramEntityEventArgs : EventArgs
     {

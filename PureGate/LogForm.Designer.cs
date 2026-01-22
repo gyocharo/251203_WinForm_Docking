@@ -35,6 +35,7 @@
             // 
             this.listBoxLogs.Dock = System.Windows.Forms.DockStyle.Fill;
             this.listBoxLogs.FormattingEnabled = true;
+            this.listBoxLogs.HorizontalScrollbar = true;
             this.listBoxLogs.ItemHeight = 18;
             this.listBoxLogs.Location = new System.Drawing.Point(0, 0);
             this.listBoxLogs.Name = "listBoxLogs";

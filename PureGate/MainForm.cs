@@ -35,28 +35,34 @@ namespace PureGate
         // CycleMode 눌림 표시를 위한 상태 변수 선언
         private bool _isCycleMode = false;
 
-        //슬라이딩 메뉴의 최대, 최소 폭 크기
-        const int MAX_SLIDING_WIDTH = 100;
+        //슬라이딩 메뉴의 최대, 최소 폭 크기, 슬라이딩 메뉴가 보이는/접히는 속도, 최초 슬라이딩 메뉴 크기
+        const int MAX_SLIDING_WIDTH = 150;
         const int MIN_SLIDING_WIDTH = 55;
-
-        //슬라이딩 메뉴가 보이는/접히는 속도 조절
-        const int STEP_SLIDING = 1;
-
-        //최초 슬라이딩 메뉴 크기
-        int _posSliding = 100;
+        const int STEP_SLIDING = 2;
+        int _posSliding = 150;
 
         public MainForm()
         {
             InitializeComponent();
 
-            // Form_Load 이벤트 연결 (픽쳐박스 이미지 하얀 부분 투명화, 픽쳐박스 배경색과 일치시키는 기능)
-            this.Load += Form1_Load;
+            InitializeUI();
+            InitializeEvents();
+            InitializeDocking();
+            LoadSetting();
 
-            // panelMain 생성
+            Global.Inst.Initialize();
+            LoadDockingWindows();
+        }
+
+        //초기화 메서드
+        #region 
+        private void InitializeUI()
+        {
+            // 메인 패널
             _panelMain = new Panel { Dock = DockStyle.Fill };
             this.Controls.Add(_panelMain);
 
-            // ===== SideMenu 설정 =====
+            // SideMenu
             _panelMain.Controls.Add(SideMenu);
             SideMenu.Dock = DockStyle.Left;
             SideMenu.Width = MAX_SLIDING_WIDTH;
@@ -66,26 +72,96 @@ namespace PureGate
             SideMenu.Controls.Add(btnSetUp);
             btnSetUp.Dock = DockStyle.Bottom;
 
-            // 슬라이딩 접고 피는 버튼 Dock (Setup 아래)
+            // 슬라이딩 버튼 Dock
             SideMenu.Controls.Add(checkBoxHide);
             checkBoxHide.Dock = DockStyle.Bottom;
-            checkBoxHide.Text = "<"; // 초기 상태
-            checkBoxHide.CheckedChanged += checkBoxHide_CheckedChanged;
-
-            // ===== DockPanel 설정 =====
-            _dockPanel = new DockPanel { Theme = new VS2015BlueTheme() };
-            _panelMain.Controls.Add(_dockPanel);
-            AdjustDockPanel();
-
-            // _panelMain 크기 변경 시 DockPanel 크기 조정
-            _panelMain.Resize += (s, e) => { AdjustDockPanel(); };
-
-            // 초기화
-            Global.Inst.Initialize();
-            LoadDockingWindows();
-            LoadSetting();
+            checkBoxHide.Text = "<";
         }
 
+        private void InitializeEvents()
+        {
+            this.Load += Form1_Load;
+            _panelMain.Resize += (s, e) => AdjustDockPanel();
+            checkBoxHide.CheckedChanged += checkBoxHide_CheckedChanged;
+            this.FormClosing += MainForm_FormClosing;
+        }
+
+        private void InitializeDocking()
+        {
+            _dockPanel = new DockPanel { Theme = new VS2015BlueTheme() };
+            _dockPanel.DocumentStyle = DocumentStyle.DockingSdi;
+            _panelMain.Controls.Add(_dockPanel);
+            AdjustDockPanel();
+        }
+        #endregion
+
+        //SideMenu 슬라이딩
+        #region
+        private void checkBoxHide_CheckedChanged(object sender, EventArgs e)
+        {
+            // 버튼 텍스트/아이콘 매핑
+            var btnIconMap = new Dictionary<Button, Image>
+        {
+            { btnOverview, Properties.Resources.Overview },
+            { btnModel, Properties.Resources.Model },
+            { btnImage, Properties.Resources.Image },
+            { btnCycleMode, Properties.Resources.CycleMode },
+            { btnSetUp, Properties.Resources.SetUp }
+        };
+
+            if (checkBoxHide.Checked)
+            {
+                foreach (var kvp in btnIconMap)
+                {
+                    kvp.Key.Text = "";
+                    kvp.Key.Image = kvp.Value;
+                }
+                checkBoxHide.Text = ">";
+            }
+            else
+            {
+                foreach (var kvp in btnIconMap)
+                {
+                    kvp.Key.Text = kvp.Key == btnCycleMode ? "Cycle Mode" : kvp.Key.Name.Replace("btn", "");
+                    kvp.Key.Image = null;
+                }
+                checkBoxHide.Text = "<";
+            }
+
+            timerSliding.Start();
+        }
+        private void timerSliding_Tick(object sender, EventArgs e)
+        {
+            if (checkBoxHide.Checked)
+            {
+                _posSliding -= STEP_SLIDING;
+                if (_posSliding <= MIN_SLIDING_WIDTH)
+                {
+                    _posSliding = MIN_SLIDING_WIDTH;
+                    timerSliding.Stop();
+                }
+            }
+            else
+            {
+                _posSliding += STEP_SLIDING;
+                if (_posSliding >= MAX_SLIDING_WIDTH)
+                {
+                    _posSliding = MAX_SLIDING_WIDTH;
+                    timerSliding.Stop();
+                }
+            }
+
+            SideMenu.Width = _posSliding;
+
+            _dockPanel.SuspendLayout();
+            AdjustDockPanel();
+            _dockPanel.ResumeLayout();
+        }
+        #endregion
+
+        // Form 이벤트
+        #region
+        // 메인 이미지로고 배경 흰색을 투명 처리하기 위한 기능
         private void Form1_Load(object sender, EventArgs e)
         {
             // 리소스 이미지 불러오기
@@ -114,56 +190,11 @@ namespace PureGate
         {
             Global.Inst.Dispose();
         }
+        #endregion
 
-        // UI 위치 선정
-        private void LoadDockingWindows()
-        {
-            CameraForm cameraForm = new CameraForm();
-            cameraForm.Show(_dockPanel, DockState.Document);
 
-            /*ResultForm resultForm = new ResultForm();
-            resultForm.Show(cameraForm.Pane, DockAlignment.Bottom, 0.2);*/
-
-            var resultWindow = new ResultForm();
-            resultWindow.Show(cameraForm.Pane, DockAlignment.Bottom, 0.3);
-
-            PropertiesForm propForm = new PropertiesForm();
-            propForm.Show(_dockPanel, DockState.DockRight);
-
-            //StatisticForm statisticForm = new StatisticForm();
-            //statisticForm.Show(_dockPanel, DockState.DockRight);
-
-            RunForm runForm = new RunForm();
-            runForm.Show(cameraForm.Pane, DockAlignment.Bottom, 0.3);
-
-            var modelTreeWindow = new ModelTreeForm();
-            modelTreeWindow.Show(runForm.Pane, DockAlignment.Right, 0.3);
-
-            var logForm = new LogForm();
-            logForm.Show(propForm.Pane, DockAlignment.Bottom, 0.3);
-        }
-
-        private void checkBoxHide_CheckedChanged(object sender, EventArgs e)
-        {
-            if (checkBoxHide.Checked == true)
-            {
-                //슬라이딩 메뉴가 접혔을 때, 메뉴 버튼의 표시
-                btnOverview.Text = "Over view";
-                btnSetROI.Text = "Set ROI";
-                checkBoxHide.Text = ">";
-            }
-            else
-            {
-                //슬라이딩 메뉴가 보였을 때, 메뉴 버튼의 표시
-                btnOverview.Text = "Overview";
-                btnSetROI.Text = "Set ROI";
-                checkBoxHide.Text = "<";
-            }
-
-            //타이머 시작
-            timerSliding.Start();
-        }
-
+        // DockPanel 관련 기능 함수들
+        #region
         private void AdjustDockPanel()
         {
             _dockPanel.Left = SideMenu.Right;
@@ -172,38 +203,47 @@ namespace PureGate
             _dockPanel.Height = _panelMain.ClientSize.Height;
         }
 
-        private void timerSliding_Tick(object sender, EventArgs e)
+        // UI 위치 선정
+        private void LoadDockingWindows()
         {
-            if (checkBoxHide.Checked)
-            {
-                _posSliding -= STEP_SLIDING;
-                if (_posSliding <= MIN_SLIDING_WIDTH)
-                {
-                    _posSliding = MIN_SLIDING_WIDTH;
-                    timerSliding.Stop();
-                }
-            }
-            else
-            {
-                _posSliding += STEP_SLIDING;
-                if (_posSliding >= MAX_SLIDING_WIDTH)
-                {
-                    _posSliding = MAX_SLIDING_WIDTH;
-                    timerSliding.Stop();
-                }
-            }
+            // ==========================
+            // Document 기준
+            // ==========================
+            CameraForm cameraForm = new CameraForm();
+            cameraForm.Show(_dockPanel, DockState.Document);
 
-            SideMenu.Width = _posSliding;
+            // ==========================
+            // 상단 TitleForm 
+            // ==========================
+            TitleForm titleForm = new TitleForm();
+            titleForm.Show(cameraForm.Pane, DockAlignment.Top, 0.07);
 
-            _dockPanel.SuspendLayout();
-            AdjustDockPanel();
-            _dockPanel.ResumeLayout();
-        }
+            // ==========================
+            // CountForm 
+            // ==========================
+            CountForm countForm = new CountForm();
+            countForm.Show(cameraForm.Pane, DockAlignment.Top, 0.1);
 
-        private void LoadSetting()
-        {
-            _isCycleMode = SettingXml.Inst.CycleMode;
-            UpdateCycleModeButtonUI();
+            // ==========================
+            // 하단 3분할
+            // ==========================
+            LogForm logForm = new LogForm();
+            logForm.Show(cameraForm.Pane, DockAlignment.Bottom, 0.25);
+
+            ResultForm resultForm = new ResultForm();
+            resultForm.Show(logForm.Pane, DockAlignment.Right, 0.8);
+
+            RunForm runForm = new RunForm();
+            runForm.Show(resultForm.Pane, DockAlignment.Right, 0.37);
+
+            // ==========================
+            // 우측 영역
+            // ==========================
+            PropertiesForm propForm = new PropertiesForm();
+            propForm.Show(_dockPanel, DockState.DockRight);
+
+            StatisticForm statisticForm = new StatisticForm();
+            statisticForm.Show(propForm.Pane, DockAlignment.Bottom, 0.4);
         }
 
         public static T GetDockForm<T>() where T : DockContent
@@ -212,10 +252,59 @@ namespace PureGate
             return findForm;
         }
 
+        // Overview 버튼을 위한 DockPanel 초기화 메서드
+        private void ResetDockLayout()
+        {
+            _dockPanel.SuspendLayout();
+
+            var camera = GetDockForm<CameraForm>();
+            var title = GetDockForm<TitleForm>();
+            var count = GetDockForm<CountForm>();
+            var log = GetDockForm<LogForm>();
+            var result = GetDockForm<ResultForm>();
+            var run = GetDockForm<RunForm>();
+            var prop = GetDockForm<PropertiesForm>();
+            var stat = GetDockForm<StatisticForm>();
+
+            // Document 기준
+            if (camera != null && camera.DockState != DockState.Document)
+                camera.Show(_dockPanel, DockState.Document);
+
+            // 상단 TitleForm
+            if (title != null) title.Show(camera?.Pane, DockAlignment.Top, 0.07);
+
+            // CountForm
+            if (count != null) count.Show(camera?.Pane, DockAlignment.Top, 0.1);
+
+            // 하단 3분할
+            if (log != null) log.Show(camera?.Pane, DockAlignment.Bottom, 0.25);
+            if (result != null) result.Show(log?.Pane, DockAlignment.Right, 0.8);
+            if (run != null) run.Show(result?.Pane, DockAlignment.Right, 0.37);
+
+            // 우측 영역
+            if (prop != null) prop.Show(_dockPanel, DockState.DockRight);
+            if (stat != null) stat.Show(prop?.Pane, DockAlignment.Bottom, 0.4);
+
+            _dockPanel.ResumeLayout();
+        }
+        #endregion
+
+        private void LoadSetting()
+        {
+            _isCycleMode = SettingXml.Inst.CycleMode;
+            UpdateCycleModeButtonUI();
+        }
 
         private void btnOverview_Click(object sender, EventArgs e)
         {
-
+            try
+            {
+                ResetDockLayout();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"레이아웃 초기화 실패: {ex.Message}");
+            }
         }
 
         private void btnCycleMode_Click(object sender, EventArgs e)
@@ -231,11 +320,6 @@ namespace PureGate
             SLogger.Write($"환경설정창 열기");
             SetupForm setupForm = new SetupForm();
             setupForm.ShowDialog();
-        }
-
-        private void btnSetROI_Click(object sender, EventArgs e)
-        {
-
         }
 
         private void btnModel_Click(object sender, EventArgs e)
@@ -405,6 +489,7 @@ namespace PureGate
 
         private void modelSaveAsMenuItem_Click(object sender, EventArgs e)
         {
+            //다른이름으로 모델 파일 저장
             using (SaveFileDialog saveFileDialog = new SaveFileDialog())
             {
                 saveFileDialog.InitialDirectory = SettingXml.Inst.ModelDir;

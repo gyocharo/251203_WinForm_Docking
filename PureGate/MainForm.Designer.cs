@@ -32,7 +32,6 @@
             this.SideMenu = new System.Windows.Forms.Panel();
             this.btnCycleMode = new System.Windows.Forms.Button();
             this.btnSetUp = new System.Windows.Forms.Button();
-            this.btnSetROI = new System.Windows.Forms.Button();
             this.btnImage = new System.Windows.Forms.Button();
             this.btnModel = new System.Windows.Forms.Button();
             this.checkBoxHide = new System.Windows.Forms.CheckBox();
@@ -48,7 +47,6 @@
             this.SideMenu.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(224)))), ((int)(((byte)(224)))), ((int)(((byte)(224)))));
             this.SideMenu.Controls.Add(this.btnCycleMode);
             this.SideMenu.Controls.Add(this.btnSetUp);
-            this.SideMenu.Controls.Add(this.btnSetROI);
             this.SideMenu.Controls.Add(this.btnImage);
             this.SideMenu.Controls.Add(this.btnModel);
             this.SideMenu.Controls.Add(this.checkBoxHide);
@@ -86,20 +84,6 @@
             this.btnSetUp.Text = "SetUp";
             this.btnSetUp.UseVisualStyleBackColor = true;
             this.btnSetUp.Click += new System.EventHandler(this.btnSetUp_Click);
-            // 
-            // btnSetROI
-            // 
-            this.btnSetROI.Dock = System.Windows.Forms.DockStyle.Top;
-            this.btnSetROI.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnSetROI.Font = new System.Drawing.Font("굴림", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(129)));
-            this.btnSetROI.ForeColor = System.Drawing.Color.Black;
-            this.btnSetROI.Location = new System.Drawing.Point(0, 306);
-            this.btnSetROI.Name = "btnSetROI";
-            this.btnSetROI.Size = new System.Drawing.Size(261, 67);
-            this.btnSetROI.TabIndex = 9;
-            this.btnSetROI.Text = "Set ROI";
-            this.btnSetROI.UseVisualStyleBackColor = true;
-            this.btnSetROI.Click += new System.EventHandler(this.btnSetROI_Click);
             // 
             // btnImage
             // 

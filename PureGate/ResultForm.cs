@@ -35,7 +35,7 @@ namespace PureGate
                 Orientation = Orientation.Horizontal,
                 SplitterDistance = 120,
                 Panel1MinSize = 70,
-                Panel2MinSize = 70
+                Panel2MinSize = 40
             };
 
             //TreeListView 검사 결과 트리 생성

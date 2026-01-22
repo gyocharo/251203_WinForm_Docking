@@ -22,6 +22,7 @@ namespace PureGate
     {
 
         Dictionary<string, TabPage> _allTabs = new Dictionary<string, TabPage>();
+
         public PropertiesForm()
         {
             InitializeComponent();

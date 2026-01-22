@@ -193,6 +193,19 @@ namespace PureGate
                     else
                         imageViewer.ResetEntity();
                     break;
+                case ToolbarButton.SetROI:
+                    if (e.IsChecked)
+                    {
+                        // 원하는 기본 ROI 타입 지정 (예: Base / Body / Sub / ID)
+                        imageViewer.NewRoi(InspWindowType.Base);
+                        imageViewer.Focus();
+                    }
+                    else
+                    {
+                        // 토글 해제 시 ROI 생성 모드 종료 (아래 2)에서 CancelNewRoi 추가 필요)
+                        imageViewer.CancelNewRoi();
+                    }
+                    break;
                 case ToolbarButton.ChannelColor:
                     _currentImageChannel = eImageChannel.Color;
                     UpdateDisplay();
