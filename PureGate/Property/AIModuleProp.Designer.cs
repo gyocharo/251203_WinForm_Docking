@@ -60,7 +60,7 @@
             // btnInspAI
             // 
             this.btnInspAI.Dock = System.Windows.Forms.DockStyle.Right;
-            this.btnInspAI.Location = new System.Drawing.Point(276, 245);
+            this.btnInspAI.Location = new System.Drawing.Point(276, 195);
             this.btnInspAI.Margin = new System.Windows.Forms.Padding(4);
             this.btnInspAI.Name = "btnInspAI";
             this.btnInspAI.Size = new System.Drawing.Size(118, 50);
@@ -82,7 +82,7 @@
             // btnLoadModel
             // 
             this.btnLoadModel.Dock = System.Windows.Forms.DockStyle.Right;
-            this.btnLoadModel.Location = new System.Drawing.Point(276, 186);
+            this.btnLoadModel.Location = new System.Drawing.Point(276, 136);
             this.btnLoadModel.Margin = new System.Windows.Forms.Padding(4);
             this.btnLoadModel.Name = "btnLoadModel";
             this.btnLoadModel.Size = new System.Drawing.Size(118, 51);
@@ -94,7 +94,7 @@
             // btnSelAIModel
             // 
             this.btnSelAIModel.Dock = System.Windows.Forms.DockStyle.Right;
-            this.btnSelAIModel.Location = new System.Drawing.Point(276, 127);
+            this.btnSelAIModel.Location = new System.Drawing.Point(276, 77);
             this.btnSelAIModel.Margin = new System.Windows.Forms.Padding(4);
             this.btnSelAIModel.Name = "btnSelAIModel";
             this.btnSelAIModel.Size = new System.Drawing.Size(118, 51);
@@ -221,7 +221,7 @@
             this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 59F));
             this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 58F));
             this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 80F));
-            this.tableLayoutPanel2.Size = new System.Drawing.Size(398, 380);
+            this.tableLayoutPanel2.Size = new System.Drawing.Size(398, 330);
             this.tableLayoutPanel2.TabIndex = 20;
             // 
             // cbAIModelType
@@ -229,7 +229,7 @@
             this.cbAIModelType.Dock = System.Windows.Forms.DockStyle.Right;
             this.cbAIModelType.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cbAIModelType.FormattingEnabled = true;
-            this.cbAIModelType.Location = new System.Drawing.Point(4, 69);
+            this.cbAIModelType.Location = new System.Drawing.Point(4, 42);
             this.cbAIModelType.Margin = new System.Windows.Forms.Padding(4);
             this.cbAIModelType.Name = "cbAIModelType";
             this.cbAIModelType.Size = new System.Drawing.Size(390, 26);
@@ -241,7 +241,7 @@
             this.panel2.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.panel2.Controls.Add(this.tableLayoutPanel3);
             this.panel2.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.panel2.Location = new System.Drawing.Point(0, 480);
+            this.panel2.Location = new System.Drawing.Point(0, 349);
             this.panel2.Margin = new System.Windows.Forms.Padding(4);
             this.panel2.Name = "panel2";
             this.panel2.Size = new System.Drawing.Size(400, 308);
@@ -280,7 +280,7 @@
             this.panel3.Dock = System.Windows.Forms.DockStyle.Top;
             this.panel3.Location = new System.Drawing.Point(0, 0);
             this.panel3.Name = "panel3";
-            this.panel3.Size = new System.Drawing.Size(400, 382);
+            this.panel3.Size = new System.Drawing.Size(400, 332);
             this.panel3.TabIndex = 22;
             // 
             // panel1
@@ -290,7 +290,7 @@
             this.panel1.Controls.Add(this.txtMinArea);
             this.panel1.Controls.Add(this.dasda);
             this.panel1.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.panel1.Location = new System.Drawing.Point(3, 302);
+            this.panel1.Location = new System.Drawing.Point(3, 252);
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(392, 75);
             this.panel1.TabIndex = 23;
@@ -312,7 +312,7 @@
             this.Controls.Add(this.panel2);
             this.Margin = new System.Windows.Forms.Padding(4);
             this.Name = "AIModuleProp";
-            this.Size = new System.Drawing.Size(400, 788);
+            this.Size = new System.Drawing.Size(400, 657);
             this.tableLayoutPanel3.ResumeLayout(false);
             this.tableLayoutPanel3.PerformLayout();
             this.tableLayoutPanel2.ResumeLayout(false);

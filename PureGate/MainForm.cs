@@ -44,11 +44,10 @@ namespace PureGate
         public MainForm()
         {
             InitializeComponent();
-
             InitializeUI();
             InitializeEvents();
             InitializeDocking();
-
+            _dockPanel.Theme = new NoToolWindowCaptionTheme();
             Global.Inst.Initialize();
             LoadDockingWindows();
             LoadSetting();

@@ -27,6 +27,9 @@ namespace PureGate
         {
             InitializeComponent();
             LoadOptionControl(InspectType.InspAIModule);
+
+            this.Text = "";        // 캡션 텍스트 제거
+            this.TabText = "";
         }
 
         private void LoadOptionControl(InspectType inspType)
