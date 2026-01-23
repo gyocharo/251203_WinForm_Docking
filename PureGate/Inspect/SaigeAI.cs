@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Drawing.Imaging;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -156,6 +157,7 @@ namespace PureGate
 
             ClassificationOption option = _clsEngine.GetInferenceOption();
             option.CalcTime = true;
+            option.CalcClassActivationMap = false;
 
             _clsEngine.SetInferenceOption(option);
         }
@@ -332,22 +334,42 @@ namespace PureGate
                 bool ok = TryGetClassificationTop1(clsResultObj, out label, out score);
 
                 string text = ok
-                    ? $"CLS: {label} ({score:0.000})"
+                    ? $"{label} ({score:0.0})"
                     : "CLS: (result parsed failed)";
 
-                using (Graphics g = Graphics.FromImage(bmp))
-                using (Font font = new Font("Arial", 24, FontStyle.Bold, GraphicsUnit.Pixel))
-                using (SolidBrush bg = new SolidBrush(Color.FromArgb(160, 0, 0, 0)))
-                using (SolidBrush fg = new SolidBrush(Color.White))
+                if(label == "Good")
                 {
-                    g.SmoothingMode = SmoothingMode.AntiAlias;
+                    using (Graphics g = Graphics.FromImage(bmp))
+                    using (Font font = new Font("Arial", 80, FontStyle.Bold, GraphicsUnit.Pixel))
+                    using (SolidBrush bg = new SolidBrush(Color.FromArgb(160, 0, 0, 0)))
+                    using (SolidBrush fg = new SolidBrush(Color.Green))
+                    {
+                        g.SmoothingMode = SmoothingMode.AntiAlias;
 
-                    SizeF sz = g.MeasureString(text, font);
-                    RectangleF rect = new RectangleF(10, 10, sz.Width + 20, sz.Height + 16);
+                        SizeF sz = g.MeasureString(text, font);
+                        RectangleF rect = new RectangleF(10, 10, sz.Width + 20, sz.Height + 16);
 
-                    g.FillRectangle(bg, rect);
-                    g.DrawString(text, font, fg, 20, 18);
+                        g.FillRectangle(bg, rect);
+                        g.DrawString(text, font, fg, 20, 18);
+                    }
                 }
+                else
+                {
+                    using (Graphics g = Graphics.FromImage(bmp))
+                    using (Font font = new Font("Arial", 80, FontStyle.Bold, GraphicsUnit.Pixel))
+                    using (SolidBrush bg = new SolidBrush(Color.FromArgb(160, 0, 0, 0)))
+                    using (SolidBrush fg = new SolidBrush(Color.Red))
+                    {
+                        g.SmoothingMode = SmoothingMode.AntiAlias;
+
+                        SizeF sz = g.MeasureString(text, font);
+                        RectangleF rect = new RectangleF(10, 10, sz.Width + 20, sz.Height + 16);
+
+                        g.FillRectangle(bg, rect);
+                        g.DrawString(text, font, fg, 20, 18);
+                    }
+                }
+                
             }
             catch
             {

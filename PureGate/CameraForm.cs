@@ -91,9 +91,16 @@ namespace PureGate
 
         public void UpdateDisplay(Bitmap bitmap = null)
         {
+            if (this.IsDisposed) return;
+
+            if (this.InvokeRequired)
+            {
+                this.BeginInvoke(new Action(() => UpdateDisplay(bitmap)));
+                return;
+            }
+
             if (bitmap == null)
             {
-                //#6_INSP_STAGE#3 업데이트시 bitmap이 없다면 InspSpace에서 가져온다
                 bitmap = Global.Inst.InspStage.GetBitmap(0, _currentImageChannel);
                 if (bitmap == null)
                     return;
