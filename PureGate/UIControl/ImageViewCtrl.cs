@@ -11,6 +11,7 @@ using System.Windows.Forms;
 using PureGate.Algorithm;
 using PureGate.Core;
 using PureGate.Teach;
+using PureGate.Util;
 
 
 namespace PureGate.UIControl
@@ -177,11 +178,36 @@ namespace PureGate.UIControl
 
         public void LoadBitmap(Bitmap bitmap)
         {
+            if (bitmap == null)
+                return;
+
+            // UI 스레드 체크 (이중 안전장치)
+            if (InvokeRequired)
+            {
+                Invoke(new Action(() => LoadBitmap(bitmap)));
+                return;
+            }
+
+            // Bitmap 복사본 생성 (원본 보호)
+            Bitmap safeBitmap = null;
+            try
+            {
+                // 안전하게 복사
+                safeBitmap = new Bitmap(bitmap);
+            }
+            catch (Exception ex)
+            {
+                SLogger.Write($"Bitmap 복사 실패: {ex.Message}", SLogger.LogType.Error);
+                return;
+            }
+
             if (_bitmapImage != null)
             {
-                if (_bitmapImage.Width == bitmap.Width && _bitmapImage.Height == bitmap.Height)
+                if (_bitmapImage.Width == safeBitmap.Width &&
+                    _bitmapImage.Height == safeBitmap.Height)
                 {
-                    _bitmapImage = bitmap;
+                    _bitmapImage.Dispose();
+                    _bitmapImage = safeBitmap;
                     Invalidate();
                     return;
                 }
@@ -190,7 +216,7 @@ namespace PureGate.UIControl
                 _bitmapImage = null;
             }
 
-            _bitmapImage = bitmap;
+            _bitmapImage = safeBitmap;
 
             if (_isInitialized == false)
             {
@@ -199,6 +225,7 @@ namespace PureGate.UIControl
             }
 
             FitImageToScreen();
+
         }
 
         private void FitImageToScreen()

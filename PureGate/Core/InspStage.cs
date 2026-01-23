@@ -499,8 +499,17 @@ namespace PureGate.Core
             var cameraForm = MainForm.GetDockForm<CameraForm>();
             if (cameraForm != null)
             {
-                cameraForm.UpdateDisplay();
+                // UI 스레드에서 실행되도록 보장
+                if (cameraForm.InvokeRequired)
+                {
+                    cameraForm.Invoke(new Action(() => cameraForm.UpdateDisplay()));
+                }
+                else
+                {
+                    cameraForm.UpdateDisplay();
+                }
             }
+
         }
 
         public void UpdateDisplay(Bitmap bitmap)
@@ -508,8 +517,17 @@ namespace PureGate.Core
             var cameraForm = MainForm.GetDockForm<CameraForm>();
             if (cameraForm != null)
             {
-                cameraForm.UpdateDisplay(bitmap);
+                // UI 스레드에서 실행되도록 보장
+                if (cameraForm.InvokeRequired)
+                {
+                    cameraForm.Invoke(new Action(() => cameraForm.UpdateDisplay(bitmap)));
+                }
+                else
+                {
+                    cameraForm.UpdateDisplay(bitmap);
+                }
             }
+
         }
 
         public void SetPreviewImage(eImageChannel channel)
@@ -700,6 +718,10 @@ namespace PureGate.Core
                         AIModule.InspAIModule(bitmap);
                         Bitmap resultImage = AIModule.GetResultImage();
                         UpdateDisplay(resultImage);
+
+                        // ✅ Saige CLS 분류 결과에 따라 저장 (실패해도 검사 흐름엔 영향 없게)
+                        TrySaveClsResultImage(resultImage);
+
                         return true;
                     }
                 }
@@ -716,6 +738,72 @@ namespace PureGate.Core
 
             return true;
 
+        }
+
+        private void TrySaveClsResultImage(Bitmap resultImage)
+        {
+            if (resultImage == null) return;
+            if (AIModule == null) return;
+
+            // CLS가 아닐 수도 있으니 라벨이 없으면 그냥 종료
+            if (!AIModule.TryGetLastClsTop1(out string label, out float score)) return;
+            if (string.IsNullOrWhiteSpace(label)) return;
+
+            try
+            {
+                string dateFolder = DateTime.Now.ToString("yyyy-MM-dd");
+
+                // 라벨명 폴더 안전 처리
+                string safeLabel = SanitizePathSegment(label);
+
+                string root;
+                string targetDir;
+
+                if (string.Equals(label, "Good", StringComparison.OrdinalIgnoreCase))
+                {
+                    root = @"D:\Good";
+                    targetDir = Path.Combine(root, dateFolder);
+                }
+                else
+                {
+                    root = @"D:\NG";
+                    targetDir = Path.Combine(root, safeLabel, dateFolder);
+                }
+
+                // 폴더 없으면 생성 (Good/NG 모두)
+                Directory.CreateDirectory(targetDir);
+
+                // 파일명: 시간_라벨.jpg (충돌 방지)
+                string ts = DateTime.Now.ToString("HHmmssff");
+                string fileName = $"{ts}_{safeLabel}.jpg";
+                string fullPath = Path.Combine(targetDir, fileName);
+
+                // 이미지 저장 (resultImage는 화면 표시용일 수 있으니 Clone해서 저장)
+                using (Bitmap clone = (Bitmap)resultImage.Clone())
+                {
+                    clone.Save(fullPath, System.Drawing.Imaging.ImageFormat.Jpeg);
+                }
+
+                SLogger.Write($"[AI-CLS Save] {label}({score:0.000}) -> {fullPath}", SLogger.LogType.Info);
+            }
+            catch (Exception ex)
+            {
+                // 저장 실패해도 기존 검사/넘김 흐름은 그대로 유지
+                SLogger.Write($"[AI-CLS Save] Failed: {ex.Message}", SLogger.LogType.Error);
+            }
+        }
+
+        private string SanitizePathSegment(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return "Unknown";
+
+            foreach (char c in Path.GetInvalidFileNameChars())
+                name = name.Replace(c, '_');
+
+            // 너무 길면 잘라서 Windows 경로 문제 방지
+            if (name.Length > 80) name = name.Substring(0, 80);
+
+            return name.Trim();
         }
 
         public void StopCycle()
