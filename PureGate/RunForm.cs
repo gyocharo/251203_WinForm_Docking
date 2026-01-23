@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using PureGate.Core;
 using PureGate.Setting;
+using PureGate.UIControl;
 using WeifenLuo.WinFormsUI.Docking;
 
 namespace PureGate
@@ -18,6 +19,8 @@ namespace PureGate
         public RunForm()
         {
             InitializeComponent();
+
+
         }
 
         private void btn_Grab_Click(object sender, EventArgs e)

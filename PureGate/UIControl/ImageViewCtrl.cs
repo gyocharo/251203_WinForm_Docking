@@ -42,6 +42,10 @@ namespace PureGate.UIControl
             NG = _ngCount;
         }
     }
+
+    public enum InspectStatus { None, OK, NG }
+
+
     public partial class ImageViewCtrl : UserControl
     {
         public event EventHandler<DiagramEntityEventArgs> DiagramEntityEvent;
@@ -107,10 +111,15 @@ namespace PureGate.UIControl
 
         private readonly object _lock = new object();
 
+
+        private InspectStatus _currentStatus = InspectStatus.None;
+
         public ImageViewCtrl()
         {
             InitializeComponent();
             InitializeCanvas();
+
+          //SetInspectResult(InspectStatus.NG);
 
             _contextMenu = new ContextMenuStrip();
             _contextMenu.Items.Add("Delete", null, OnDeleteClicked);
@@ -177,28 +186,36 @@ namespace PureGate.UIControl
 
         public void LoadBitmap(Bitmap bitmap)
         {
-            if (_bitmapImage != null)
+            if (bitmap == null) return;
+
+            lock (_lock) // 동기화 추가
             {
-                if (_bitmapImage.Width == bitmap.Width && _bitmapImage.Height == bitmap.Height)
+                // 원본과 크기가 같더라도 안전하게 새 객체를 생성하여 교체
+                Bitmap newBitmap = new Bitmap(bitmap);
+
+                if (_bitmapImage != null)
                 {
-                    _bitmapImage = bitmap;
-                    Invalidate();
-                    return;
+                    _bitmapImage.Dispose();
                 }
 
-                _bitmapImage.Dispose();
-                _bitmapImage = null;
+                _bitmapImage = newBitmap;
+
+                if (_isInitialized == false)
+                {
+                    _isInitialized = true;
+                    ResizeCanvas();
+                }
             }
 
-            _bitmapImage = bitmap;
-
-            if (_isInitialized == false)
+            if (InvokeRequired)
             {
-                _isInitialized = true;
-                ResizeCanvas();
+                BeginInvoke(new Action(() => { FitImageToScreen(); Invalidate(); }));
             }
-
-            FitImageToScreen();
+            else
+            {
+                FitImageToScreen();
+                Invalidate();
+            }
         }
 
         private void FitImageToScreen()
@@ -247,28 +264,57 @@ namespace PureGate.UIControl
             Invalidate();
         }
 
+
+        public void SetInspectResult(InspectStatus status)
+        {
+            _currentStatus = status;
+            if (this.InvokeRequired) this.BeginInvoke(new Action(() => Invalidate()));
+            else Invalidate();
+        }
+
+
         protected override void OnPaint(PaintEventArgs e)
         {
-            base.OnPaint(e);
-
             if (_bitmapImage != null && Canvas != null)
             {
                 using (Graphics g = Graphics.FromImage(Canvas))
                 {
                     g.Clear(Color.Transparent);
-
                     g.InterpolationMode = InterpolationMode.NearestNeighbor;
+
+                    // 1. 배경 이미지 그리기 (이게 있어야 이미지가 보입니다)
                     g.DrawImage(_bitmapImage, ImageRect);
 
+                    // 2. ROI 및 하이라이트 그리기
                     DrawDiagram(g);
+                    DrawInspectHighlight(g);
 
+                    // 3. ✅ [추가] OK/NG 결과 그리기 (이미지 위에 덮어쓰기)
+                    if (this.WorkingState == "OK" || this.WorkingState == "NG")
+                    {
+                        // OK는 초록, NG는 빨강
+                        Color textColor = (this.WorkingState == "OK") ? Color.Lime : Color.Red;
+
+                        // 폰트 크기를 100으로 설정하여 매우 크게 만듭니다.
+                        using (Font font = new Font("Arial", 100, FontStyle.Bold))
+                        using (SolidBrush brush = new SolidBrush(textColor))
+                        {
+                            // (50, 50) 위치에 글자를 그립니다.
+                            g.DrawString(this.WorkingState, font, brush, new PointF(50, 50));
+                        }
+                    }
+
+                    // 4. 최종 결과물을 화면에 출력
                     e.Graphics.DrawImage(Canvas, 0, 0);
                 }
             }
         }
 
+
+
         private void DrawDiagram(Graphics g)
         {
+            
             //#10_INSPWINDOW#18 ROI 그리기
             _screenSelectedRect = new Rectangle(0, 0, 0, 0);
             foreach (DiagramEntity entity in _diagramEntityList)
@@ -295,7 +341,7 @@ namespace PureGate.UIControl
 
                     g.DrawRectangle(pen, screenRect);
                 }
-
+            
                 //선택된 ROI가 있다면, 리사이즈 핸들 그리기
                 if (_multiSelectedEntities.Count <= 1 && entity == _selEntity)
                 {
@@ -1190,7 +1236,58 @@ namespace PureGate.UIControl
                 DiagramEntityEvent?.Invoke(this, new DiagramEntityEventArgs(EntityActionType.Delete, linkedWindow));
             }
         }
+
+        private void DrawInspectHighlight(Graphics g)
+        {
+            if (_currentStatus == InspectStatus.None) return;
+
+            string statusText = _currentStatus.ToString();
+            Color highlightColor = (_currentStatus == InspectStatus.OK)
+                                   ? Color.FromArgb(180, 0, 200, 0)  // 약간 더 진하게
+                                   : Color.FromArgb(180, 200, 0, 0);
+
+            int barHeight = 60;
+            RectangleF highlightRect = new RectangleF(ImageRect.X, ImageRect.Y, ImageRect.Width, barHeight);
+
+            using (SolidBrush brush = new SolidBrush(highlightColor))
+            {
+                g.FillRectangle(brush, highlightRect);
+            }
+
+            float fontSize = 35.0f;
+            using (Font font = new Font("Arial", fontSize, FontStyle.Bold))
+            using (SolidBrush textBrush = new SolidBrush(Color.White))
+            {
+                StringFormat sf = new StringFormat
+                {
+                    Alignment = StringAlignment.Center,
+                    LineAlignment = StringAlignment.Center
+                };
+                DrawTextWithOutline(g, statusText, font, textBrush, highlightRect, sf);
+            }
+        }
+
+        // 5. 외곽선 그리기 메서드 (이것도 클래스 내부여야 함)
+        private void DrawTextWithOutline(Graphics g, string text, Font font, Brush textBrush, RectangleF rect, StringFormat sf)
+        {
+            using (System.Drawing.Drawing2D.GraphicsPath path = new System.Drawing.Drawing2D.GraphicsPath())
+            {
+                // 글자 크기를 적절히 변환하여 경로 생성
+                float emSize = g.DpiY * font.Size / 72;
+                path.AddString(text, font.FontFamily, (int)font.Style, emSize, rect, sf);
+
+                using (Pen outlinePen = new Pen(Color.Black, 3))
+                {
+                    g.DrawPath(outlinePen, path);
+                }
+                g.FillPath(textBrush, path);
+            }
+        }
     }
+
+
+
+
     public class DiagramEntityEventArgs : EventArgs
     {
         public EntityActionType ActionType { get; private set; }

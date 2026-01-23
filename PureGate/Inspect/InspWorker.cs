@@ -61,48 +61,52 @@ namespace PureGate.Inspect
             isDefect = false;
             Model curMode = Global.Inst.InspStage.CurModel;
             List<InspWindow> inspWindowList = curMode.InspWindowList;
-            foreach (var inspWindow in inspWindowList)
+
+            try
             {
-                if (inspWindow is null)
-                    continue;
-
-                UpdateInspData(inspWindow);
-            }
-
-            _inspectBoard.InspectWindowList(inspWindowList);
-
-            int totalCnt = 0;
-            int okCnt = 0;
-            int ngCnt = 0;
-            foreach (var inspWindow in inspWindowList)
-            {
-                totalCnt++;
-
-                if (inspWindow.IsDefect())
+                // 1. 데이터 업데이트
+                foreach (var inspWindow in inspWindowList)
                 {
-                    if (!isDefect)
-                        isDefect = true;
-
-                    ngCnt++;
-                }
-                else
-                {
-                    okCnt++;
+                    if (inspWindow is null) continue;
+                    UpdateInspData(inspWindow);
                 }
 
-                DisplayResult(inspWindow, InspectType.InspNone);
+                // 2. 비전 엔진 실행 (여기서 에러가 나도 튕기지 않게 개별 감쌈)
+                try
+                {
+                    _inspectBoard.InspectWindowList(inspWindowList);
+                }
+                catch (Exception ex)
+                {
+                    // 서버 연결 끊김 로그만 찍고 넘어감
+                    SLogger.Write("Vision Server Error: " + ex.Message, SLogger.LogType.Error);
+                    isDefect = true; // 에러가 났으므로 결과는 NG로 간주
+                }
             }
-
-            if (totalCnt > 0)
+            finally
             {
-                //찾은 위치를 이미지상에서 표시
+                // 3. ✅ [핵심] 상단에서 에러가 나도 이곳은 '무조건' 실행됩니다.
+                int totalCnt = 0; int okCnt = 0; int ngCnt = 0;
+                foreach (var inspWindow in inspWindowList)
+                {
+                    totalCnt++;
+                    if (inspWindow.IsDefect()) { isDefect = true; ngCnt++; }
+                    else { okCnt++; }
+                    DisplayResult(inspWindow, InspectType.InspNone);
+                }
+
                 var cameraForm = MainForm.GetDockForm<CameraForm>();
                 if (cameraForm != null)
                 {
                     cameraForm.SetInspResultCount(totalCnt, okCnt, ngCnt);
+
+                    // 🔴 이 로그가 뜨는지 다시 확인하세요. 무조건 떠야 합니다.
+                    string finalResult = isDefect ? "NG" : "OK";
+                    SLogger.Write($"UI_CHECK: Result is {finalResult}", SLogger.LogType.Info);
+
+                    cameraForm.ShowResultOnScreen(!isDefect);
                 }
             }
-
             return true;
         }
 

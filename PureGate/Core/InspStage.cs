@@ -791,16 +791,21 @@ namespace PureGate.Core
 
         private void RunInspect()
         {
+            // 검사 시작 전 상태 초기화
             ResetDisplay();
 
             bool isDefect = false;
+            // 실제 AI 검사가 실행되는 구간
             if (!_inspWorker.RunInspect(out isDefect))
             {
-                string errMsg = string.Format("Failed to inspect");
-                SLogger.Write(errMsg, SLogger.LogType.Error);
+                SLogger.Write("Failed to inspect", SLogger.LogType.Error);
             }
 
-            //#WCF_FSM#6 비젼 -> 제어에 검사 완료 및 결과 전송
+            // ✅ 핵심: 검사가 끝나자마자 결과 UI 업데이트 호출
+            // 결함이 없으면(false) -> OK(true)를 UI에 보냄
+            UpdateResultUI(!isDefect);
+
+            // 제어기로 결과 전송
             VisionSequence.Inst.VisionCommand(Vision2Mmi.InspDone, isDefect);
         }
 
@@ -888,6 +893,18 @@ namespace PureGate.Core
                 _grabManager.SetExposureTime(exposureTime);
             }
         }
+
+        private void UpdateResultUI(bool isOK)
+        {
+            // CameraForm을 찾아 화면에 결과를 표시합니다.
+            CameraForm cameraForm = MainForm.GetDockForm<CameraForm>();
+            if (cameraForm != null)
+            {
+                cameraForm.ShowResultOnScreen(isOK); // 이제 1단계 덕분에 오류가 사라집니다!
+            }
+        }
+
+
 
 
         #region Disposable

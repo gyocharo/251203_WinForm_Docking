@@ -184,5 +184,7 @@ namespace PureGate
             bool isChecked = cycleModeMenuItem.Checked;
             SettingXml.Inst.CycleMode = isChecked;
         }
+
+
     }
 }

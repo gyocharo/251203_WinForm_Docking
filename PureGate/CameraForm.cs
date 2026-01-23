@@ -159,6 +159,7 @@ namespace PureGate
         public void SetInspResultCount(int totalArea, int okCnt, int ngCnt)
         {
             imageViewer.SetInspResultCount(new InspectResultCount(totalArea, okCnt, ngCnt));
+
         }
 
         public void SetWorkingState(WorkingState workingState)
@@ -229,6 +230,22 @@ namespace PureGate
             imageViewer.DiagramEntityEvent -= ImageViewer_DiagramEntityEvent;
 
             this.FormClosed -= CameraForm_FormClosed;
+        }
+
+        public void ShowResultOnScreen(bool isOK)
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(() => ShowResultOnScreen(isOK)));
+                return;
+            }
+
+            // WorkingState를 결과 값으로 덮어씁니다.
+            // ImageViewerCtrl에서 이 문자열을 감지해서 화면에 그려줍니다.
+            imageViewer.WorkingState = isOK ? "OK" : "NG";
+
+            // 즉시 화면을 다시 그리도록 강제합니다.
+            imageViewer.Invalidate();
         }
     }
 }
