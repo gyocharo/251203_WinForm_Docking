@@ -31,33 +31,22 @@ namespace PureGate.Property
         {
             InitializeComponent();
 
-            lv_Result.HideSelection = false;
-
-
             cbAIModelType.DataSource = Enum.GetValues(typeof(AIEngineType)).Cast<AIEngineType>().ToList();
             cbAIModelType.SelectedIndex = 0;
 
-            lv_Result.View = View.Details;
-            lv_Result.FullRowSelect = true;
-            lv_Result.GridLines = true;
-
-            lv_Result.Columns.Clear();
-            lv_Result.Columns.Add("Class", 120);
-            lv_Result.Columns.Add("Count", 60);
-
             UpdateAreaFilterUI();
-
-            txtMinArea.TextChanged += (s, e) =>
-            {
-                UpdateResultUI();
-                UpdateClassInfoResultUI();
-            };
 
             txtMaxArea.TextChanged += (s, e) =>
             {
-                UpdateResultUI();
                 UpdateClassInfoResultUI();
             };
+
+            txtMinArea.TextChanged += (s, e) =>
+            {
+                UpdateClassInfoResultUI();
+            };
+
+            this.AutoScroll = true;
         }
 
         private void btnSelAIModel_Click(object sender, EventArgs e)
@@ -146,18 +135,13 @@ namespace PureGate.Property
                 MessageBox.Show("현재 이미지가 없습니다.", "오류", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
-
-
-            lv_Result.Items.Clear();
-            lbx_ResultDetail.Items.Clear();
-
+           
             _saigeAI.InspAIModule(bitmap);
 
             Bitmap resultImage = _saigeAI.GetResultImage();
 
             Global.Inst.InspStage.UpdateDisplay(resultImage);
 
-            UpdateResultUI();
             UpdateClassInfoResultUI();
         }
 
@@ -183,10 +167,6 @@ namespace PureGate.Property
                 lbx_ModelInformation.Items.Clear();
                 lv_ClassInfos.Items.Clear();
                 Txt_ModuleInfo.Clear();
-
-                // 결과 UI 초기화
-                lv_Result.Items.Clear();
-                lbx_ResultDetail.Items.Clear();
             }
             _engineType = engineType;
             UpdateAreaFilterUI();
@@ -230,146 +210,21 @@ namespace PureGate.Property
             Txt_ModuleInfo.Text = module;
         }
 
-        private void Lv_Result_ItemSelectionChanged(object sender, ListViewItemSelectionChangedEventArgs e)
-        {
-            if (!e.IsSelected) return;
-
-            lbx_ResultDetail.Items.Clear();
-
-            var result = _saigeAI.GetResult();
-            if (result == null) return;
-
-            string className = e.Item.Text.Trim();
-
-            switch (_engineType)
-            {
-                case AIEngineType.Detection:
-                    ShowDetectionDetail(result as DetectionResult, className);
-                    break;
-
-                case AIEngineType.Segmentation:
-                    ShowSegmentationDetail(result as SegmentationResult, className);
-                    break;
-
-                case AIEngineType.AnomalyDetection:
-                    ShowIADDetail(result as IADResult, className);
-                    break;
-            }
-        }
-
-        private void ShowDetectionDetail(DetectionResult result, string className)
-        {
-            lbx_ResultDetail.Items.Clear();
-            if (result == null) return;
-
-            // 🔹 Area 값 읽기
-            if (!TryGetAreaFilter(out double minArea, out double maxArea))
-                return;
-
-            // 🔹 Class + Area 필터
-            var filteredObjects = result.DetectedObjects
-                .Where(o => string.Equals(o.ClassInfo.Name, className, StringComparison.OrdinalIgnoreCase))
-                .Where(o => o.Area >= minArea && o.Area <= maxArea)
-                .ToArray();
-
-            lbx_ResultDetail.Items.Add($"Class : {className}");
-            lbx_ResultDetail.Items.Add($"Object Count : {filteredObjects.Length}");
-            lbx_ResultDetail.Items.Add($"ImreadTime : {result.InspectionTime.ImreadTime}");
-            lbx_ResultDetail.Items.Add($"InferenceTime : {result.InspectionTime.InferenceTime}");
-            lbx_ResultDetail.Items.Add($"PostProcessingTime : {result.InspectionTime.PostProcessingTime}");
-            lbx_ResultDetail.Items.Add("--------------------------------------");
-
-            foreach (var obj in filteredObjects)
-            {
-                lbx_ResultDetail.Items.Add($"Name : {obj.ClassInfo.Name}");
-                lbx_ResultDetail.Items.Add($"Area : {obj.Area}");
-                lbx_ResultDetail.Items.Add($"Score : {obj.Score}");
-                lbx_ResultDetail.Items.Add("--------------------------------------");
-            }
-        }
-
-
-        private void ShowSegmentationDetail(SegmentationResult result, string className)
-        {
-            lbx_ResultDetail.Items.Clear();
-            if (result == null) return;
-
-            // 🔹 Area 값 읽기
-            if (!TryGetAreaFilter(out double minArea, out double maxArea))
-                return;
-
-            // 🔹 Class + Area 필터
-            var filteredObjects = result.SegmentedObjects
-                .Where(o => string.Equals(o.ClassInfo.Name, className, StringComparison.OrdinalIgnoreCase))
-                .Where(o => o.Area >= minArea && o.Area <= maxArea)
-                .ToArray();
-
-            lbx_ResultDetail.Items.Add($"Contour Count : {filteredObjects.Length}");
-            lbx_ResultDetail.Items.Add($"ImreadTime : {result.InspectionTime.ImreadTime}");
-            lbx_ResultDetail.Items.Add($"InferenceTime : {result.InspectionTime.InferenceTime}");
-            lbx_ResultDetail.Items.Add($"PostProcessingTime : {result.InspectionTime.PostProcessingTime}");
-            lbx_ResultDetail.Items.Add("--------------------------------------");
-
-            foreach (var obj in filteredObjects)
-            {
-                lbx_ResultDetail.Items.Add($"Name : {obj.ClassInfo.Name}");
-                lbx_ResultDetail.Items.Add($"Area : {obj.Area}");
-                lbx_ResultDetail.Items.Add($"Score : {obj.Score}");
-                lbx_ResultDetail.Items.Add(
-                    $"Center : ({obj.BoundingRotBox.Center.X}, {obj.BoundingRotBox.Center.Y})");
-                lbx_ResultDetail.Items.Add("--------------------------------------");
-            }
-        }
-
-        private void ShowIADDetail(IADResult result, string className)
-        {
-            lbx_ResultDetail.Items.Clear();
-
-            if (result == null) return;
-
-            lbx_ResultDetail.Items.Add("RESULT : " + (result.IsNG ? "NG" : "OK"));
-            lbx_ResultDetail.Items.Add($"Anomaly Score : {result.AnomalyScore.Score:N3}");
-            lbx_ResultDetail.Items.Add("--------------------------------------");
-
-            var objects = result.SegmentedObjects
-                .Where(o => string.Equals(o.ClassInfo.Name, className, StringComparison.OrdinalIgnoreCase));
-
-            var classObjects = result.SegmentedObjects
-                .Where(o => o.ClassInfo.Name == className)
-                .ToArray();
-
-            lbx_ResultDetail.Items.Clear();
-            lbx_ResultDetail.Items.Add($"Class : {className}");
-            lbx_ResultDetail.Items.Add($"Contour Count : {classObjects.Length}");
-            lbx_ResultDetail.Items.Add($"ImreadTime : {result.InspectionTime.ImreadTime}");
-            lbx_ResultDetail.Items.Add($"InferenceTime : {result.InspectionTime.InferenceTime}");
-            lbx_ResultDetail.Items.Add($"PostProcessingTime : {result.InspectionTime.PostProcessingTime}");
-            lbx_ResultDetail.Items.Add("--------------------------------------");
-
-
-            foreach (var obj in objects)
-            {
-                lbx_ResultDetail.Items.Add($"Name : {obj.ClassInfo.Name}");
-                lbx_ResultDetail.Items.Add($"Area : {obj.Area}");
-                lbx_ResultDetail.Items.Add($"Score : {obj.Score}");
-                lbx_ResultDetail.Items.Add("--------------------------------------");
-            }
-        }
-
+      
         private bool TryGetAreaFilter(out double minArea, out double maxArea)
         {
             minArea = double.MinValue;
             maxArea = double.MaxValue;
 
-            if (!string.IsNullOrWhiteSpace(txtMinArea.Text))
+            if (!string.IsNullOrWhiteSpace(txtMaxArea.Text))
             {
-                if (!double.TryParse(txtMinArea.Text, out minArea))
+                if (!double.TryParse(txtMaxArea.Text, out minArea))
                     return false;
             }
 
-            if (!string.IsNullOrWhiteSpace(txtMaxArea.Text))
+            if (!string.IsNullOrWhiteSpace(txtMinArea.Text))
             {
-                if (!double.TryParse(txtMaxArea.Text, out maxArea))
+                if (!double.TryParse(txtMinArea.Text, out maxArea))
                     return false;
             }
 
@@ -382,8 +237,8 @@ namespace PureGate.Property
                 _engineType == AIEngineType.Detection ||
                 _engineType == AIEngineType.Segmentation;
 
-            txtMinArea.Enabled = enable;
             txtMaxArea.Enabled = enable;
+            txtMinArea.Enabled = enable;
             lblAreaFilter.Enabled = enable;
         }
 
@@ -436,106 +291,6 @@ namespace PureGate.Property
                 case AIEngineType.Segmentation:
                     UpdateSegmentationClassInfo(result as SegmentationResult);
                     break;
-            }
-        }
-
-        private void UpdateResultUI()
-        {
-            lv_Result.Items.Clear();
-            lbx_ResultDetail.Items.Clear();
-
-            var result = _saigeAI.GetResult();
-            if (result == null) return;
-
-            switch (_engineType)
-            {
-                case AIEngineType.Detection:
-                    UpdateDetectionResult(result as DetectionResult);
-                    break;
-
-                case AIEngineType.Segmentation:
-                    UpdateSegmentationResult(result as SegmentationResult);
-                    break;
-
-                case AIEngineType.AnomalyDetection:
-                    UpdateIADResult(result as IADResult);
-                    break;
-            }
-
-        }
-
-        private void UpdateDetectionResult(DetectionResult detResult)
-        {
-            if (detResult == null) return;
-
-            // 🔹 Area 값 읽기
-            if (!TryGetAreaFilter(out double minArea, out double maxArea))
-                return;
-
-            // 🔹 Area 필터 적용
-            var filteredObjects = detResult.DetectedObjects
-                .Where(o => o.Area >= minArea && o.Area <= maxArea);
-
-            // 🔹 필터된 결과로 그룹핑
-            var groups = filteredObjects
-                .GroupBy(o => o.ClassInfo);
-
-            foreach (var g in groups)
-            {
-                var item = new ListViewItem(g.Key.Name);
-                item.SubItems.Add(g.Count().ToString());
-
-                item.UseItemStyleForSubItems = false;
-                item.SubItems[0].BackColor = g.Key.Color;
-
-                lv_Result.Items.Add(item);
-            }
-        }
-
-        private void UpdateSegmentationResult(SegmentationResult segResult)
-        {
-            if (segResult == null) return;
-
-            // 🔹 Area 값 읽기
-            if (!TryGetAreaFilter(out double minArea, out double maxArea))
-                return;
-
-            // 🔹 Area 필터 적용
-            var filteredObjects = segResult.SegmentedObjects
-                .Where(o => o.Area >= minArea && o.Area <= maxArea);
-
-            // 🔹 필터된 결과로 그룹핑
-            var groups = filteredObjects
-                .GroupBy(o => o.ClassInfo);
-
-            foreach (var g in groups)
-            {
-                var item = new ListViewItem(g.Key.Name);
-                item.SubItems.Add(g.Count().ToString());
-
-                item.UseItemStyleForSubItems = false;
-                item.SubItems[0].BackColor = g.Key.Color;
-
-                lv_Result.Items.Add(item);
-            }
-        }
-
-        private void UpdateIADResult(IADResult iadResult)
-        {
-            if (iadResult == null) return;
-
-            var groups = iadResult.SegmentedObjects
-                .GroupBy(o => o.ClassInfo);
-
-            foreach (var g in groups)
-            {
-                var item = new ListViewItem(g.Key.Name);
-                item.SubItems.Add(g.Count().ToString());
-
-                item.UseItemStyleForSubItems = false;
-                item.SubItems[0].BackColor = g.Key.Color;
-
-                lv_Result.Items.Add(item);
             }
         }
 
@@ -592,8 +347,5 @@ namespace PureGate.Property
                 item.SubItems[2].Text = hasNG ? "True" : "False";
             }
         }
-
-
-
     }
 }

@@ -63,7 +63,7 @@
             this.btnCycleMode.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnCycleMode.Font = new System.Drawing.Font("굴림", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(129)));
             this.btnCycleMode.ForeColor = System.Drawing.Color.Black;
-            this.btnCycleMode.Location = new System.Drawing.Point(0, 373);
+            this.btnCycleMode.Location = new System.Drawing.Point(0, 306);
             this.btnCycleMode.Name = "btnCycleMode";
             this.btnCycleMode.Size = new System.Drawing.Size(261, 67);
             this.btnCycleMode.TabIndex = 11;
@@ -181,7 +181,6 @@
         private System.Windows.Forms.Panel SideMenu;
         private System.Windows.Forms.Button btnCycleMode;
         private System.Windows.Forms.Button btnSetUp;
-        private System.Windows.Forms.Button btnSetROI;
         private System.Windows.Forms.Button btnModel;
         private System.Windows.Forms.CheckBox checkBoxHide;
         private System.Windows.Forms.Button btnOverview;

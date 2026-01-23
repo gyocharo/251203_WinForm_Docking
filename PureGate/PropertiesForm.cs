@@ -26,6 +26,7 @@ namespace PureGate
         public PropertiesForm()
         {
             InitializeComponent();
+            LoadOptionControl(InspectType.InspAIModule);
         }
 
         private void LoadOptionControl(InspectType inspType)
@@ -101,6 +102,11 @@ namespace PureGate
 
         public void ShowProperty(InspWindow window)
         {
+            LoadOptionControl(InspectType.InspAIModule);
+
+            if (window == null)
+                return;
+
             foreach (InspAlgorithm algo in window.AlgorithmList)
             {
                 LoadOptionControl(algo.InspectType);
@@ -110,6 +116,7 @@ namespace PureGate
         public void ResetProperty()
         {
             tabPropControl1.TabPages.Clear();
+            LoadOptionControl(InspectType.InspAIModule);
         }
 
         public void UpdateProperty(InspWindow window)

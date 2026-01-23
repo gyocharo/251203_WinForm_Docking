@@ -46,6 +46,6 @@ namespace PureGate.Core
     {
         public static readonly string ROI_IMAGE_NAME = "RoiImage.png";
 
-        public static readonly string PROGRAM_NAME = "Windocking";
+        public static readonly string PROGRAM_NAME = "PureGate";
     }
 }

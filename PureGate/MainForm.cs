@@ -36,10 +36,10 @@ namespace PureGate
         private bool _isCycleMode = false;
 
         //슬라이딩 메뉴의 최대, 최소 폭 크기, 슬라이딩 메뉴가 보이는/접히는 속도, 최초 슬라이딩 메뉴 크기
-        const int MAX_SLIDING_WIDTH = 150;
+        const int MAX_SLIDING_WIDTH = 120;
         const int MIN_SLIDING_WIDTH = 55;
         const int STEP_SLIDING = 2;
-        int _posSliding = 150;
+        int _posSliding = 120;
 
         public MainForm()
         {
@@ -48,10 +48,16 @@ namespace PureGate
             InitializeUI();
             InitializeEvents();
             InitializeDocking();
-            LoadSetting();
 
             Global.Inst.Initialize();
             LoadDockingWindows();
+            LoadSetting();
+
+            this.Shown += (s, e) =>
+            {
+                bool loaded = Global.Inst.InspStage.LastestModelOpen(); // ← 너가 보여준 그 함수 호출
+                if (loaded) ApplyModelToUI();
+            };
         }
 
         //초기화 메서드
@@ -191,7 +197,6 @@ namespace PureGate
             Global.Inst.Dispose();
         }
         #endregion
-
 
         // DockPanel 관련 기능 함수들
         #region
@@ -415,7 +420,8 @@ namespace PureGate
             dropDown.Show(location);
         }
 
-        // Cycle Mode 버튼 눌림 표시 UI
+        // Cycle Mode 관련 기능 함수
+        #region
         private void UpdateCycleModeButtonUI()
         {
             btnCycleMode.FlatStyle = FlatStyle.Flat;
@@ -434,17 +440,34 @@ namespace PureGate
                 btnCycleMode.FlatAppearance.BorderSize = 1;
             }
         }
+        #endregion
 
         // 모델 버튼 클릭 시 동적으로 생성되는 4가지의 탭 기능들 
         #region 
 
-        private string GetMdoelTitle(Model curModel)
+        private string GetModelTitle(Model curModel)
         {
             if (curModel is null)
                 return "";
 
             string modelName = curModel.ModelName;
             return $"{Define.PROGRAM_NAME} - MODEL : {modelName}";
+        }
+
+        // 프로그램 실행 시 모델 로드할 때 UI 갱신을 위한 기능
+        private void ApplyModelToUI()
+        {
+            var m = Global.Inst.InspStage.CurModel;
+            if (m == null) return;
+
+            // 타이틀 갱신
+            this.Text = GetModelTitle(m);
+
+            // 이미지 즉시 표시(모델에 경로가 있을 때)
+            if (!string.IsNullOrWhiteSpace(m.InspectImagePath) && File.Exists(m.InspectImagePath))
+            {
+                Global.Inst.InspStage.SetImageBuffer(m.InspectImagePath);
+            }
         }
 
         private void modelNewMenuItem_Click(object sender, EventArgs e)
@@ -455,7 +478,7 @@ namespace PureGate
             Model curModel = Global.Inst.InspStage.CurModel;
             if (curModel != null)
             {
-                this.Text = GetMdoelTitle(curModel);
+                this.Text = GetModelTitle(curModel);
             }
         }
 
@@ -472,11 +495,7 @@ namespace PureGate
                     string filePath = openFileDialog.FileName;
                     if (Global.Inst.InspStage.LoadModel(filePath))
                     {
-                        Model curModel = Global.Inst.InspStage.CurModel;
-                        if (curModel != null)
-                        {
-                            this.Text = GetMdoelTitle(curModel);
-                        }
+                        ApplyModelToUI();
                     }
                 }
             }

@@ -445,14 +445,61 @@ namespace PureGate.Core
             _model.DelInspWindowList(inspWindowList);
             UpdateDiagramEntity();
         }
-
+            
         public bool Grab(int bufferIndex)
         {
             if (_grabManager == null)
                 return false;
 
+            CheckImageBuffer();
+
             if (!_grabManager.Grab(bufferIndex, true))
                 return false;
+
+            return true;
+        }
+
+        public bool ApplyCameraSetting()
+        {
+            StopCycle(); // 실행중 정지
+
+            // 최신 설정 반영
+            _camType = SettingXml.Inst.CamType;
+
+            // 기존 카메라 정리
+            if (_grabManager != null)
+            {
+                try { _grabManager.TransferCompleted -= _multiGrab_TransferCompleted; } catch { }
+                _grabManager.Dispose();
+                _grabManager = null;
+            }
+
+            // 새 카메라 생성
+            switch (_camType)
+            {
+                case CameraType.WebCam:
+                    _grabManager = new WebCam();
+                    break;
+                case CameraType.HikRobot:
+                    _grabManager = new HikRobotCam();
+                    break;
+                case CameraType.None:
+                default:
+                    _grabManager = null;
+                    break;
+            }
+
+            // 카메라 있으면 초기화 + 버퍼 세팅
+            if (_grabManager != null && _grabManager.InitGrab())
+            {
+                _grabManager.TransferCompleted += _multiGrab_TransferCompleted;
+                InitModelGrab(MAX_GRAB_BUF);
+            }
+
+            // 런타임 상태 갱신
+            UseCamera = (SettingXml.Inst.CamType != CameraType.None);
+            CheckImageBuffer();
+            ResetDisplay();
 
             return true;
         }
@@ -626,7 +673,7 @@ namespace PureGate.Core
                 Global.Inst.InspStage.CurModel.SaveAs(filePath);
         }
 
-        private bool LastestModelOpen()
+        public bool LastestModelOpen()
         {
             if (_lastestModelOpen)
                 return true;
