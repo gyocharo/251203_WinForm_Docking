@@ -49,40 +49,47 @@ namespace PureGate.Core
 
             public Bitmap ToBitmap()
             {
-                if (_bitmap == null)
+                try
                 {
-                    _bitmap = new Bitmap(Width, Height,
-                        (PixelBpp == 8 ?
-                        System.Drawing.Imaging.PixelFormat.Format8bppIndexed :
-                        System.Drawing.Imaging.PixelFormat.Format24bppRgb));
+                    if (ImageData == null || Width <= 0 || Height <= 0) return null;
 
-                    Format = _bitmap.PixelFormat;
-                    Width = _bitmap.Width;
-                    Height = _bitmap.Height;
+                    PixelFormat fmt = (PixelBpp == 8) ? PixelFormat.Format8bppIndexed : PixelFormat.Format24bppRgb;
 
-                    Handle = GCHandle.Alloc(ImageData, GCHandleType.Pinned);
-                    IntPtr pointer = Handle.AddrOfPinnedObject();
+                    // 1. 매번 완전히 새로운 비트맵 객체를 생성 (전역 변수 재사용 금지)
+                    Bitmap bmp = new Bitmap(Width, Height, fmt);
 
-                    var bufferAndStride = _bitmap.ToBufferAndStride();
-                    Buffer = pointer;
-                    Stride = bufferAndStride.Item2;
+                    if (fmt == PixelFormat.Format8bppIndexed)
+                    {
+                        ColorPalette pal = bmp.Palette;
+                        for (int i = 0; i < 256; i++) pal.Entries[i] = Color.FromArgb(i, i, i);
+                        bmp.Palette = pal;
+                    }
+
+                    BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, Width, Height),
+                                                      ImageLockMode.WriteOnly, fmt);
+                    try
+                    {
+                        int bytesPerPixel = PixelBpp / 8;
+                        int lineLength = Width * bytesPerPixel;
+                        for (int i = 0; i < Height; i++)
+                        {
+                            IntPtr destPtr = (IntPtr)((long)bmpData.Scan0 + (i * bmpData.Stride));
+                            Marshal.Copy(ImageData, i * Stride, destPtr, lineLength);
+                        }
+                    }
+                    finally
+                    {
+                        bmp.UnlockBits(bmpData);
+                    }
+
+                    // 2. _tempBitmap에 저장하지 않고 생성된 독립 객체를 바로 반환
+                    return bmp;
+                }
+                catch (Exception ex)
+                {
+                    return null;
                 }
 
-                if (_tempBitmap != null)
-                    _tempBitmap = null;
-
-                _tempBitmap = new Bitmap(Width, Height, Stride, Format, Buffer);
-
-                if (_tempBitmap.PixelFormat == System.Drawing.Imaging.PixelFormat.Format8bppIndexed)
-                {
-                    ColorPalette pal = _tempBitmap.Palette;
-                    // Generate grayscale colours:
-                    for (Int32 i = 0; i < 256; i++)
-                        pal.Entries[i] = Color.FromArgb(i, i, i);
-                    // Assign the edited palette to the bitmap.
-                    _tempBitmap.Palette = pal;
-                }
-                return _tempBitmap;
             }
 
             public Mat ToMat()

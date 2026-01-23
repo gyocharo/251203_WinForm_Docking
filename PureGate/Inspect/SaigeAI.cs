@@ -44,6 +44,9 @@ namespace PureGate
 
         Bitmap _bitmap = null;
 
+        private string _lastClsLabel = null;
+        private float _lastClsScore = 0f;
+
 
         public SaigeAI()
         {
@@ -210,6 +213,26 @@ namespace PureGate
                         return false;
                     }
                     _clsResult = _clsEngine.Inspection(srImage);
+                    try
+                    {
+                        string label;
+                        float score;
+                        if (TryGetClassificationTop1(_clsResult, out label, out score))
+                        {
+                            _lastClsLabel = label;
+                            _lastClsScore = score;
+                        }
+                        else
+                        {
+                            _lastClsLabel = null;
+                            _lastClsScore = 0f;
+                        }
+                    }
+                    catch
+                    {
+                        _lastClsLabel = null;
+                        _lastClsScore = 0f;
+                    }
                     break;
             }
 
@@ -284,6 +307,13 @@ namespace PureGate
                 }
                 step += 50;
             }
+        }
+
+        public bool TryGetLastClsTop1(out string label, out float score)
+        {
+            label = _lastClsLabel;
+            score = _lastClsScore;
+            return !string.IsNullOrWhiteSpace(label);
         }
 
         public Bitmap GetResultImage()

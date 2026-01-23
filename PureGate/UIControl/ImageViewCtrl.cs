@@ -11,6 +11,7 @@ using System.Windows.Forms;
 using PureGate.Algorithm;
 using PureGate.Core;
 using PureGate.Teach;
+using PureGate.Util;
 
 
 namespace PureGate.UIControl
@@ -188,11 +189,24 @@ namespace PureGate.UIControl
         {
             if (bitmap == null) return;
 
-            lock (_lock) // 동기화 추가
-            {
-                // 원본과 크기가 같더라도 안전하게 새 객체를 생성하여 교체
-                Bitmap newBitmap = new Bitmap(bitmap);
+            Bitmap newBitmap = null;
 
+            // 1. 전달받은 비트맵으로부터 안전하게 복사본 생성
+            // bitmap 객체를 사용하는 동안 다른 곳에서 건드리지 못하게 lock을 걸어야 함
+            try
+            {
+                // 원본 비트맵의 데이터를 복제하여 독립적인 인스턴스 생성
+                newBitmap = (Bitmap)bitmap.Clone();
+            }
+            catch (Exception)
+            {
+                // 여기서 '개체를 다른 곳에서 사용하고 있습니다'가 발생할 수 있음
+                // 만약 발생한다면 호출하는 쪽(ToBitmap)에서 이미 Lock을 걸어줘야 함
+                return;
+            }
+
+            lock (_lock)
+            {
                 if (_bitmapImage != null)
                 {
                     _bitmapImage.Dispose();
@@ -205,8 +219,13 @@ namespace PureGate.UIControl
                     _isInitialized = true;
                     ResizeCanvas();
                 }
+
+                // SrImage 생성도 lock 안에서 안전하게 수행
+                // 만약 SrImage 내부에서 _bitmapImage를 사용한다면 여기서 처리해야 함
+                // SrImage srImage = new SrImage(_bitmapImage); 
             }
 
+            // UI 갱신
             if (InvokeRequired)
             {
                 BeginInvoke(new Action(() => { FitImageToScreen(); Invalidate(); }));
@@ -216,6 +235,7 @@ namespace PureGate.UIControl
                 FitImageToScreen();
                 Invalidate();
             }
+
         }
 
         private void FitImageToScreen()
@@ -317,41 +337,45 @@ namespace PureGate.UIControl
             
             //#10_INSPWINDOW#18 ROI 그리기
             _screenSelectedRect = new Rectangle(0, 0, 0, 0);
-            foreach (DiagramEntity entity in _diagramEntityList)
-            {
-                Rectangle screenRect = VirtualToScreen(entity.EntityROI);
-                using (Pen pen = new Pen(entity.EntityColor, 2))
-                {
-                    if (_multiSelectedEntities.Contains(entity))
-                    {
-                        pen.DashStyle = DashStyle.Dash;
-                        pen.Width = 2;
 
-                        if (_screenSelectedRect.IsEmpty)
+            lock (_lock)
+            {
+                foreach (DiagramEntity entity in _diagramEntityList)
+                {
+                    Rectangle screenRect = VirtualToScreen(entity.EntityROI);
+                    using (Pen pen = new Pen(entity.EntityColor, 2))
+                    {
+                        if (_multiSelectedEntities.Contains(entity))
                         {
-                            _screenSelectedRect = screenRect;
+                            pen.DashStyle = DashStyle.Dash;
+                            pen.Width = 2;
+
+                            if (_screenSelectedRect.IsEmpty)
+                            {
+                                _screenSelectedRect = screenRect;
+                            }
+                            else
+                            {
+                                //선택된 roi가 여러개 일때, 전체 roi 영역 계산
+                                //선택된 roi 영역 합치기
+                                _screenSelectedRect = Rectangle.Union(_screenSelectedRect, screenRect);
+                            }
                         }
-                        else
-                        {
-                            //선택된 roi가 여러개 일때, 전체 roi 영역 계산
-                            //선택된 roi 영역 합치기
-                            _screenSelectedRect = Rectangle.Union(_screenSelectedRect, screenRect);
-                        }
+
+                        g.DrawRectangle(pen, screenRect);
                     }
 
-                    g.DrawRectangle(pen, screenRect);
-                }
-            
-                //선택된 ROI가 있다면, 리사이즈 핸들 그리기
-                if (_multiSelectedEntities.Count <= 1 && entity == _selEntity)
-                {
-                    // 리사이즈 핸들 그리기 (8개 포인트: 4 모서리 + 4 변 중간)
-                    using (Brush brush = new SolidBrush(Color.LightBlue))
+                    //선택된 ROI가 있다면, 리사이즈 핸들 그리기
+                    if (_multiSelectedEntities.Count <= 1 && entity == _selEntity)
                     {
-                        Point[] resizeHandles = GetResizeHandles(screenRect);
-                        foreach (Point handle in resizeHandles)
+                        // 리사이즈 핸들 그리기 (8개 포인트: 4 모서리 + 4 변 중간)
+                        using (Brush brush = new SolidBrush(Color.LightBlue))
                         {
-                            g.FillRectangle(brush, handle.X - _ResizeHandleSize / 2, handle.Y - _ResizeHandleSize / 2, _ResizeHandleSize, _ResizeHandleSize);
+                            Point[] resizeHandles = GetResizeHandles(screenRect);
+                            foreach (Point handle in resizeHandles)
+                            {
+                                g.FillRectangle(brush, handle.X - _ResizeHandleSize / 2, handle.Y - _ResizeHandleSize / 2, _ResizeHandleSize, _ResizeHandleSize);
+                            }
                         }
                     }
                 }
@@ -427,6 +451,7 @@ namespace PureGate.UIControl
                 PointF textPos = new PointF(Width - 80, 10);
                 DrawText(g, resultText, textPos, fontSize, resultColor);
             }
+
         }
 
         private void DrawRectInfo(Graphics g)
