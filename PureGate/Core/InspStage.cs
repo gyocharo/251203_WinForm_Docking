@@ -188,45 +188,6 @@ namespace PureGate.Core
             SetImageChannel(imageChannel);
 
         }
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-        public Bitmap CreateMaskedHeatmap(Mat templateMat, Mat inspectMat, double alpha = 0.6)
-        {
-            // 1. 이미지 차이 계산
-            Mat diff = new Mat();
-            Cv2.Absdiff(templateMat, inspectMat, diff);
-
-            // 2. 그레이스케일 및 노이즈 필터링
-            Mat grayDiff = new Mat();
-            Cv2.CvtColor(diff, grayDiff, ColorConversionCodes.BGR2GRAY);
-            Cv2.GaussianBlur(grayDiff, grayDiff, new OpenCvSharp.Size(5, 5), 0); // 미세한 노이즈 제거
-
-            // 3. 불량 마스크 생성 (차이가 50 이상인 곳만 추출)
-            // 이 Threshold 값(50)을 조절하여 민감도를 설정하세요.
-            Mat mask = new Mat();
-            Cv2.Threshold(grayDiff, mask, 50, 255, ThresholdTypes.Binary);
-
-            // 4. 히트맵 컬러 적용 (Jet: 0은 파랑, 255는 빨강)
-            Mat colorHeatmap = new Mat();
-            Cv2.ApplyColorMap(grayDiff, colorHeatmap, ColormapTypes.Jet);
-
-            // 5. 합성 결과물 준비 (원본 복사)
-            Mat resultMat = inspectMat.Clone();
-
-            // 6. 마스크가 씌워진 영역(불량)만 원본과 히트맵을 합성
-            // mask가 255인 부분만 colorHeatmap의 값을 가져와서 원본과 섞습니다.
-            Mat overlayPart = new Mat();
-            Cv2.AddWeighted(resultMat, 1.0 - alpha, colorHeatmap, alpha, 0, overlayPart);
-
-            // 마스크 영역만 덮어쓰기
-            overlayPart.CopyTo(resultMat, mask);
-
-            // 자원 해제
-            diff.Dispose(); grayDiff.Dispose(); mask.Dispose(); colorHeatmap.Dispose(); overlayPart.Dispose();
-
-            return OpenCvSharp.Extensions.BitmapConverter.ToBitmap(resultMat);
-        }
-
 
         public void SetImageBuffer(string filePath)
         {
