@@ -64,6 +64,8 @@ namespace PureGate.Core
 
         private bool _isInspectMode = false;
 
+        private string _loadedImageDir = "";
+
         public InspStage() { }
 
         public ImageSpace ImageSpace
@@ -673,15 +675,24 @@ namespace PureGate.Core
             if (!UseCamera)
             {
                 string inspImagePath = CurModel.InspectImagePath;
-                if (inspImagePath == "")
-                    return;
-
                 string inspImageDir = Path.GetDirectoryName(inspImagePath);
+
                 if (!Directory.Exists(inspImageDir))
                     return;
 
-                if (!_imageLoader.IsLoadedImages())
+                // ✅ 폴더가 바뀌었으면 무조건 다시 로드
+                if (_loadedImageDir != inspImageDir)
+                {
                     _imageLoader.LoadImages(inspImageDir);
+                    _imageLoader.Reset();          // ← 이전 인덱스 제거
+                    _loadedImageDir = inspImageDir;
+                }
+                else
+                {
+                    // 같은 폴더지만 아직 로드 안 된 경우
+                    if (!_imageLoader.IsLoadedImages())
+                        _imageLoader.LoadImages(inspImageDir);
+                }
             }
 
             if (isCycle)
@@ -774,7 +785,7 @@ namespace PureGate.Core
                 Directory.CreateDirectory(targetDir);
 
                 // 파일명: 시간_라벨.jpg (충돌 방지)
-                string ts = DateTime.Now.ToString("HHmmssff");
+                string ts = DateTime.Now.ToString("HH.mm.ss.ff");
                 string fileName = $"{ts}_{safeLabel}.jpg";
                 string fullPath = Path.Combine(targetDir, fileName);
 
