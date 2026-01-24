@@ -19,7 +19,7 @@ namespace PureGate.Grab
 
         internal override bool Create(string stripAddr = null)
         {
-            _capture = new VideoCapture(0);
+            //_capture = new VideoCapture(0);
             if (_capture == null)
             {
                 return false;
