@@ -28,6 +28,7 @@ namespace PureGate.UIControl
     public enum ToolbarButton
     {
         ShowROI,
+        SetROI,
         ChannelColor,
         ChannelGray,
         ChannelRed,
@@ -39,6 +40,7 @@ namespace PureGate.UIControl
     {
         private ToolStripDropDownButton _dropDownButton;
         private ToolStripButton _showROIButton;
+        private ToolStripButton _setROIButton;
 
         #region Events
 
@@ -85,6 +87,12 @@ namespace PureGate.UIControl
 
             // ───────────────── Buttons ─────────────────
             _showROIButton = IconButton("ShowROI", "ROI보기", (s, e) => OnShowROI(), toggle: true);
+            _setROIButton = IconButton("SetROI", "ROI 설정", (s, e) => OnSetROI(), toggle: true);
+                
+            _setROIButton.Image = PureGate.Properties.Resources.SetROI;
+            _setROIButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            
+
 
             // ───────────────── Channel DropDown ─────────────────
             _dropDownButton = new ToolStripDropDownButton
@@ -128,6 +136,7 @@ namespace PureGate.UIControl
             bar.Items.AddRange(new ToolStripItem[]
             {
             _showROIButton,
+            _setROIButton,
             new ToolStripSeparator(),
             _dropDownButton
             });
@@ -139,6 +148,10 @@ namespace PureGate.UIControl
         private void OnShowROI()
         {
             ButtonChanged?.Invoke(this, new ToolbarEventArgs(ToolbarButton.ShowROI, _showROIButton.Checked));
+        }
+        private void OnSetROI()
+        {
+            ButtonChanged?.Invoke(this, new ToolbarEventArgs(ToolbarButton.SetROI, _setROIButton.Checked));
         }
         private void OnSelectChannel(ToolbarButton buttonType)
         {
@@ -174,6 +187,18 @@ namespace PureGate.UIControl
                 mappedButton = result;
 
             OnSelectChannel(mappedButton);
+        }
+
+        public void SetSetRoiChecked(bool isChecked)
+        {
+            if (_setROIButton != null)
+                _setROIButton.Checked = isChecked;
+        }
+
+        public void SetShowRoiChecked(bool isChecked)
+        {
+            if (_showROIButton != null)
+                _showROIButton.Checked = isChecked;
         }
 
     }

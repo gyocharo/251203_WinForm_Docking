@@ -7,19 +7,15 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using WeifenLuo.WinFormsUI.Docking;
 
 namespace PureGate
 {
-    public partial class Auto_Teaching : Form
+    public partial class CountForm : DockContent
     {
-        public Auto_Teaching()
+        public CountForm()
         {
             InitializeComponent();
-        }
-
-        private void btnApply_Click(object sender, EventArgs e)
-        {
-
         }
     }
 }

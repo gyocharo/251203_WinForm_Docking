@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using PureGate.Grab;
 using PureGate.Util;
+using PureGate.Core;
 
 namespace PureGate.Setting
 {
@@ -40,6 +41,7 @@ namespace PureGate.Setting
         private void btnApply_Click(object sender, EventArgs e)
         {
             SaveSetting();
+            Global.Inst.InspStage.ApplyCameraSetting();
         }
     }
 }

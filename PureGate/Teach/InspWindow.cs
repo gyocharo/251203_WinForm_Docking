@@ -1,14 +1,15 @@
-﻿using System;
+﻿using PureGate.Algorithm;
+using PureGate.Core;
+using PureGate.Inspect;
+using PureGate.Property;
+using OpenCvSharp;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
-using PureGate.Algorithm;
-using PureGate.Core;
-using PureGate.Inspect;
-using OpenCvSharp;
 
 namespace PureGate.Teach
 {
@@ -144,13 +145,16 @@ namespace PureGate.Teach
                 case InspectType.InspMatch:
                     inspAlgo = new MatchAlgorithm();
                     break;
+
+                case InspectType.InspAIModule:
+                    inspAlgo = new AIModuleAlgorithm();
+                    break;
             }
 
             if (inspAlgo is null)
                 return false;
 
             AlgorithmList.Add(inspAlgo);
-
             return true;
         }
 

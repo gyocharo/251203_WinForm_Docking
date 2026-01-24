@@ -23,7 +23,7 @@ namespace PureGate
 
         }
 
-        private void btn_Grab_Click(object sender, EventArgs e)
+        private void btnGrab_Click_1(object sender, EventArgs e)
         {
             Global.Inst.InspStage.Grab(0);
         }
@@ -60,5 +60,7 @@ namespace PureGate
         {
             Global.Inst.InspStage.StopCycle();
         }
+
+
     }
 }

@@ -1,6 +1,6 @@
 ﻿namespace PureGate
 {
-    partial class StatisticForm
+    partial class SummaryForm
     {
         /// <summary>
         /// Required designer variable.
@@ -28,19 +28,10 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.SuspendLayout();
-            // 
-            // StatisticForm
-            // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 18F);
+            this.components = new System.ComponentModel.Container();
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(341, 337);
-            this.CloseButton = false;
-            this.CloseButtonVisible = false;
-            this.Name = "StatisticForm";
-            this.Text = "StatisticForm";
-            this.ResumeLayout(false);
-
+            this.ClientSize = new System.Drawing.Size(800, 450);
+            this.Text = "SummaryForm";
         }
 
         #endregion

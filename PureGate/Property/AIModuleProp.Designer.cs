@@ -28,102 +28,325 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.cmb_Model = new System.Windows.Forms.ComboBox();
-            this.btn_Apply = new System.Windows.Forms.Button();
-            this.txt_Model_Path = new System.Windows.Forms.TextBox();
-            this.btn_Model = new System.Windows.Forms.Button();
-            this.btn_Model_Load = new System.Windows.Forms.Button();
-            this.txt_Area = new System.Windows.Forms.TextBox();
+            this.btnInspAI = new System.Windows.Forms.Button();
+            this.txtAIModelPath = new System.Windows.Forms.TextBox();
+            this.btnLoadModel = new System.Windows.Forms.Button();
+            this.btnSelAIModel = new System.Windows.Forms.Button();
+            this.Txt_ModuleInfo = new System.Windows.Forms.TextBox();
+            this.lv_ClassInfos = new System.Windows.Forms.ListView();
+            this.columnHeader3 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader4 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader5 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.lbx_ModelInformation = new System.Windows.Forms.ListBox();
+            this.Lbl_ModuleInfo = new System.Windows.Forms.Label();
+            this.label24 = new System.Windows.Forms.Label();
+            this.tableLayoutPanel3 = new System.Windows.Forms.TableLayoutPanel();
+            this.tableLayoutPanel2 = new System.Windows.Forms.TableLayoutPanel();
+            this.cbAIModelType = new System.Windows.Forms.ComboBox();
+            this.panel2 = new System.Windows.Forms.Panel();
+            this.txtMinArea = new System.Windows.Forms.TextBox();
+            this.dasda = new System.Windows.Forms.Label();
+            this.txtMaxArea = new System.Windows.Forms.TextBox();
+            this.panel3 = new System.Windows.Forms.Panel();
+            this.panel1 = new System.Windows.Forms.Panel();
+            this.lblAreaFilter = new System.Windows.Forms.Label();
+            this.tableLayoutPanel3.SuspendLayout();
+            this.tableLayoutPanel2.SuspendLayout();
+            this.panel2.SuspendLayout();
+            this.panel3.SuspendLayout();
+            this.panel1.SuspendLayout();
             this.SuspendLayout();
             // 
-            // cmb_Model
+            // btnInspAI
             // 
-            this.cmb_Model.FormattingEnabled = true;
-            this.cmb_Model.Items.AddRange(new object[] {
-            "SEG",
-            "DET",
-            "IAD"});
-            this.cmb_Model.Location = new System.Drawing.Point(17, 21);
-            this.cmb_Model.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.cmb_Model.Name = "cmb_Model";
-            this.cmb_Model.Size = new System.Drawing.Size(171, 26);
-            this.cmb_Model.TabIndex = 0;
-            this.cmb_Model.SelectedIndexChanged += new System.EventHandler(this.cmb_Model_SelectedIndexChanged);
+            this.btnInspAI.Dock = System.Windows.Forms.DockStyle.Right;
+            this.btnInspAI.Location = new System.Drawing.Point(276, 195);
+            this.btnInspAI.Margin = new System.Windows.Forms.Padding(4);
+            this.btnInspAI.Name = "btnInspAI";
+            this.btnInspAI.Size = new System.Drawing.Size(118, 50);
+            this.btnInspAI.TabIndex = 9;
+            this.btnInspAI.Text = "AI 검사";
+            this.btnInspAI.UseVisualStyleBackColor = true;
+            this.btnInspAI.Click += new System.EventHandler(this.btnInspAI_Click);
             // 
-            // btn_Apply
+            // txtAIModelPath
             // 
-            this.btn_Apply.Location = new System.Drawing.Point(179, 270);
-            this.btn_Apply.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.btn_Apply.Name = "btn_Apply";
-            this.btn_Apply.Size = new System.Drawing.Size(139, 60);
-            this.btn_Apply.TabIndex = 1;
-            this.btn_Apply.Text = "적용";
-            this.btn_Apply.UseVisualStyleBackColor = true;
-            this.btn_Apply.Click += new System.EventHandler(this.btn_Apply_Click);
+            this.txtAIModelPath.Dock = System.Windows.Forms.DockStyle.Top;
+            this.txtAIModelPath.Location = new System.Drawing.Point(4, 4);
+            this.txtAIModelPath.Margin = new System.Windows.Forms.Padding(4);
+            this.txtAIModelPath.Name = "txtAIModelPath";
+            this.txtAIModelPath.ReadOnly = true;
+            this.txtAIModelPath.Size = new System.Drawing.Size(390, 28);
+            this.txtAIModelPath.TabIndex = 6;
             // 
-            // txt_Model_Path
+            // btnLoadModel
             // 
-            this.txt_Model_Path.Location = new System.Drawing.Point(17, 60);
-            this.txt_Model_Path.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.txt_Model_Path.Name = "txt_Model_Path";
-            this.txt_Model_Path.ReadOnly = true;
-            this.txt_Model_Path.Size = new System.Drawing.Size(298, 28);
-            this.txt_Model_Path.TabIndex = 2;
+            this.btnLoadModel.Dock = System.Windows.Forms.DockStyle.Right;
+            this.btnLoadModel.Location = new System.Drawing.Point(276, 136);
+            this.btnLoadModel.Margin = new System.Windows.Forms.Padding(4);
+            this.btnLoadModel.Name = "btnLoadModel";
+            this.btnLoadModel.Size = new System.Drawing.Size(118, 51);
+            this.btnLoadModel.TabIndex = 8;
+            this.btnLoadModel.Text = "모델 로딩";
+            this.btnLoadModel.UseVisualStyleBackColor = true;
+            this.btnLoadModel.Click += new System.EventHandler(this.btnLoadModel_Click);
             // 
-            // btn_Model
+            // btnSelAIModel
             // 
-            this.btn_Model.Location = new System.Drawing.Point(179, 134);
-            this.btn_Model.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.btn_Model.Name = "btn_Model";
-            this.btn_Model.Size = new System.Drawing.Size(139, 60);
-            this.btn_Model.TabIndex = 3;
-            this.btn_Model.Text = "모델 선택";
-            this.btn_Model.UseVisualStyleBackColor = true;
-            this.btn_Model.Click += new System.EventHandler(this.btn_Model_Click);
+            this.btnSelAIModel.Dock = System.Windows.Forms.DockStyle.Right;
+            this.btnSelAIModel.Location = new System.Drawing.Point(276, 77);
+            this.btnSelAIModel.Margin = new System.Windows.Forms.Padding(4);
+            this.btnSelAIModel.Name = "btnSelAIModel";
+            this.btnSelAIModel.Size = new System.Drawing.Size(118, 51);
+            this.btnSelAIModel.TabIndex = 7;
+            this.btnSelAIModel.Text = "AI모델 선택";
+            this.btnSelAIModel.UseVisualStyleBackColor = true;
+            this.btnSelAIModel.Click += new System.EventHandler(this.btnSelAIModel_Click);
             // 
-            // btn_Model_Load
+            // Txt_ModuleInfo
             // 
-            this.btn_Model_Load.Location = new System.Drawing.Point(179, 202);
-            this.btn_Model_Load.Margin = new System.Windows.Forms.Padding(4);
-            this.btn_Model_Load.Name = "btn_Model_Load";
-            this.btn_Model_Load.Size = new System.Drawing.Size(139, 60);
-            this.btn_Model_Load.TabIndex = 4;
-            this.btn_Model_Load.Text = "모델 로드";
-            this.btn_Model_Load.UseVisualStyleBackColor = true;
-            this.btn_Model_Load.Click += new System.EventHandler(this.btn_Model_Load_Click);
+            this.Txt_ModuleInfo.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.Txt_ModuleInfo.Location = new System.Drawing.Point(4, 282);
+            this.Txt_ModuleInfo.Margin = new System.Windows.Forms.Padding(4);
+            this.Txt_ModuleInfo.Multiline = true;
+            this.Txt_ModuleInfo.Name = "Txt_ModuleInfo";
+            this.Txt_ModuleInfo.Size = new System.Drawing.Size(390, 20);
+            this.Txt_ModuleInfo.TabIndex = 27;
             // 
-            // txt_Area
+            // lv_ClassInfos
             // 
-            this.txt_Area.Location = new System.Drawing.Point(17, 134);
-            this.txt_Area.Name = "txt_Area";
-            this.txt_Area.Size = new System.Drawing.Size(124, 28);
-            this.txt_Area.TabIndex = 5;
+            this.lv_ClassInfos.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.columnHeader3,
+            this.columnHeader4,
+            this.columnHeader5});
+            this.lv_ClassInfos.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.lv_ClassInfos.GridLines = true;
+            this.lv_ClassInfos.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable;
+            this.lv_ClassInfos.HideSelection = false;
+            this.lv_ClassInfos.Location = new System.Drawing.Point(4, 108);
+            this.lv_ClassInfos.Margin = new System.Windows.Forms.Padding(4);
+            this.lv_ClassInfos.MultiSelect = false;
+            this.lv_ClassInfos.Name = "lv_ClassInfos";
+            this.lv_ClassInfos.Size = new System.Drawing.Size(390, 140);
+            this.lv_ClassInfos.TabIndex = 25;
+            this.lv_ClassInfos.UseCompatibleStateImageBehavior = false;
+            this.lv_ClassInfos.View = System.Windows.Forms.View.Details;
             // 
-            // SaigeAIProp
+            // columnHeader3
+            // 
+            this.columnHeader3.Text = "Name";
+            this.columnHeader3.Width = 110;
+            // 
+            // columnHeader4
+            // 
+            this.columnHeader4.Text = "Color";
+            // 
+            // columnHeader5
+            // 
+            this.columnHeader5.Text = "IsNG";
+            // 
+            // lbx_ModelInformation
+            // 
+            this.lbx_ModelInformation.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.lbx_ModelInformation.FormattingEnabled = true;
+            this.lbx_ModelInformation.ItemHeight = 18;
+            this.lbx_ModelInformation.Location = new System.Drawing.Point(4, 23);
+            this.lbx_ModelInformation.Margin = new System.Windows.Forms.Padding(4);
+            this.lbx_ModelInformation.Name = "lbx_ModelInformation";
+            this.lbx_ModelInformation.Size = new System.Drawing.Size(390, 77);
+            this.lbx_ModelInformation.TabIndex = 24;
+            // 
+            // Lbl_ModuleInfo
+            // 
+            this.Lbl_ModuleInfo.AutoSize = true;
+            this.Lbl_ModuleInfo.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.Lbl_ModuleInfo.Font = new System.Drawing.Font("굴림", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(129)));
+            this.Lbl_ModuleInfo.Location = new System.Drawing.Point(4, 252);
+            this.Lbl_ModuleInfo.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.Lbl_ModuleInfo.Name = "Lbl_ModuleInfo";
+            this.Lbl_ModuleInfo.Size = new System.Drawing.Size(390, 26);
+            this.Lbl_ModuleInfo.TabIndex = 26;
+            this.Lbl_ModuleInfo.Text = "Module Information";
+            // 
+            // label24
+            // 
+            this.label24.AutoSize = true;
+            this.label24.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.label24.Font = new System.Drawing.Font("굴림", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(129)));
+            this.label24.Location = new System.Drawing.Point(4, 0);
+            this.label24.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.label24.Name = "label24";
+            this.label24.Size = new System.Drawing.Size(390, 19);
+            this.label24.TabIndex = 20;
+            this.label24.Text = "Model Information";
+            // 
+            // tableLayoutPanel3
+            // 
+            this.tableLayoutPanel3.ColumnCount = 1;
+            this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
+            this.tableLayoutPanel3.Controls.Add(this.Txt_ModuleInfo, 0, 4);
+            this.tableLayoutPanel3.Controls.Add(this.label24, 0, 0);
+            this.tableLayoutPanel3.Controls.Add(this.Lbl_ModuleInfo, 0, 3);
+            this.tableLayoutPanel3.Controls.Add(this.lv_ClassInfos, 0, 2);
+            this.tableLayoutPanel3.Controls.Add(this.lbx_ModelInformation, 0, 1);
+            this.tableLayoutPanel3.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.tableLayoutPanel3.Location = new System.Drawing.Point(0, 0);
+            this.tableLayoutPanel3.Name = "tableLayoutPanel3";
+            this.tableLayoutPanel3.RowCount = 5;
+            this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 18.24324F));
+            this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 81.75676F));
+            this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 148F));
+            this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 26F));
+            this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 27F));
+            this.tableLayoutPanel3.Size = new System.Drawing.Size(398, 306);
+            this.tableLayoutPanel3.TabIndex = 19;
+            // 
+            // tableLayoutPanel2
+            // 
+            this.tableLayoutPanel2.ColumnCount = 1;
+            this.tableLayoutPanel2.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.tableLayoutPanel2.Controls.Add(this.panel1, 0, 5);
+            this.tableLayoutPanel2.Controls.Add(this.txtAIModelPath, 0, 0);
+            this.tableLayoutPanel2.Controls.Add(this.cbAIModelType, 0, 1);
+            this.tableLayoutPanel2.Controls.Add(this.btnSelAIModel, 0, 2);
+            this.tableLayoutPanel2.Controls.Add(this.btnLoadModel, 0, 3);
+            this.tableLayoutPanel2.Controls.Add(this.btnInspAI, 0, 4);
+            this.tableLayoutPanel2.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.tableLayoutPanel2.Location = new System.Drawing.Point(0, 0);
+            this.tableLayoutPanel2.Name = "tableLayoutPanel2";
+            this.tableLayoutPanel2.RowCount = 6;
+            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 52.58855F));
+            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 47.41145F));
+            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 59F));
+            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 59F));
+            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 58F));
+            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 80F));
+            this.tableLayoutPanel2.Size = new System.Drawing.Size(398, 330);
+            this.tableLayoutPanel2.TabIndex = 20;
+            // 
+            // cbAIModelType
+            // 
+            this.cbAIModelType.Dock = System.Windows.Forms.DockStyle.Right;
+            this.cbAIModelType.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cbAIModelType.FormattingEnabled = true;
+            this.cbAIModelType.Location = new System.Drawing.Point(4, 42);
+            this.cbAIModelType.Margin = new System.Windows.Forms.Padding(4);
+            this.cbAIModelType.Name = "cbAIModelType";
+            this.cbAIModelType.Size = new System.Drawing.Size(390, 26);
+            this.cbAIModelType.TabIndex = 5;
+            this.cbAIModelType.SelectedIndexChanged += new System.EventHandler(this.cbAIModelType_SelectedIndexChanged);
+            // 
+            // panel2
+            // 
+            this.panel2.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.panel2.Controls.Add(this.tableLayoutPanel3);
+            this.panel2.Dock = System.Windows.Forms.DockStyle.Bottom;
+            this.panel2.Location = new System.Drawing.Point(0, 349);
+            this.panel2.Margin = new System.Windows.Forms.Padding(4);
+            this.panel2.Name = "panel2";
+            this.panel2.Size = new System.Drawing.Size(400, 308);
+            this.panel2.TabIndex = 21;
+            // 
+            // txtMinArea
+            // 
+            this.txtMinArea.Location = new System.Drawing.Point(129, 4);
+            this.txtMinArea.Margin = new System.Windows.Forms.Padding(4);
+            this.txtMinArea.Name = "txtMinArea";
+            this.txtMinArea.Size = new System.Drawing.Size(86, 28);
+            this.txtMinArea.TabIndex = 15;
+            // 
+            // dasda
+            // 
+            this.dasda.AutoSize = true;
+            this.dasda.Location = new System.Drawing.Point(99, 7);
+            this.dasda.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.dasda.Name = "dasda";
+            this.dasda.Size = new System.Drawing.Size(22, 18);
+            this.dasda.TabIndex = 17;
+            this.dasda.Text = "~";
+            // 
+            // txtMaxArea
+            // 
+            this.txtMaxArea.Location = new System.Drawing.Point(5, 4);
+            this.txtMaxArea.Margin = new System.Windows.Forms.Padding(4);
+            this.txtMaxArea.Name = "txtMaxArea";
+            this.txtMaxArea.Size = new System.Drawing.Size(86, 28);
+            this.txtMaxArea.TabIndex = 14;
+            // 
+            // panel3
+            // 
+            this.panel3.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.panel3.Controls.Add(this.tableLayoutPanel2);
+            this.panel3.Dock = System.Windows.Forms.DockStyle.Top;
+            this.panel3.Location = new System.Drawing.Point(0, 0);
+            this.panel3.Name = "panel3";
+            this.panel3.Size = new System.Drawing.Size(400, 332);
+            this.panel3.TabIndex = 22;
+            // 
+            // panel1
+            // 
+            this.panel1.Controls.Add(this.lblAreaFilter);
+            this.panel1.Controls.Add(this.txtMaxArea);
+            this.panel1.Controls.Add(this.txtMinArea);
+            this.panel1.Controls.Add(this.dasda);
+            this.panel1.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.panel1.Location = new System.Drawing.Point(3, 252);
+            this.panel1.Name = "panel1";
+            this.panel1.Size = new System.Drawing.Size(392, 75);
+            this.panel1.TabIndex = 23;
+            // 
+            // lblAreaFilter
+            // 
+            this.lblAreaFilter.AutoSize = true;
+            this.lblAreaFilter.Location = new System.Drawing.Point(15, 46);
+            this.lblAreaFilter.Name = "lblAreaFilter";
+            this.lblAreaFilter.Size = new System.Drawing.Size(195, 18);
+            this.lblAreaFilter.TabIndex = 24;
+            this.lblAreaFilter.Text = "Area Filter (Min ~ Max)";
+            // 
+            // AIModuleProp
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 18F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.Controls.Add(this.txt_Area);
-            this.Controls.Add(this.btn_Model_Load);
-            this.Controls.Add(this.btn_Model);
-            this.Controls.Add(this.txt_Model_Path);
-            this.Controls.Add(this.btn_Apply);
-            this.Controls.Add(this.cmb_Model);
-            this.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.Name = "SaigeAIProp";
-            this.Size = new System.Drawing.Size(609, 687);
+            this.Controls.Add(this.panel3);
+            this.Controls.Add(this.panel2);
+            this.Margin = new System.Windows.Forms.Padding(4);
+            this.Name = "AIModuleProp";
+            this.Size = new System.Drawing.Size(400, 657);
+            this.tableLayoutPanel3.ResumeLayout(false);
+            this.tableLayoutPanel3.PerformLayout();
+            this.tableLayoutPanel2.ResumeLayout(false);
+            this.tableLayoutPanel2.PerformLayout();
+            this.panel2.ResumeLayout(false);
+            this.panel3.ResumeLayout(false);
+            this.panel1.ResumeLayout(false);
+            this.panel1.PerformLayout();
             this.ResumeLayout(false);
-            this.PerformLayout();
 
         }
 
         #endregion
-
-        private System.Windows.Forms.ComboBox cmb_Model;
-        private System.Windows.Forms.Button btn_Apply;
-        private System.Windows.Forms.TextBox txt_Model_Path;
-        private System.Windows.Forms.Button btn_Model;
-        private System.Windows.Forms.Button btn_Model_Load;
-        public System.Windows.Forms.TextBox txt_Area;
+        private System.Windows.Forms.Button btnInspAI;
+        private System.Windows.Forms.TextBox txtAIModelPath;
+        private System.Windows.Forms.Button btnLoadModel;
+        private System.Windows.Forms.Button btnSelAIModel;
+        private System.Windows.Forms.TextBox Txt_ModuleInfo;
+        private System.Windows.Forms.Label Lbl_ModuleInfo;
+        private System.Windows.Forms.ListView lv_ClassInfos;
+        private System.Windows.Forms.ColumnHeader columnHeader3;
+        private System.Windows.Forms.ColumnHeader columnHeader4;
+        private System.Windows.Forms.ColumnHeader columnHeader5;
+        private System.Windows.Forms.ListBox lbx_ModelInformation;
+        private System.Windows.Forms.Label label24;
+        private System.Windows.Forms.TableLayoutPanel tableLayoutPanel3;
+        private System.Windows.Forms.TableLayoutPanel tableLayoutPanel2;
+        private System.Windows.Forms.Panel panel2;
+        private System.Windows.Forms.TextBox txtMinArea;
+        private System.Windows.Forms.Label dasda;
+        private System.Windows.Forms.TextBox txtMaxArea;
+        private System.Windows.Forms.ComboBox cbAIModelType;
+        private System.Windows.Forms.Panel panel3;
+        private System.Windows.Forms.Panel panel1;
+        private System.Windows.Forms.Label lblAreaFilter;
     }
 }
