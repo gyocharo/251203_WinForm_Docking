@@ -5,24 +5,13 @@ using SaigeVision.Net.V2;
 using SaigeVision.Net.V2.Classification;
 using SaigeVision.Net.V2.Detection;
 using SaigeVision.Net.V2.IAD;
-using SaigeVision.Net.V2.IEN;
-using SaigeVision.Net.V2.OCR;
 using SaigeVision.Net.V2.Segmentation;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Diagnostics;
 using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
-
 
 namespace PureGate.Algorithm
 {
@@ -33,8 +22,6 @@ namespace PureGate.Algorithm
 
         private SaigeAI _saigeAI;
         private List<DrawInspectInfo> _resultAreas;
-
-
 
         public AIModuleAlgorithm()
         {
@@ -54,13 +41,14 @@ namespace PureGate.Algorithm
             if (_srcImage == null)
                 return false;
 
-            if (InspRect.Right > _srcImage.Width ||
-                InspRect.Bottom > _srcImage.Height)
+            // 검사 영역이 이미지 범위를 벗어나는지 체크
+            if (InspRect.Right > _srcImage.Width || InspRect.Bottom > _srcImage.Height)
                 return false;
 
             if (_saigeAI == null)
                 _saigeAI = Global.Inst.InspStage.AIModule;
 
+            // ROI 추출 및 검사
             using (Mat roiMat = new Mat(_srcImage, InspRect))
             using (Bitmap roiBmp = BitmapConverter.ToBitmap(roiMat))
             {
@@ -73,11 +61,12 @@ namespace PureGate.Algorithm
 
             _resultAreas = new List<DrawInspectInfo>();
 
-            if (EngineType == AIEngineType.AnomalyDetection)
+            // Enum 명칭 수정 (AnomalyDetection -> IAD, Detection -> DET 등)
+            if (EngineType == AIEngineType.IAD)
                 HandleIAD(result as IADResult);
-            else if (EngineType == AIEngineType.Detection)
+            else if (EngineType == AIEngineType.DET)
                 HandleDetection(result as DetectionResult);
-            else if (EngineType == AIEngineType.Segmentation)
+            else if (EngineType == AIEngineType.SEG)
                 HandleSegmentation(result as SegmentationResult);
 
             IsInspected = true;
@@ -86,11 +75,9 @@ namespace PureGate.Algorithm
 
         private void HandleIAD(IADResult iad)
         {
-            if (iad == null)
-                return;
+            if (iad == null) return;
 
             IsDefect = iad.IsNG;
-
             ResultString.Add($"IAD Result : {(IsDefect ? "NG" : "OK")}");
             ResultString.Add($"Score : {iad.AnomalyScore.Score:N3}");
 
@@ -106,19 +93,19 @@ namespace PureGate.Algorithm
 
         private void HandleDetection(DetectionResult det)
         {
-            if (det == null)
-                return;
+            if (det == null) return;
 
             IsDefect = det.DetectedObjects.Length > 0;
 
             foreach (var obj in det.DetectedObjects)
             {
+                // ROI 상대 좌표를 전체 이미지 절대 좌표로 변환
                 Rect rect = new Rect(
-                    (int)obj.BoundingBox.X,
-                    (int)obj.BoundingBox.Y,
+                    (int)obj.BoundingBox.X + InspRect.X,
+                    (int)obj.BoundingBox.Y + InspRect.Y,
                     (int)obj.BoundingBox.Width,
                     (int)obj.BoundingBox.Height
-                ) + InspRect.TopLeft;
+                );
 
                 _resultAreas.Add(
                     new DrawInspectInfo(
@@ -129,14 +116,12 @@ namespace PureGate.Algorithm
                     )
                 );
             }
-
             ResultString.Add($"Detection Count : {det.DetectedObjects.Length}");
         }
 
         private void HandleSegmentation(SegmentationResult seg)
         {
-            if (seg == null)
-                return;
+            if (seg == null) return;
 
             IsDefect = seg.SegmentedObjects.Length > 0;
 
@@ -144,12 +129,13 @@ namespace PureGate.Algorithm
             {
                 var box = obj.BoundingRotBox;
 
+                // ROI 상대 좌표를 전체 이미지 절대 좌표로 변환
                 Rect rect = new Rect(
-                    (int)(box.Center.X - box.Width / 2),
-                    (int)(box.Center.Y - box.Height / 2),
+                    (int)(box.Center.X - box.Width / 2) + InspRect.X,
+                    (int)(box.Center.Y - box.Height / 2) + InspRect.Y,
                     (int)box.Width,
                     (int)box.Height
-                ) + InspRect.TopLeft;
+                );
 
                 _resultAreas.Add(
                     new DrawInspectInfo(
@@ -160,14 +146,12 @@ namespace PureGate.Algorithm
                     )
                 );
             }
-
             ResultString.Add($"Segment Count : {seg.SegmentedObjects.Length}");
         }
 
         public override int GetResultRect(out List<DrawInspectInfo> resultArea)
         {
             resultArea = null;
-
             if (!IsInspected || _resultAreas == null || _resultAreas.Count == 0)
                 return -1;
 
@@ -178,13 +162,11 @@ namespace PureGate.Algorithm
         public override bool CopyFrom(InspAlgorithm sourceAlgo)
         {
             var src = sourceAlgo as AIModuleAlgorithm;
-            if (src == null)
-                return false;
+            if (src == null) return false;
 
             CopyBaseTo(this);
             ModelPath = src.ModelPath;
             EngineType = src.EngineType;
-
             return true;
         }
 

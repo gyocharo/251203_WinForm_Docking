@@ -27,24 +27,19 @@ namespace PureGate.Property
         private bool _isUpdatingUI = false;
 
         public static AIModuleProp saigeaiprop;
+
         public AIModuleProp()
         {
             InitializeComponent();
+            saigeaiprop = this; // 정적 참조 초기화 추가
 
             cbAIModelType.DataSource = Enum.GetValues(typeof(AIEngineType)).Cast<AIEngineType>().ToList();
             cbAIModelType.SelectedIndex = 0;
 
             UpdateAreaFilterUI();
 
-            txtMaxArea.TextChanged += (s, e) =>
-            {
-                UpdateClassInfoResultUI();
-            };
-
-            txtMinArea.TextChanged += (s, e) =>
-            {
-                UpdateClassInfoResultUI();
-            };
+            txtMaxArea.TextChanged += (s, e) => { UpdateClassInfoResultUI(); };
+            txtMinArea.TextChanged += (s, e) => { UpdateClassInfoResultUI(); };
 
             this.AutoScroll = true;
         }
@@ -55,16 +50,16 @@ namespace PureGate.Property
 
             switch (_engineType)
             {
-                case AIEngineType.AnomalyDetection:
+                case AIEngineType.IAD: // Enum 이름 일치 (AnomalyDetection -> IAD)
                     filter = "Anomaly Detection Files|*.saigeiad;";
                     break;
-                case AIEngineType.Segmentation:
+                case AIEngineType.SEG: // Enum 이름 일치 (Segmentation -> SEG)
                     filter = "Segmentation Files|*.saigeseg;";
                     break;
-                case AIEngineType.Detection:
+                case AIEngineType.DET: // Enum 이름 일치 (Detection -> DET)
                     filter = "Detection Files|*.saigedet;";
                     break;
-                case EngineType.CLS:
+                case AIEngineType.CLS: // EngineType -> AIEngineType 오타 수정
                     filter = "Classification Files|*.saigecls;";
                     break;
             }
@@ -85,7 +80,6 @@ namespace PureGate.Property
 
         private void btnLoadModel_Click(object sender, EventArgs e)
         {
-            // SaigeAI가 null이면 초기화
             if (_saigeAI == null)
             {
                 _saigeAI = Global.Inst.InspStage.AIModule;
@@ -99,10 +93,7 @@ namespace PureGate.Property
 
             try
             {
-                // 모델 로딩
-                _saigeAI.LoadEngine(_modelPath, _engineType); // 예외가 발생할 수 있음
-
-                // 모델 정보 가져오기
+                _saigeAI.LoadEngine(_modelPath, _engineType);
                 var modelInfo = _saigeAI.GetModelInfo();
 
                 if (modelInfo == null)
@@ -111,7 +102,6 @@ namespace PureGate.Property
                     return;
                 }
 
-                // 모델 정보 출력
                 UpdateModelInfoUI();
             }
             catch (Exception ex)
@@ -138,13 +128,11 @@ namespace PureGate.Property
                 MessageBox.Show("현재 이미지가 없습니다.", "오류", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
-           
-            _saigeAI.InspAIModule(bitmap);
 
+            _saigeAI.InspAIModule(bitmap);
             Bitmap resultImage = _saigeAI.GetResultImage();
 
             Global.Inst.InspStage.UpdateDisplay(resultImage);
-
             UpdateClassInfoResultUI();
         }
 
@@ -158,15 +146,12 @@ namespace PureGate.Property
             {
                 if (_saigeAI != null)
                 {
-                    _saigeAI.Dispose();
-                    _saigeAI = null;
+                    _saigeAI.DisposeMode(); // Dispose -> DisposeMode (SaigeAI 클래스 메서드명)
+                    // _saigeAI = null; // 인스턴스를 유지하려면 주석 처리, 새로 생성하려면 유지
                 }
 
-                // 모델 경로 초기화
                 _modelPath = string.Empty;
                 txtAIModelPath.Clear();
-
-                // 모델 정보 UI 초기화
                 lbx_ModelInformation.Items.Clear();
                 lv_ClassInfos.Items.Clear();
                 Txt_ModuleInfo.Clear();
@@ -184,7 +169,9 @@ namespace PureGate.Property
             try
             {
                 txtAIModelPath.Text = _aiAlgo.ModelPath;
+                _modelPath = _aiAlgo.ModelPath; // 내부 경로 변수도 업데이트
                 cbAIModelType.SelectedItem = _aiAlgo.EngineType;
+                _engineType = _aiAlgo.EngineType;
             }
             finally
             {
@@ -213,32 +200,21 @@ namespace PureGate.Property
             Txt_ModuleInfo.Text = module;
         }
 
-      
         private bool TryGetAreaFilter(out double minArea, out double maxArea)
         {
             minArea = double.MinValue;
             maxArea = double.MaxValue;
 
-            if (!string.IsNullOrWhiteSpace(txtMaxArea.Text))
-            {
-                if (!double.TryParse(txtMaxArea.Text, out minArea))
-                    return false;
-            }
-
-            if (!string.IsNullOrWhiteSpace(txtMinArea.Text))
-            {
-                if (!double.TryParse(txtMinArea.Text, out maxArea))
-                    return false;
-            }
+            // 로직상 txtMinArea가 minArea로, txtMaxArea가 maxArea로 가야할 것 같아 순서 조정 권장
+            if (double.TryParse(txtMinArea.Text, out double min)) minArea = min;
+            if (double.TryParse(txtMaxArea.Text, out double max)) maxArea = max;
 
             return true;
         }
 
         private void UpdateAreaFilterUI()
         {
-            bool enable =
-                _engineType == AIEngineType.Detection ||
-                _engineType == AIEngineType.Segmentation;
+            bool enable = _engineType == AIEngineType.DET || _engineType == AIEngineType.SEG;
 
             txtMaxArea.Enabled = enable;
             txtMinArea.Enabled = enable;
@@ -251,7 +227,7 @@ namespace PureGate.Property
             lv_ClassInfos.Items.Clear();
             Txt_ModuleInfo.Clear();
 
-            var modelInfo = _saigeAI.GetModelInfo(); // SaigeAI 인스턴스로 모델 정보 가져오기
+            var modelInfo = _saigeAI.GetModelInfo();
             if (modelInfo == null)
             {
                 lbx_ModelInformation.Items.Add("모델 정보가 없습니다.");
@@ -260,18 +236,8 @@ namespace PureGate.Property
 
             lbx_ModelInformation.Items.Add($"EngineType : {_engineType}");
             lbx_ModelInformation.Items.Add($"ModelPath : {_modelPath}");
-            lbx_ModelInformation.Items.Add($"ModelInfo Type: {modelInfo.GetType().Name}");
 
-            // 모델 속성 동적 확인
-            var properties = modelInfo.GetType().GetProperties();
-            foreach (var property in properties)
-            {
-                lbx_ModelInformation.Items.Add($"Property: {property.Name} | Value: {property.GetValue(modelInfo)}");
-            }
-
-            lbx_ModelInformation.Refresh();
             SetModelInfo(modelInfo, _engineType.ToString());
-
         }
 
         private void UpdateClassInfoResultUI()
@@ -283,15 +249,13 @@ namespace PureGate.Property
 
             switch (_engineType)
             {
-                case AIEngineType.AnomalyDetection:
+                case AIEngineType.IAD:
                     UpdateIADClassInfo(result as IADResult);
                     break;
-
-                case AIEngineType.Detection:
+                case AIEngineType.DET:
                     UpdateDetectionClassInfo(result as DetectionResult);
                     break;
-
-                case AIEngineType.Segmentation:
+                case AIEngineType.SEG:
                     UpdateSegmentationClassInfo(result as SegmentationResult);
                     break;
             }
@@ -301,14 +265,10 @@ namespace PureGate.Property
         {
             if (detResult == null || lv_ClassInfos.Items.Count == 0) return;
 
-            if (!TryGetAreaFilter(out double minArea, out double maxArea))
-                return;
-
             for (int i = 0; i < lv_ClassInfos.Items.Count; i++)
             {
                 var item = lv_ClassInfos.Items[i];
                 string className = item.Text;
-
                 bool hasNG = detResult.DetectedObjects.Any(o =>
                     string.Equals(o.ClassInfo.Name, className, StringComparison.OrdinalIgnoreCase));
 
@@ -320,14 +280,10 @@ namespace PureGate.Property
         {
             if (segResult == null || lv_ClassInfos.Items.Count == 0) return;
 
-            if (!TryGetAreaFilter(out double minArea, out double maxArea))
-                return;
-
             for (int i = 0; i < lv_ClassInfos.Items.Count; i++)
             {
                 var item = lv_ClassInfos.Items[i];
                 string className = item.Text;
-
                 bool hasNG = segResult.SegmentedObjects.Any(o =>
                     string.Equals(o.ClassInfo.Name, className, StringComparison.OrdinalIgnoreCase));
 
@@ -343,7 +299,6 @@ namespace PureGate.Property
             {
                 var item = lv_ClassInfos.Items[i];
                 string className = item.Text;
-
                 bool hasNG = iadResult.SegmentedObjects.Any(o =>
                     string.Equals(o.ClassInfo.Name, className, StringComparison.OrdinalIgnoreCase));
 

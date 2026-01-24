@@ -34,8 +34,6 @@ namespace PureGate
     public class SaigeAI : IDisposable
     {
         AIEngineType _engineType;
-        IADEngine _iADEngine = null;
-        IADResult _iADResult = null;
         SegmentationEngine _segEngine = null;
         SegmentationResult _segResult = null;
         DetectionEngine _detEngine = null;
@@ -47,6 +45,7 @@ namespace PureGate
 
 
         Bitmap _inspImage = null;
+        object _lastResult = null;
 
         private string _lastClsLabel = null;
         private float _lastClsScore = 0f;
@@ -60,23 +59,21 @@ namespace PureGate
         // 엔진을 로드하는 메서드입니다.
         public void LoadEngine(string modelPath, AIEngineType engineType)
         {
-            //GPU에 여러개 모델을 넣을 경우, 메모리가 부족할 수 있으므로, 해제
             DisposeMode();
-
             _engineType = engineType;
 
             switch (_engineType)
             {
-                case AIEngineType.AnomalyDetection:
+                case AIEngineType.IAD: // Enum 이름 일치
                     LoadIADEngine(modelPath);
                     break;
-                case AIEngineType.Segmentation:
+                case AIEngineType.SEG:
                     LoadSegEngine(modelPath);
                     break;
-                case AIEngineType.Detection:
+                case AIEngineType.DET:
                     LoadDetEngine(modelPath);
                     break;
-                case EngineType.CLS:
+                case AIEngineType.CLS:
                     RunCLS(modelPath);
                     break;
                 default:
@@ -90,58 +87,27 @@ namespace PureGate
             {
                 switch (_engineType)
                 {
-                    case EngineType.IAD:
-                        return _iadEngine != null;
-                    case EngineType.SEG:
-                        return _segEngine != null;
-                    case EngineType.DET:
-                        return _detEngine != null;
-                    case EngineType.CLS:
-                        return _clsEngine != null;
-                    default:
-                        return false;
+                    case AIEngineType.IAD: return _iadEngine != null;
+                    case AIEngineType.SEG: return _segEngine != null;
+                    case AIEngineType.DET: return _detEngine != null;
+                    case AIEngineType.CLS: return _clsEngine != null;
+                    default: return false;
                 }
             }
         }
-        public void RunSEG(string txt)
+
+        public void LoadIADEngine(string modelPath)
         {
-            // 검사하기 위한 엔진에 대한 객체를 생성합니다.
-            // 인스턴스 생성 시 모데파일 정보와 GPU Index를 입력해줍니다.
-            // 필요에 따라 batch size를 입력합니다
-            _iADEngine = new IADEngine(modelPath, 0);
-
-            // 검사 전 option에 대한 설정을 가져옵니다
-            IADOption option = _iADEngine.GetInferenceOption();
-
+            _iadEngine = new IADEngine(modelPath, 0); // _iADEngine 오타 수정
+            IADOption option = _iadEngine.GetInferenceOption();
             option.CalcScoremap = false;
-
-            // 검사 결과에 대한 heatmap 이미지를 가져올 지 선택합니다
-            // 약간의 속도차이로 불필요할 경우 false 로 설정합니다
             option.CalcHeatmap = false;
-
-            // 검사 결과에 대한 mask이미지를 가져올 지 선택합니다
-            // 약간의 속도차이로 불필요할 경우 false 로 설정합니다
             option.CalcMask = false;
-
-            // 검사 결과에 대한 segmencted object (contour) 에 대한 정보를 가져올 지 선택합니다
-            // 약간의 속도차이로 불필요할 경우 false 로 설정합니다
             option.CalcObject = true;
-
-            // Segmented object의 면적이 object area threshold 보다 작으면 최종 결과에서 제외됩니다.
             option.CalcObjectAreaAndApplyThreshold = true;
-
-            // Segmented object의 면적이 object score threshold 보다 작으면 최종 결과에서 제외됩니다.
             option.CalcObjectScoreAndApplyThreshold = true;
-
-            // 추론 API 실행에 소요되는 시간을 세분화하여 출력할지 결정합니다.
-            // `true`로 설정하면 이미지를 읽는 시간, 순수 딥러닝 추론 시간, 후처리 시간을 각각 확인할 수 있습니다.
-            // `false`로 설정하면 추론 API 실행에 소요된 총 시간만을 확인할 수 있습니다.
-            // `true`로 설정하면 전체 추론 시간이 느려질 수 있습니다. 실제 검사 시에는 `false`로 설정하는 것을 권장합니다.
             option.CalcTime = true;
-
-            // option을 적용하여 검사에 대한 조건을 변경할 수 있습니다.
-            // 필요에 따라 writeModelFile parameter를 이용하여 모델파일에 정보를 영구적으로 변경할 수 있습니다.
-            _iADEngine.SetInferenceOption(option);
+            _iadEngine.SetInferenceOption(option);
         }
 
         public void LoadSegEngine(string modelPath)
@@ -221,113 +187,63 @@ namespace PureGate
         // 입력된 이미지에서 IAD 검사 진행
         public bool InspAIModule(Bitmap bmpImage)
         {
-            if (bmpImage is null)
-            {
-                MessageBox.Show("이미지가 없습니다. 유효한 이미지를 입력해주세요.", "오류", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return false;
-            }
+            if (bmpImage is null) return false;
 
             _inspImage = bmpImage;
-
             SrImage srImage = new SrImage(bmpImage);
-
-            Stopwatch sw = Stopwatch.StartNew();
 
             switch (_engineType)
             {
-                case AIEngineType.AnomalyDetection:
-                    // IAD 엔진을 이용하여 검사합니다.
-                    if (_iADEngine == null)
-                    {
-                        MessageBox.Show("엔진이 초기화되지 않았습니다. LoadEngine 메서드를 호출하여 엔진을 초기화하세요.");
-                        return false;
-                    }
-
-                    _iADResult = _iADEngine.Inspection(srImage);
-                    _lastResult = _iADResult;
+                case AIEngineType.IAD:
+                    if (_iadEngine == null) return false;
+                    _iadResult = _iadEngine.Inspection(srImage);
+                    _lastResult = _iadResult;
                     break;
-                case AIEngineType.Segmentation:
-                    if (_segEngine == null)
-                    {
-                        MessageBox.Show("엔진이 초기화되지 않았습니다. LoadEngine 메서드를 호출하여 엔진을 초기화하세요.");
-                        return false;
-                    }
-                    // Segmentation 엔진을 이용하여 검사합니다.
+                case AIEngineType.SEG:
+                    if (_segEngine == null) return false;
                     _segResult = _segEngine.Inspection(srImage);
+                    _lastResult = _segResult;
                     break;
-                case AIEngineType.Detection:
-                    if (_detEngine == null)
-                    {
-                        MessageBox.Show("엔진이 초기화되지 않았습니다. LoadEngine 메서드를 호출하여 엔진을 초기화하세요.");
-                        return false;
-                    }
-                    // Detection 엔진을 이용하여 검사합니다.
+                case AIEngineType.DET:
+                    if (_detEngine == null) return false;
                     _detResult = _detEngine.Inspection(srImage);
                     _lastResult = _detResult;
                     break;
-                case EngineType.CLS: // Classification
-                    if (_clsEngine == null)
-                    {
-                        MessageBox.Show("엔진이 초기화되지 않았습니다. LoadEngine 메서드를 호출하여 엔진을 초기화하세요.");
-                        return false;
-                    }
+                case AIEngineType.CLS:
+                    if (_clsEngine == null) return false;
                     _clsResult = _clsEngine.Inspection(srImage);
-                    try
-                    {
-                        string label;
-                        float score;
-                        if (TryGetClassificationTop1(_clsResult, out label, out score))
-                        {
-                            _lastClsLabel = label;
-                            _lastClsScore = score;
-                        }
-                        else
-                        {
-                            _lastClsLabel = null;
-                            _lastClsScore = 0f;
-                        }
-                    }
-                    catch
-                    {
-                        _lastClsLabel = null;
-                        _lastClsScore = 0f;
-                    }
+                    _lastResult = _clsResult;
+                    TryGetClassificationTop1(_clsResult, out _lastClsLabel, out _lastClsScore);
                     break;
             }
-
             return true;
         }
 
+        public object GetResult() => _lastResult;
 
-        public object GetResult()
+        private void DrawSegResult(SegmentedObject[] segmentedObjects, Bitmap bmp)
         {
-            return _lastResult;
+            using (Graphics g = Graphics.FromImage(bmp))
+            {
+                foreach (var prediction in segmentedObjects)
+                {
+                    using (SolidBrush brush = new SolidBrush(Color.FromArgb(127, prediction.ClassInfo.Color)))
+                    using (GraphicsPath gp = new GraphicsPath())
+                    {
+                        if (prediction.Contour.Value.Count < 3) continue;
+                        gp.AddPolygon(prediction.Contour.Value.ToArray());
+                        foreach (var innerValue in prediction.Contour.InnerValue)
+                        {
+                            gp.AddPolygon(innerValue.ToArray());
+                        }
+                        g.FillPath(brush, gp);
+                    }
+                }
+            }
         }
 
         // IADResult를 이용하여 결과를 이미지에 그립니다.
-        private void DrawSegResult(SegmentedObject[] segmentedObjects, Bitmap bmp)
-        {
-            Graphics g = Graphics.FromImage(bmp);
-            int step = 10;
 
-            // outline contour
-            foreach (var prediction in segmentedObjects)
-            {
-                SolidBrush brush = new SolidBrush(Color.FromArgb(127, prediction.ClassInfo.Color));
-                //g.DrawString(prediction.ClassInfo.Name + " : " + prediction.Area, new Font(FontFamily.GenericSansSerif, 50), brush, 10, step);
-                using (GraphicsPath gp = new GraphicsPath())
-                {
-                    if (prediction.Contour.Value.Count < 3) continue;
-                    gp.AddPolygon(prediction.Contour.Value.ToArray());
-                    foreach (var innerValue in prediction.Contour.InnerValue)
-                    {
-                        gp.AddPolygon(innerValue.ToArray());
-                    }
-                    g.FillPath(brush, gp);
-                }
-                step += 50;
-            }
-        }
         private void DrawDetectionResult(DetectionResult result, Bitmap bmp)
         {
             Graphics g = Graphics.FromImage(bmp);
@@ -360,56 +276,51 @@ namespace PureGate
 
         public Bitmap GetResultImage()
         {
-            if (_inspImage is null)
-                return null;
+            if (_inspImage is null) return null;
 
-            Bitmap resultImage = _inspImage.Clone(new Rectangle(0, 0, _inspImage.Width, _inspImage.Height), System.Drawing.Imaging.PixelFormat.Format24bppRgb);
-            Bitmap resultImage = _bitmap.Clone(new Rectangle(0, 0, _bitmap.Width, _bitmap.Height), System.Drawing.Imaging.PixelFormat.Format24bppRgb);
-
-            int size = 0; // 기본값
-            var text = AIModuleProp.saigeaiprop?.txt_Area?.Text?.Trim();
-
-            if (!int.TryParse(text, out size))
-                size = 0;
+            // 중복 선언 및 _bitmap 변수 오류 수정
+            Bitmap resultImage = _inspImage.Clone(new Rectangle(0, 0, _inspImage.Width, _inspImage.Height), PixelFormat.Format24bppRgb);
 
             switch (_engineType)
             {
-                case EngineType.IAD:
-                    if (_iadResult == null)
-                        return resultImage;
-                    DrawIADResult(_iadResult.SegmentedObjects, resultImage);
+                case AIEngineType.IAD:
+                    if (_iadResult != null) DrawSegResult(_iadResult.SegmentedObjects, resultImage);
                     break;
-                case EngineType.SEG:
-                    if (_segResult == null)
-                        return resultImage;
-                    DrawSEGResult(_segResult.SegmentedObjects, resultImage, size);
+                case AIEngineType.SEG:
+                    if (_segResult != null) DrawSegResult(_segResult.SegmentedObjects, resultImage);
                     break;
-                case EngineType.DET:
-                    if (_detResult == null)
-                        return resultImage;
-                    DrawDETResult(_detResult, resultImage);
+                case AIEngineType.DET:
+                    if (_detResult != null) DrawDetectionResult(_detResult, resultImage);
                     break;
-                case EngineType.CLS: // classification
-                    if (_clsResult == null) return resultImage;
-                    DrawCLSResultOverlay(_clsResult, resultImage);
+                case AIEngineType.CLS:
+                    if (_clsResult != null) DrawCLSResultOverlay(_clsResult, resultImage);
                     break;
             }
-
             return resultImage;
         }
+
         public ModelInfo GetModelInfo()
         {
+            if (!IsEngineLoaded) return null;
+
             switch (_engineType)
             {
-                case AIEngineType.AnomalyDetection:
-                    return _iADEngine?.GetModelInfo();
+                case AIEngineType.IAD: // AnomalyDetection -> IAD
+                    return _iadEngine?.GetModelInfo(); // _iADEngine 오타 수정
 
-                case AIEngineType.Segmentation:
+                case AIEngineType.SEG: // Segmentation -> SEG
                     return _segEngine?.GetModelInfo();
 
-                case AIEngineType.Detection:
+                case AIEngineType.DET: // Detection -> DET
                     return _detEngine?.GetModelInfo();
+
+                case AIEngineType.CLS: // CLS 케이스 추가 (선택사항)
+                    return _clsEngine?.GetModelInfo();
+
+                default:
+                    return null; // 모든 경로에서 값을 반환하도록 추가
             }
+        }
 
         private void DrawCLSResultOverlay(object clsResultObj, Bitmap bmp)
         {
@@ -638,22 +549,22 @@ namespace PureGate
         }
 
         private bool TryGetFloat(object v, out float f)
-{
-    f = 0f;
-    if (v == null) return false;
+        {
+            f = 0f;
+            if (v == null) return false;
 
-    if (v is float ff) { f = ff; return true; }
-    if (v is double dd) { f = (float)dd; return true; }
-    if (v is int ii) { f = ii; return true; }
-    if (v is long ll) { f = ll; return true; }
+            if (v is float ff) { f = ff; return true; }
+            if (v is double dd) { f = (float)dd; return true; }
+            if (v is int ii) { f = ii; return true; }
+            if (v is long ll) { f = ll; return true; }
 
-    if (float.TryParse(v.ToString(), out f))
-        return true;
+            if (float.TryParse(v.ToString(), out f))
+                return true;
 
-    return false;
-}
+            return false;
+        }
 
-        private void DisposeMode()
+        public void DisposeMode()
         {
             if (_segEngine != null)
             {
