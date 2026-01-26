@@ -50,7 +50,7 @@ namespace PureGate
         private string _lastClsLabel = null;
         private float _lastClsScore = 0f;
 
-
+        public bool EnableClsOverlayDraw { get; set; } = false;
         public SaigeAI()
         {
 
@@ -324,6 +324,9 @@ namespace PureGate
 
         private void DrawCLSResultOverlay(object clsResultObj, Bitmap bmp)
         {
+            if (!EnableClsOverlayDraw)
+                return;
+
             try
             {
                 string label;
@@ -374,7 +377,7 @@ namespace PureGate
             }
         }
 
-        // ✅ SaigeVision ClassificationResult 구조가 버전에 따라 다를 수 있어 Reflection으로 최대한 안전하게 Top1 추출
+        // SaigeVision ClassificationResult 구조가 버전에 따라 다를 수 있어 Reflection으로 최대한 안전하게 Top1 추출
         private bool TryGetClassificationTop1(object result, out string label, out float score)
         {
             label = null;
@@ -383,11 +386,11 @@ namespace PureGate
             if (result == null)
                 return false;
 
-            // ✅ 1) 강타입(정확한 프로퍼티명) 우선
+            // 1) 강타입(정확한 프로퍼티명) 우선
             if (result is ClassificationResult cr)
                 return TryGetClassificationTop1Strong(cr, out label, out score);
 
-            // ✅ 2) 강타입이 아니면(참조 어셈블리 mismatch 등) 리플렉션 fallback
+            // 2) 강타입이 아니면(참조 어셈블리 mismatch 등) 리플렉션 fallback
             return TryGetClassificationTop1ByReflection(result, out label, out score);
         }
 
@@ -405,7 +408,7 @@ namespace PureGate
             object TryGetProp(string name)
                 => props.FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase))?.GetValue(result);
 
-            // ✅ DLL 문자열 기반으로 가장 유력한 후보를 우선 시도
+            // DLL 문자열 기반으로 가장 유력한 후보를 우선 시도
             // BestScoreClassInfo / ClassScoreInfos / ClassInfo / Name / Score
             foreach (var cand in new[] { "BestScoreClassInfo", "Top1", "Best", "BestClass", "TopClass", "ClassInfo", "Class" })
             {
@@ -475,15 +478,15 @@ namespace PureGate
 
             if (best != null)
             {
-                label = best.ClassInfo?.Name;   // ✅ DLL 문자열에 <Name>k__BackingField / get_Name 존재
-                score = best.Score;             // ✅ get_Score 존재
+                label = best.ClassInfo?.Name;   // DLL 문자열에 <Name>k__BackingField / get_Name 존재
+                score = best.Score;             // get_Score 존재
 
                 if (!string.IsNullOrWhiteSpace(label))
                     return true;
             }
 
             // 2) 없으면 ClassScoreInfos 에서 최대 Score 찾기
-            var list = cr.ClassScoreInfos;      // ✅ get_ClassScoreInfos 존재
+            var list = cr.ClassScoreInfos;      // get_ClassScoreInfos 존재
             if (list != null && list.Count() > 0)
             {
                 best = list.OrderByDescending(x => x?.Score ?? float.MinValue).FirstOrDefault();

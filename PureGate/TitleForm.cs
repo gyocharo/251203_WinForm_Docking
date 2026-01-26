@@ -166,6 +166,11 @@ namespace PureGate
 
                 ll.BackColor = normalBg;
 
+                if (ll == lbl1Month)
+                    ll.Padding = new Padding(2, 2, 2, 2);
+                else
+                    ll.Padding = new Padding(6, 2, 6, 2);
+
                 // Hover 효과
                 ll.MouseEnter += (s, e) =>
                 {

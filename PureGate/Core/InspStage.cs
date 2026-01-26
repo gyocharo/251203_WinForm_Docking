@@ -727,7 +727,7 @@ namespace PureGate.Core
                 if (!Directory.Exists(inspImageDir))
                     return;
 
-                // ✅ 폴더가 바뀌었으면 무조건 다시 로드
+                // 폴더가 바뀌었으면 무조건 다시 로드
                 if (_loadedImageDir != inspImageDir)
                 {
                     _imageLoader.LoadImages(inspImageDir);
@@ -763,7 +763,7 @@ namespace PureGate.Core
 
             ResetDisplay();
 
-            // ✅ ROI(검사 윈도우)가 하나도 없으면: AIModuleProp의 "적용"과 동일 흐름으로 검사
+            // ROI(검사 윈도우)가 하나도 없으면: AIModuleProp의 "적용"과 동일 흐름으로 검사
             //    (검사 버튼 누를 때마다 다음 이미지로 넘어가는 VirtualGrab/Grab 흐름은 그대로 유지됨)
             if (CurModel != null && (CurModel.InspWindowList == null || CurModel.InspWindowList.Count == 0))
             {
@@ -777,10 +777,10 @@ namespace PureGate.Core
                         Bitmap resultImage = AIModule.GetResultImage();
                         UpdateDisplay(resultImage);
 
-                        // ✅ Saige CLS 분류 결과에 따라 저장 (실패해도 검사 흐름엔 영향 없게)
+                        // Saige CLS 분류 결과에 따라 저장 (실패해도 검사 흐름엔 영향 없게)
                         TrySaveClsResultImage(resultImage);
 
-                        // ✅ 통계 저장(1검사=1레코드)
+                        // 통계 저장(1검사=1레코드)
                         try
                         {
                             if (AIModule.TryGetLastClsTop1(out string label, out float score) && !string.IsNullOrWhiteSpace(label))
@@ -800,7 +800,7 @@ namespace PureGate.Core
                                     Total = 1,
                                     Ok = ok ? 1 : 0,
                                     Ng = ok ? 0 : 1,
-                                    NgClass = ok ? "" : label,  // ✅ NG일 때 클래스명 저장
+                                    NgClass = ok ? "" : label,  // NG일 때 클래스명 저장
                                     Score = score
                                 });
                             }
@@ -819,7 +819,7 @@ namespace PureGate.Core
                 return true;
             }
 
-            // ✅ ROI가 있으면 기존 검사 로직 그대로
+            // ROI가 있으면 기존 검사 로직 그대로
             bool isDefect;
             if (!_inspWorker.RunInspect(out isDefect))
                 return false;
@@ -977,11 +977,11 @@ namespace PureGate.Core
                 SLogger.Write("Failed to inspect", SLogger.LogType.Error);
             }
 
-            // ✅ 핵심: 검사가 끝나자마자 결과 UI 업데이트 호출
+            // 핵심: 검사가 끝나자마자 결과 UI 업데이트 호출
             // 결함이 없으면(false) -> OK(true)를 UI에 보냄
             UpdateResultUI(!isDefect);
 
-            // ✅ ROI 검사도 1검사=1레코드로 저장
+            // ROI 검사도 1검사=1레코드로 저장
             try
             {
                 string modelName = "";

@@ -143,7 +143,7 @@ namespace PureGate
 
             split.Panel1.Controls.Add(dgvNgByClass);
 
-            // ✅ 차트 2개를 좌/우로 배치할 컨테이너
+            // 차트 2개를 좌/우로 배치할 컨테이너
             var chartRow = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
@@ -263,7 +263,7 @@ namespace PureGate
                 ChartType = SeriesChartType.Pie,
                 IsValueShownAsLabel = true,
 
-                // ✅ 도넛 안에는 퍼센트만
+                // 도넛 안에는 퍼센트만
                 Label = "#PERCENT{P1}",
 
                 // 범례(오른쪽)에는 클래스명
@@ -282,7 +282,7 @@ namespace PureGate
             if (NGResultChart.Legends.Count > 0)
                 NGResultChart.Legends[0].Docking = Docking.Right;
 
-            // ✅ 아래(차트 밖)에 4개 클래스 개수 전부 표시
+            // 아래(차트 밖)에 4개 클래스 개수 전부 표시
             NGResultChart.Titles.Clear();
 
             // 4개니까 전부 넣되, 보기 좋게 정렬만
@@ -337,7 +337,7 @@ namespace PureGate
             double okPct = total > 0 ? ok * 100.0 / total : 0;
             double ngPct = total > 0 ? ng * 100.0 / total : 0;
 
-            // ✅ 오른쪽 아래 텍스트를 Title로 표시 (가장 안정적)
+            // 오른쪽 아래 텍스트를 Title로 표시 (가장 안정적)
             OkNgChart.Titles.Clear();
 
             var t = new Title
@@ -347,7 +347,7 @@ namespace PureGate
                 Alignment = ContentAlignment.BottomRight,
                 Font = new Font("Segoe UI", 9, FontStyle.Bold),
                 ForeColor = Color.Black,
-                IsDockedInsideChartArea = false, // ✅ 차트 바깥(아래)에 붙임 (잘 보임)
+                IsDockedInsideChartArea = false, // 차트 바깥(아래)에 붙임 (잘 보임)
             };
 
             OkNgChart.Titles.Add(t);

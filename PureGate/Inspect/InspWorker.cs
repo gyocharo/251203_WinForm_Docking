@@ -85,7 +85,7 @@ namespace PureGate.Inspect
             }
             finally
             {
-                // 3. ✅ [핵심] 상단에서 에러가 나도 이곳은 '무조건' 실행됩니다.
+                // 3. [핵심] 상단에서 에러가 나도 이곳은 '무조건' 실행됩니다.
                 int totalCnt = 0; int okCnt = 0; int ngCnt = 0;
                 foreach (var inspWindow in inspWindowList)
                 {
@@ -100,7 +100,7 @@ namespace PureGate.Inspect
                 {
                     cameraForm.SetInspResultCount(totalCnt, okCnt, ngCnt);
 
-                    // 🔴 이 로그가 뜨는지 다시 확인하세요. 무조건 떠야 합니다.
+                    // 이 로그가 뜨는지 다시 확인하세요. 무조건 떠야 합니다.
                     string finalResult = isDefect ? "NG" : "OK";
                     SLogger.Write($"UI_CHECK: Result is {finalResult}", SLogger.LogType.Info);
 
