@@ -265,7 +265,6 @@ namespace PureGate
             // WorkingState를 결과 값으로 덮어씁니다.
             // ImageViewerCtrl에서 이 문자열을 감지해서 화면에 그려줍니다.
             imageViewer.WorkingState = isOK ? "OK" : "NG";
-
             // 즉시 화면을 다시 그리도록 강제합니다.
             imageViewer.Invalidate();
         }
