@@ -90,7 +90,7 @@ namespace PureGate
             this.Load += Form1_Load;
             _panelMain.Resize += (s, e) => AdjustDockPanel();
             checkBoxHide.CheckedChanged += checkBoxHide_CheckedChanged;
-            this.FormClosing += MainForm_FormClosing;
+            //this.FormClosing += MainForm_FormClosing;
         }
 
         private void InitializeDocking()
@@ -195,23 +195,34 @@ namespace PureGate
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (_isClosing)
-                return;
+            if (_isClosing) return;
 
-            DialogResult result = MessageBox.Show(
+            var result = MessageBox.Show(
                 "프로그램을 종료하시겠습니까?",
                 "종료 확인",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
 
-            if (result == DialogResult.No)
+            if (result != DialogResult.Yes)
             {
+                // 종료 취소
                 e.Cancel = true;
+                return;
             }
-            else
+
+            // 여기부터는 "종료 확정" 상태로 만들고,
+            // 이후 재진입(FormClosing 재호출) 시에는 메시지박스가 절대 안 뜨게 함
+            _isClosing = true;
+
+            // Dispose 과정에서 Close/Exit 등이 다시 걸려도 메시지박스 재등장 방지
+            try
             {
-                _isClosing = true;
                 Global.Inst.Dispose();
+            }
+            catch
+            {
+                // 필요하면 로그만 남기고 종료는 계속 진행
+                // e.Cancel = true;  // <- 이건 넣지 않는 게 보통 안전
             }
         }
         #endregion
