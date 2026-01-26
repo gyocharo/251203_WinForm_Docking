@@ -147,6 +147,12 @@
     <Compile Include="NewModel.Designer.cs">
       <DependentUpon>NewModel.cs</DependentUpon>
     </Compile>
+    <Compile Include="UIControl\RecentNGimages.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UIControl\RecentNGimages.Designer.cs">
+      <DependentUpon>RecentNGimages.cs</DependentUpon>
+    </Compile>
     <Compile Include="Util\NoToolWindowCaptionTheme.cs">
       <SubType>Component</SubType>
     </Compile>
