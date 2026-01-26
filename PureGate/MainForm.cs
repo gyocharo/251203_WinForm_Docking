@@ -41,6 +41,9 @@ namespace PureGate
         const int STEP_SLIDING = 2;
         int _posSliding = 120;
 
+        //닫기 창 불타입 선언
+        private bool _isClosing = false;
+
         public MainForm()
         {
             InitializeComponent();
@@ -192,7 +195,24 @@ namespace PureGate
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            Global.Inst.Dispose();
+            if (_isClosing)
+                return;
+
+            DialogResult result = MessageBox.Show(
+                "프로그램을 종료하시겠습니까?",
+                "종료 확인",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (result == DialogResult.No)
+            {
+                e.Cancel = true;
+            }
+            else
+            {
+                _isClosing = true;
+                Global.Inst.Dispose();
+            }
         }
         #endregion
 
