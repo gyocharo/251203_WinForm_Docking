@@ -42,19 +42,19 @@
             this.label24 = new System.Windows.Forms.Label();
             this.tableLayoutPanel3 = new System.Windows.Forms.TableLayoutPanel();
             this.tableLayoutPanel2 = new System.Windows.Forms.TableLayoutPanel();
-            this.cbAIModelType = new System.Windows.Forms.ComboBox();
-            this.panel2 = new System.Windows.Forms.Panel();
-            this.txtMinArea = new System.Windows.Forms.TextBox();
-            this.dasda = new System.Windows.Forms.Label();
-            this.txtMaxArea = new System.Windows.Forms.TextBox();
-            this.panel3 = new System.Windows.Forms.Panel();
             this.panel1 = new System.Windows.Forms.Panel();
             this.lblAreaFilter = new System.Windows.Forms.Label();
+            this.txtMaxArea = new System.Windows.Forms.TextBox();
+            this.txtMinArea = new System.Windows.Forms.TextBox();
+            this.dasda = new System.Windows.Forms.Label();
+            this.cbAIModelType = new System.Windows.Forms.ComboBox();
+            this.panel2 = new System.Windows.Forms.Panel();
+            this.panel3 = new System.Windows.Forms.Panel();
             this.tableLayoutPanel3.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
+            this.panel1.SuspendLayout();
             this.panel2.SuspendLayout();
             this.panel3.SuspendLayout();
-            this.panel1.SuspendLayout();
             this.SuspendLayout();
             // 
             // btnInspAI
@@ -224,6 +224,53 @@
             this.tableLayoutPanel2.Size = new System.Drawing.Size(398, 330);
             this.tableLayoutPanel2.TabIndex = 20;
             // 
+            // panel1
+            // 
+            this.panel1.Controls.Add(this.lblAreaFilter);
+            this.panel1.Controls.Add(this.txtMaxArea);
+            this.panel1.Controls.Add(this.txtMinArea);
+            this.panel1.Controls.Add(this.dasda);
+            this.panel1.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.panel1.Location = new System.Drawing.Point(3, 252);
+            this.panel1.Name = "panel1";
+            this.panel1.Size = new System.Drawing.Size(392, 75);
+            this.panel1.TabIndex = 23;
+            // 
+            // lblAreaFilter
+            // 
+            this.lblAreaFilter.AutoSize = true;
+            this.lblAreaFilter.Location = new System.Drawing.Point(15, 46);
+            this.lblAreaFilter.Name = "lblAreaFilter";
+            this.lblAreaFilter.Size = new System.Drawing.Size(195, 18);
+            this.lblAreaFilter.TabIndex = 24;
+            this.lblAreaFilter.Text = "Area Filter (Min ~ Max)";
+            // 
+            // txtMaxArea
+            // 
+            this.txtMaxArea.Location = new System.Drawing.Point(5, 4);
+            this.txtMaxArea.Margin = new System.Windows.Forms.Padding(4);
+            this.txtMaxArea.Name = "txtMaxArea";
+            this.txtMaxArea.Size = new System.Drawing.Size(86, 28);
+            this.txtMaxArea.TabIndex = 14;
+            // 
+            // txtMinArea
+            // 
+            this.txtMinArea.Location = new System.Drawing.Point(129, 4);
+            this.txtMinArea.Margin = new System.Windows.Forms.Padding(4);
+            this.txtMinArea.Name = "txtMinArea";
+            this.txtMinArea.Size = new System.Drawing.Size(86, 28);
+            this.txtMinArea.TabIndex = 15;
+            // 
+            // dasda
+            // 
+            this.dasda.AutoSize = true;
+            this.dasda.Location = new System.Drawing.Point(99, 7);
+            this.dasda.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.dasda.Name = "dasda";
+            this.dasda.Size = new System.Drawing.Size(22, 18);
+            this.dasda.TabIndex = 17;
+            this.dasda.Text = "~";
+            // 
             // cbAIModelType
             // 
             this.cbAIModelType.Dock = System.Windows.Forms.DockStyle.Right;
@@ -247,32 +294,6 @@
             this.panel2.Size = new System.Drawing.Size(400, 308);
             this.panel2.TabIndex = 21;
             // 
-            // txtMinArea
-            // 
-            this.txtMinArea.Location = new System.Drawing.Point(129, 4);
-            this.txtMinArea.Margin = new System.Windows.Forms.Padding(4);
-            this.txtMinArea.Name = "txtMinArea";
-            this.txtMinArea.Size = new System.Drawing.Size(86, 28);
-            this.txtMinArea.TabIndex = 15;
-            // 
-            // dasda
-            // 
-            this.dasda.AutoSize = true;
-            this.dasda.Location = new System.Drawing.Point(99, 7);
-            this.dasda.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
-            this.dasda.Name = "dasda";
-            this.dasda.Size = new System.Drawing.Size(22, 18);
-            this.dasda.TabIndex = 17;
-            this.dasda.Text = "~";
-            // 
-            // txtMaxArea
-            // 
-            this.txtMaxArea.Location = new System.Drawing.Point(5, 4);
-            this.txtMaxArea.Margin = new System.Windows.Forms.Padding(4);
-            this.txtMaxArea.Name = "txtMaxArea";
-            this.txtMaxArea.Size = new System.Drawing.Size(86, 28);
-            this.txtMaxArea.TabIndex = 14;
-            // 
             // panel3
             // 
             this.panel3.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
@@ -282,27 +303,6 @@
             this.panel3.Name = "panel3";
             this.panel3.Size = new System.Drawing.Size(400, 332);
             this.panel3.TabIndex = 22;
-            // 
-            // panel1
-            // 
-            this.panel1.Controls.Add(this.lblAreaFilter);
-            this.panel1.Controls.Add(this.txtMaxArea);
-            this.panel1.Controls.Add(this.txtMinArea);
-            this.panel1.Controls.Add(this.dasda);
-            this.panel1.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.panel1.Location = new System.Drawing.Point(3, 252);
-            this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(392, 75);
-            this.panel1.TabIndex = 23;
-            // 
-            // lblAreaFilter
-            // 
-            this.lblAreaFilter.AutoSize = true;
-            this.lblAreaFilter.Location = new System.Drawing.Point(15, 46);
-            this.lblAreaFilter.Name = "lblAreaFilter";
-            this.lblAreaFilter.Size = new System.Drawing.Size(195, 18);
-            this.lblAreaFilter.TabIndex = 24;
-            this.lblAreaFilter.Text = "Area Filter (Min ~ Max)";
             // 
             // AIModuleProp
             // 
@@ -317,10 +317,10 @@
             this.tableLayoutPanel3.PerformLayout();
             this.tableLayoutPanel2.ResumeLayout(false);
             this.tableLayoutPanel2.PerformLayout();
-            this.panel2.ResumeLayout(false);
-            this.panel3.ResumeLayout(false);
             this.panel1.ResumeLayout(false);
             this.panel1.PerformLayout();
+            this.panel2.ResumeLayout(false);
+            this.panel3.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }

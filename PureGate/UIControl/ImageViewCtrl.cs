@@ -115,6 +115,7 @@ namespace PureGate.UIControl
 
         private InspectStatus _currentStatus = InspectStatus.None;
 
+        public event EventHandler NewRoiCanceled;
         public ImageViewCtrl()
         {
             InitializeComponent();
@@ -879,6 +880,7 @@ namespace PureGate.UIControl
                 {
                     //같은 타입의 ROI추가가 더이상 없다면 초기화하여, ROI가 추가되지 않도록 함
                     _newRoiType = InspWindowType.None;
+                    NewRoiCanceled?.Invoke(this, EventArgs.Empty);
                 }
                 else if (_selEntity != null)
                 {

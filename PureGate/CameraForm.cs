@@ -30,6 +30,8 @@ namespace PureGate
             imageViewer.DiagramEntityEvent += ImageViewer_DiagramEntityEvent;
 
             mainViewToolbar.ButtonChanged += Toolbar_ButtonChanged;
+
+            imageViewer.NewRoiCanceled += (s, e) => {mainViewToolbar.SetSetRoiChecked(false);};
         }
 
         private void ImageViewer_DiagramEntityEvent(object sender, DiagramEntityEventArgs e)

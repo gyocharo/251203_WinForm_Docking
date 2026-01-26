@@ -24,10 +24,10 @@ namespace PureGate
 
     public enum AIEngineType
     {
-        SEG = 0,
-        DET = 1,
-        IAD = 2,
-        CLS = 3,
+        CLS = 0,
+        SEG ,
+        DET,
+        IAD,
     }
 
 

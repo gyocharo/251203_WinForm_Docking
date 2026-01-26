@@ -50,6 +50,9 @@ namespace PureGate.Property
 
             switch (_engineType)
             {
+                case AIEngineType.CLS: // EngineType -> AIEngineType 오타 수정
+                    filter = "Classification Files|*.saigecls;";
+                    break;
                 case AIEngineType.IAD: // Enum 이름 일치 (AnomalyDetection -> IAD)
                     filter = "Anomaly Detection Files|*.saigeiad;";
                     break;
@@ -58,9 +61,6 @@ namespace PureGate.Property
                     break;
                 case AIEngineType.DET: // Enum 이름 일치 (Detection -> DET)
                     filter = "Detection Files|*.saigedet;";
-                    break;
-                case AIEngineType.CLS: // EngineType -> AIEngineType 오타 수정
-                    filter = "Classification Files|*.saigecls;";
                     break;
             }
 
