@@ -28,12 +28,47 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.components = new System.ComponentModel.Container();
+            System.Windows.Forms.DataVisualization.Charting.ChartArea chartArea1 = new System.Windows.Forms.DataVisualization.Charting.ChartArea();
+            System.Windows.Forms.DataVisualization.Charting.Legend legend1 = new System.Windows.Forms.DataVisualization.Charting.Legend();
+            System.Windows.Forms.DataVisualization.Charting.Series series1 = new System.Windows.Forms.DataVisualization.Charting.Series();
+            this.ResultChart = new System.Windows.Forms.DataVisualization.Charting.Chart();
+            ((System.ComponentModel.ISupportInitialize)(this.ResultChart)).BeginInit();
+            this.SuspendLayout();
+            // 
+            // ResultChart
+            // 
+            chartArea1.Name = "ChartArea1";
+            this.ResultChart.ChartAreas.Add(chartArea1);
+            this.ResultChart.Dock = System.Windows.Forms.DockStyle.Bottom;
+            legend1.Name = "Legend1";
+            this.ResultChart.Legends.Add(legend1);
+            this.ResultChart.Location = new System.Drawing.Point(0, 239);
+            this.ResultChart.Name = "ResultChart";
+            series1.ChartArea = "ChartArea1";
+            series1.ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.Doughnut;
+            series1.Legend = "Legend1";
+            series1.Name = "Series1";
+            this.ResultChart.Series.Add(series1);
+            this.ResultChart.Size = new System.Drawing.Size(800, 211);
+            this.ResultChart.TabIndex = 0;
+            this.ResultChart.TabStop = false;
+            this.ResultChart.Text = "chart1";
+            // 
+            // SummaryForm
+            // 
+            this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 18F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 450);
+            this.Controls.Add(this.ResultChart);
+            this.Name = "SummaryForm";
             this.Text = "SummaryForm";
+            ((System.ComponentModel.ISupportInitialize)(this.ResultChart)).EndInit();
+            this.ResumeLayout(false);
+
         }
 
         #endregion
+
+        private System.Windows.Forms.DataVisualization.Charting.Chart ResultChart;
     }
 }

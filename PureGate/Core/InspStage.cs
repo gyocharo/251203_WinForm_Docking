@@ -780,6 +780,36 @@ namespace PureGate.Core
                         // ✅ Saige CLS 분류 결과에 따라 저장 (실패해도 검사 흐름엔 영향 없게)
                         TrySaveClsResultImage(resultImage);
 
+                        // ✅ 통계 저장(1검사=1레코드)
+                        try
+                        {
+                            if (AIModule.TryGetLastClsTop1(out string label, out float score) && !string.IsNullOrWhiteSpace(label))
+                            {
+                                bool ok = string.Equals(label, "Good", StringComparison.OrdinalIgnoreCase);
+
+                                string modelName = "";
+                                if (CurModel != null && !string.IsNullOrWhiteSpace(CurModel.ModelPath))
+                                    modelName = Path.GetFileNameWithoutExtension(CurModel.ModelPath);
+
+                                InspHistoryRepo.Append(new InspHistoryRecord
+                                {
+                                    Time = DateTime.Now,
+                                    ModelName = modelName,
+                                    LotNumber = _lotNumber ?? "",
+                                    SerialID = _serialID ?? "",
+                                    Total = 1,
+                                    Ok = ok ? 1 : 0,
+                                    Ng = ok ? 0 : 1,
+                                    NgClass = ok ? "" : label,  // ✅ NG일 때 클래스명 저장
+                                    Score = score
+                                });
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            SLogger.Write($"[History Save] Failed: {ex.Message}", SLogger.LogType.Error);
+                        }
+
                         return true;
                     }
                 }
@@ -950,6 +980,35 @@ namespace PureGate.Core
             // ✅ 핵심: 검사가 끝나자마자 결과 UI 업데이트 호출
             // 결함이 없으면(false) -> OK(true)를 UI에 보냄
             UpdateResultUI(!isDefect);
+
+            // ✅ ROI 검사도 1검사=1레코드로 저장
+            try
+            {
+                string modelName = "";
+                if (CurModel != null && !string.IsNullOrWhiteSpace(CurModel.ModelPath))
+                    modelName = Path.GetFileNameWithoutExtension(CurModel.ModelPath);
+
+                bool ok = !isDefect;
+
+                // 지금은 원인 클래스가 없으니 임시값
+                string ngClass = ok ? "" : "ROI_NG";
+
+                InspHistoryRepo.Append(new InspHistoryRecord
+                {
+                    Time = DateTime.Now,
+                    ModelName = modelName,
+                    LotNumber = _lotNumber ?? "",
+                    SerialID = _serialID ?? "",
+                    Total = 1,
+                    Ok = ok ? 1 : 0,
+                    Ng = ok ? 0 : 1,
+                    NgClass = ngClass
+                });
+            }
+            catch (Exception ex)
+            {
+                SLogger.Write($"[History Save] Failed: {ex.Message}", SLogger.LogType.Error);
+            }
 
             // 제어기로 결과 전송
             VisionSequence.Inst.VisionCommand(Vision2Mmi.InspDone, isDefect);

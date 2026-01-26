@@ -120,6 +120,8 @@
     <Compile Include="Grab\HikRobotCam.cs" />
     <Compile Include="Grab\WebCam.cs" />
     <Compile Include="Inspect\InspectBoard.cs" />
+    <Compile Include="Inspect\InspHistoryRecord.cs" />
+    <Compile Include="Inspect\InspHistoryRepo.cs" />
     <Compile Include="Inspect\InspResult.cs" />
     <Compile Include="Inspect\InspWorker.cs" />
     <Compile Include="Inspect\SaigeAI.cs" />
@@ -147,6 +149,7 @@
     <Compile Include="NewModel.Designer.cs">
       <DependentUpon>NewModel.cs</DependentUpon>
     </Compile>
+    <Compile Include="Inspect\NgClassCount.cs" />
     <Compile Include="Util\NoToolWindowCaptionTheme.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -332,6 +335,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="StatisticForm.resx">
       <DependentUpon>StatisticForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="SummaryForm.resx">
+      <DependentUpon>SummaryForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="TitleForm.resx">
       <DependentUpon>TitleForm.cs</DependentUpon>

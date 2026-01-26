@@ -54,8 +54,7 @@ namespace PureGate
 
             this.Shown += (s, e) =>
             {
-                bool loaded = Global.Inst.InspStage.LastestModelOpen(); // ← 너가 보여준 그 함수 호출
-                if (loaded) ApplyModelToUI();
+                bool loaded = Global.Inst.InspStage.LastestModelOpen(); 
             };
         }
 
@@ -255,48 +254,19 @@ namespace PureGate
             var findForm = _dockPanel.Contents.OfType<T>().FirstOrDefault();
             return findForm;
         }
-
-        // Overview 버튼을 위한 DockPanel 초기화 메서드
-        private void ResetDockLayout()
-        {
-            _dockPanel.SuspendLayout();
-
-            var camera = GetDockForm<CameraForm>();
-            var title = GetDockForm<TitleForm>();
-            var count = GetDockForm<CountForm>();
-            var log = GetDockForm<LogForm>();
-            var result = GetDockForm<ResultForm>();
-            var run = GetDockForm<RunForm>();
-            var prop = GetDockForm<PropertiesForm>();
-            var stat = GetDockForm<StatisticForm>();
-
-            // Document 기준
-            if (camera != null && camera.DockState != DockState.Document)
-                camera.Show(_dockPanel, DockState.Document);
-
-            // 상단 TitleForm
-            if (title != null) title.Show(camera?.Pane, DockAlignment.Top, 0.07);
-
-            // CountForm
-            if (count != null) count.Show(camera?.Pane, DockAlignment.Top, 0.1);
-
-            // 하단 3분할
-            if (log != null) log.Show(camera?.Pane, DockAlignment.Bottom, 0.25);
-            if (result != null) result.Show(log?.Pane, DockAlignment.Right, 0.8);
-            if (run != null) run.Show(result?.Pane, DockAlignment.Right, 0.37);
-
-            // 우측 영역
-            if (prop != null) prop.Show(_dockPanel, DockState.DockRight);
-            if (stat != null) stat.Show(prop?.Pane, DockAlignment.Bottom, 0.4);
-
-            _dockPanel.ResumeLayout();
-        }
         #endregion
 
         private void LoadSetting()
         {
-            _isCycleMode = SettingXml.Inst.CycleMode;
-            UpdateCycleModeButtonUI();
+            try
+            {
+                _isCycleMode = SettingXml.Inst.CycleMode;
+                UpdateCycleModeButtonUI();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"로드 세팅 실패: {ex.Message}");
+            }
         }
 
         private void btnOverview_Click(object sender, EventArgs e)
@@ -304,6 +274,7 @@ namespace PureGate
             try
             {
                 ResetDockLayout();
+                ResetToInitialState();
             }
             catch (Exception ex)
             {
@@ -313,17 +284,31 @@ namespace PureGate
 
         private void btnCycleMode_Click(object sender, EventArgs e)
         {
-            _isCycleMode = !_isCycleMode;
-            SettingXml.Inst.CycleMode = _isCycleMode;
+            try
+            {
+                _isCycleMode = !_isCycleMode;
+                SettingXml.Inst.CycleMode = _isCycleMode;
 
-            UpdateCycleModeButtonUI();
+                UpdateCycleModeButtonUI();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"사이클모드 실행/취소 실패: {ex.Message}");
+            }
         }
 
         private void btnSetUp_Click(object sender, EventArgs e)
         {
-            SLogger.Write($"환경설정창 열기");
-            SetupForm setupForm = new SetupForm();
-            setupForm.ShowDialog();
+            try
+            {
+                SLogger.Write($"환경설정창 열기");
+                SetupForm setupForm = new SetupForm();
+                setupForm.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"환경설정창 열기 실패: {ex.Message}");
+            }
         }
 
         private void btnModel_Click(object sender, EventArgs e)
@@ -418,6 +403,68 @@ namespace PureGate
             Point location = btnImage.PointToScreen(new Point(btnImage.Width, 0));
             dropDown.Show(location);
         }
+
+        // Overview 버튼을 위한 초기화 메서드
+        #region
+        private void ResetDockLayout()
+        {
+            _dockPanel.SuspendLayout();
+
+            var camera = GetDockForm<CameraForm>();
+            var title = GetDockForm<TitleForm>();
+            var count = GetDockForm<CountForm>();
+            var log = GetDockForm<LogForm>();
+            var result = GetDockForm<ResultForm>();
+            var run = GetDockForm<RunForm>();
+            var prop = GetDockForm<PropertiesForm>();
+            var stat = GetDockForm<StatisticForm>();
+
+            // Document 기준
+            if (camera != null && camera.DockState != DockState.Document)
+                camera.Show(_dockPanel, DockState.Document);
+
+            // 상단 TitleForm
+            if (title != null) title.Show(camera?.Pane, DockAlignment.Top, 0.07);
+
+            // CountForm
+            if (count != null) count.Show(camera?.Pane, DockAlignment.Top, 0.1);
+
+            // 하단 3분할
+            if (log != null) log.Show(camera?.Pane, DockAlignment.Bottom, 0.25);
+            if (result != null) result.Show(log?.Pane, DockAlignment.Right, 0.8);
+            if (run != null) run.Show(result?.Pane, DockAlignment.Right, 0.37);
+
+            // 우측 영역
+            if (prop != null) prop.Show(_dockPanel, DockState.DockRight);
+            if (stat != null) stat.Show(prop?.Pane, DockAlignment.Bottom, 0.4);
+
+            _dockPanel.ResumeLayout();
+        }
+
+        private void ResetToInitialState()
+        {
+            // 1) 검사/시퀀스 완전 정지 + 화면 리셋
+            try
+            {
+                var stage = Global.Inst.InspStage;
+                if (stage != null)
+                {
+                    stage.StopCycle();      // InspWorker/Sequence 정지 포함
+                    stage.LiveMode = false;
+                    stage.ResetDisplay();
+                }
+            }
+            catch { }
+
+            // 2) UI 타이틀/설정 다시 반영 (원하면)
+            try
+            {
+                LoadSetting();       // CycleMode 버튼 UI 반영
+                ApplyModelToUI();    // 마지막 모델 로딩되어 있으면 타이틀/이미지 다시 반영
+            }
+            catch { }
+        }
+        #endregion
 
         // Cycle Mode 관련 기능 함수
         #region
@@ -600,3 +647,4 @@ namespace PureGate
 
     }
 }
+
