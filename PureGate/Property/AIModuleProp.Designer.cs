@@ -50,6 +50,7 @@
             this.cbAIModelType = new System.Windows.Forms.ComboBox();
             this.panel2 = new System.Windows.Forms.Panel();
             this.panel3 = new System.Windows.Forms.Panel();
+            this.btnClearCount = new System.Windows.Forms.Button();
             this.tableLayoutPanel3.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.panel1.SuspendLayout();
@@ -60,10 +61,9 @@
             // btnInspAI
             // 
             this.btnInspAI.Dock = System.Windows.Forms.DockStyle.Right;
-            this.btnInspAI.Location = new System.Drawing.Point(276, 195);
-            this.btnInspAI.Margin = new System.Windows.Forms.Padding(4);
+            this.btnInspAI.Location = new System.Drawing.Point(442, 162);
             this.btnInspAI.Name = "btnInspAI";
-            this.btnInspAI.Size = new System.Drawing.Size(118, 50);
+            this.btnInspAI.Size = new System.Drawing.Size(94, 42);
             this.btnInspAI.TabIndex = 9;
             this.btnInspAI.Text = "AI 검사";
             this.btnInspAI.UseVisualStyleBackColor = true;
@@ -72,20 +72,18 @@
             // txtAIModelPath
             // 
             this.txtAIModelPath.Dock = System.Windows.Forms.DockStyle.Top;
-            this.txtAIModelPath.Location = new System.Drawing.Point(4, 4);
-            this.txtAIModelPath.Margin = new System.Windows.Forms.Padding(4);
+            this.txtAIModelPath.Location = new System.Drawing.Point(3, 3);
             this.txtAIModelPath.Name = "txtAIModelPath";
             this.txtAIModelPath.ReadOnly = true;
-            this.txtAIModelPath.Size = new System.Drawing.Size(390, 28);
+            this.txtAIModelPath.Size = new System.Drawing.Size(533, 25);
             this.txtAIModelPath.TabIndex = 6;
             // 
             // btnLoadModel
             // 
             this.btnLoadModel.Dock = System.Windows.Forms.DockStyle.Right;
-            this.btnLoadModel.Location = new System.Drawing.Point(276, 136);
-            this.btnLoadModel.Margin = new System.Windows.Forms.Padding(4);
+            this.btnLoadModel.Location = new System.Drawing.Point(442, 113);
             this.btnLoadModel.Name = "btnLoadModel";
-            this.btnLoadModel.Size = new System.Drawing.Size(118, 51);
+            this.btnLoadModel.Size = new System.Drawing.Size(94, 43);
             this.btnLoadModel.TabIndex = 8;
             this.btnLoadModel.Text = "모델 로딩";
             this.btnLoadModel.UseVisualStyleBackColor = true;
@@ -94,10 +92,9 @@
             // btnSelAIModel
             // 
             this.btnSelAIModel.Dock = System.Windows.Forms.DockStyle.Right;
-            this.btnSelAIModel.Location = new System.Drawing.Point(276, 77);
-            this.btnSelAIModel.Margin = new System.Windows.Forms.Padding(4);
+            this.btnSelAIModel.Location = new System.Drawing.Point(442, 64);
             this.btnSelAIModel.Name = "btnSelAIModel";
-            this.btnSelAIModel.Size = new System.Drawing.Size(118, 51);
+            this.btnSelAIModel.Size = new System.Drawing.Size(94, 43);
             this.btnSelAIModel.TabIndex = 7;
             this.btnSelAIModel.Text = "AI모델 선택";
             this.btnSelAIModel.UseVisualStyleBackColor = true;
@@ -106,11 +103,10 @@
             // Txt_ModuleInfo
             // 
             this.Txt_ModuleInfo.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.Txt_ModuleInfo.Location = new System.Drawing.Point(4, 282);
-            this.Txt_ModuleInfo.Margin = new System.Windows.Forms.Padding(4);
+            this.Txt_ModuleInfo.Location = new System.Drawing.Point(3, 235);
             this.Txt_ModuleInfo.Multiline = true;
             this.Txt_ModuleInfo.Name = "Txt_ModuleInfo";
-            this.Txt_ModuleInfo.Size = new System.Drawing.Size(390, 20);
+            this.Txt_ModuleInfo.Size = new System.Drawing.Size(533, 17);
             this.Txt_ModuleInfo.TabIndex = 27;
             // 
             // lv_ClassInfos
@@ -123,11 +119,10 @@
             this.lv_ClassInfos.GridLines = true;
             this.lv_ClassInfos.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable;
             this.lv_ClassInfos.HideSelection = false;
-            this.lv_ClassInfos.Location = new System.Drawing.Point(4, 108);
-            this.lv_ClassInfos.Margin = new System.Windows.Forms.Padding(4);
+            this.lv_ClassInfos.Location = new System.Drawing.Point(3, 90);
             this.lv_ClassInfos.MultiSelect = false;
             this.lv_ClassInfos.Name = "lv_ClassInfos";
-            this.lv_ClassInfos.Size = new System.Drawing.Size(390, 140);
+            this.lv_ClassInfos.Size = new System.Drawing.Size(533, 117);
             this.lv_ClassInfos.TabIndex = 25;
             this.lv_ClassInfos.UseCompatibleStateImageBehavior = false;
             this.lv_ClassInfos.View = System.Windows.Forms.View.Details;
@@ -149,11 +144,10 @@
             // 
             this.lbx_ModelInformation.Dock = System.Windows.Forms.DockStyle.Fill;
             this.lbx_ModelInformation.FormattingEnabled = true;
-            this.lbx_ModelInformation.ItemHeight = 18;
-            this.lbx_ModelInformation.Location = new System.Drawing.Point(4, 23);
-            this.lbx_ModelInformation.Margin = new System.Windows.Forms.Padding(4);
+            this.lbx_ModelInformation.ItemHeight = 15;
+            this.lbx_ModelInformation.Location = new System.Drawing.Point(3, 19);
             this.lbx_ModelInformation.Name = "lbx_ModelInformation";
-            this.lbx_ModelInformation.Size = new System.Drawing.Size(390, 77);
+            this.lbx_ModelInformation.Size = new System.Drawing.Size(533, 65);
             this.lbx_ModelInformation.TabIndex = 24;
             // 
             // Lbl_ModuleInfo
@@ -161,10 +155,9 @@
             this.Lbl_ModuleInfo.AutoSize = true;
             this.Lbl_ModuleInfo.Dock = System.Windows.Forms.DockStyle.Fill;
             this.Lbl_ModuleInfo.Font = new System.Drawing.Font("굴림", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(129)));
-            this.Lbl_ModuleInfo.Location = new System.Drawing.Point(4, 252);
-            this.Lbl_ModuleInfo.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.Lbl_ModuleInfo.Location = new System.Drawing.Point(3, 210);
             this.Lbl_ModuleInfo.Name = "Lbl_ModuleInfo";
-            this.Lbl_ModuleInfo.Size = new System.Drawing.Size(390, 26);
+            this.Lbl_ModuleInfo.Size = new System.Drawing.Size(533, 22);
             this.Lbl_ModuleInfo.TabIndex = 26;
             this.Lbl_ModuleInfo.Text = "Module Information";
             // 
@@ -173,10 +166,9 @@
             this.label24.AutoSize = true;
             this.label24.Dock = System.Windows.Forms.DockStyle.Fill;
             this.label24.Font = new System.Drawing.Font("굴림", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(129)));
-            this.label24.Location = new System.Drawing.Point(4, 0);
-            this.label24.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.label24.Location = new System.Drawing.Point(3, 0);
             this.label24.Name = "label24";
-            this.label24.Size = new System.Drawing.Size(390, 19);
+            this.label24.Size = new System.Drawing.Size(533, 16);
             this.label24.TabIndex = 20;
             this.label24.Text = "Model Information";
             // 
@@ -191,14 +183,15 @@
             this.tableLayoutPanel3.Controls.Add(this.lbx_ModelInformation, 0, 1);
             this.tableLayoutPanel3.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tableLayoutPanel3.Location = new System.Drawing.Point(0, 0);
+            this.tableLayoutPanel3.Margin = new System.Windows.Forms.Padding(2);
             this.tableLayoutPanel3.Name = "tableLayoutPanel3";
             this.tableLayoutPanel3.RowCount = 5;
             this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 18.24324F));
             this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 81.75676F));
-            this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 148F));
-            this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 26F));
-            this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 27F));
-            this.tableLayoutPanel3.Size = new System.Drawing.Size(398, 306);
+            this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 123F));
+            this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 22F));
+            this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 22F));
+            this.tableLayoutPanel3.Size = new System.Drawing.Size(539, 255);
             this.tableLayoutPanel3.TabIndex = 19;
             // 
             // tableLayoutPanel2
@@ -213,15 +206,16 @@
             this.tableLayoutPanel2.Controls.Add(this.btnInspAI, 0, 4);
             this.tableLayoutPanel2.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tableLayoutPanel2.Location = new System.Drawing.Point(0, 0);
+            this.tableLayoutPanel2.Margin = new System.Windows.Forms.Padding(2);
             this.tableLayoutPanel2.Name = "tableLayoutPanel2";
             this.tableLayoutPanel2.RowCount = 6;
             this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 52.58855F));
             this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 47.41145F));
-            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 59F));
-            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 59F));
-            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 58F));
-            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 80F));
-            this.tableLayoutPanel2.Size = new System.Drawing.Size(398, 330);
+            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 49F));
+            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 49F));
+            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 48F));
+            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 67F));
+            this.tableLayoutPanel2.Size = new System.Drawing.Size(539, 275);
             this.tableLayoutPanel2.TabIndex = 20;
             // 
             // panel1
@@ -231,43 +225,42 @@
             this.panel1.Controls.Add(this.txtMinArea);
             this.panel1.Controls.Add(this.dasda);
             this.panel1.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.panel1.Location = new System.Drawing.Point(3, 252);
+            this.panel1.Location = new System.Drawing.Point(2, 209);
+            this.panel1.Margin = new System.Windows.Forms.Padding(2);
             this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(392, 75);
+            this.panel1.Size = new System.Drawing.Size(535, 64);
             this.panel1.TabIndex = 23;
             // 
             // lblAreaFilter
             // 
             this.lblAreaFilter.AutoSize = true;
-            this.lblAreaFilter.Location = new System.Drawing.Point(15, 46);
+            this.lblAreaFilter.Location = new System.Drawing.Point(12, 38);
+            this.lblAreaFilter.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.lblAreaFilter.Name = "lblAreaFilter";
-            this.lblAreaFilter.Size = new System.Drawing.Size(195, 18);
+            this.lblAreaFilter.Size = new System.Drawing.Size(161, 15);
             this.lblAreaFilter.TabIndex = 24;
             this.lblAreaFilter.Text = "Area Filter (Min ~ Max)";
             // 
             // txtMaxArea
             // 
-            this.txtMaxArea.Location = new System.Drawing.Point(5, 4);
-            this.txtMaxArea.Margin = new System.Windows.Forms.Padding(4);
+            this.txtMaxArea.Location = new System.Drawing.Point(4, 3);
             this.txtMaxArea.Name = "txtMaxArea";
-            this.txtMaxArea.Size = new System.Drawing.Size(86, 28);
+            this.txtMaxArea.Size = new System.Drawing.Size(70, 25);
             this.txtMaxArea.TabIndex = 14;
             // 
             // txtMinArea
             // 
-            this.txtMinArea.Location = new System.Drawing.Point(129, 4);
-            this.txtMinArea.Margin = new System.Windows.Forms.Padding(4);
+            this.txtMinArea.Location = new System.Drawing.Point(103, 3);
             this.txtMinArea.Name = "txtMinArea";
-            this.txtMinArea.Size = new System.Drawing.Size(86, 28);
+            this.txtMinArea.Size = new System.Drawing.Size(70, 25);
             this.txtMinArea.TabIndex = 15;
             // 
             // dasda
             // 
             this.dasda.AutoSize = true;
-            this.dasda.Location = new System.Drawing.Point(99, 7);
-            this.dasda.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.dasda.Location = new System.Drawing.Point(79, 6);
             this.dasda.Name = "dasda";
-            this.dasda.Size = new System.Drawing.Size(22, 18);
+            this.dasda.Size = new System.Drawing.Size(18, 15);
             this.dasda.TabIndex = 17;
             this.dasda.Text = "~";
             // 
@@ -276,10 +269,9 @@
             this.cbAIModelType.Dock = System.Windows.Forms.DockStyle.Right;
             this.cbAIModelType.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cbAIModelType.FormattingEnabled = true;
-            this.cbAIModelType.Location = new System.Drawing.Point(4, 42);
-            this.cbAIModelType.Margin = new System.Windows.Forms.Padding(4);
+            this.cbAIModelType.Location = new System.Drawing.Point(223, 35);
             this.cbAIModelType.Name = "cbAIModelType";
-            this.cbAIModelType.Size = new System.Drawing.Size(390, 26);
+            this.cbAIModelType.Size = new System.Drawing.Size(313, 23);
             this.cbAIModelType.TabIndex = 5;
             this.cbAIModelType.SelectedIndexChanged += new System.EventHandler(this.cbAIModelType_SelectedIndexChanged);
             // 
@@ -288,10 +280,9 @@
             this.panel2.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.panel2.Controls.Add(this.tableLayoutPanel3);
             this.panel2.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.panel2.Location = new System.Drawing.Point(0, 349);
-            this.panel2.Margin = new System.Windows.Forms.Padding(4);
+            this.panel2.Location = new System.Drawing.Point(0, 416);
             this.panel2.Name = "panel2";
-            this.panel2.Size = new System.Drawing.Size(400, 308);
+            this.panel2.Size = new System.Drawing.Size(541, 257);
             this.panel2.TabIndex = 21;
             // 
             // panel3
@@ -300,19 +291,29 @@
             this.panel3.Controls.Add(this.tableLayoutPanel2);
             this.panel3.Dock = System.Windows.Forms.DockStyle.Top;
             this.panel3.Location = new System.Drawing.Point(0, 0);
+            this.panel3.Margin = new System.Windows.Forms.Padding(2);
             this.panel3.Name = "panel3";
-            this.panel3.Size = new System.Drawing.Size(400, 332);
+            this.panel3.Size = new System.Drawing.Size(541, 277);
             this.panel3.TabIndex = 22;
+            // 
+            // btnClearCount
+            // 
+            this.btnClearCount.Location = new System.Drawing.Point(18, 299);
+            this.btnClearCount.Name = "btnClearCount";
+            this.btnClearCount.Size = new System.Drawing.Size(140, 89);
+            this.btnClearCount.TabIndex = 23;
+            this.btnClearCount.Text = "초기화";
+            this.btnClearCount.UseVisualStyleBackColor = true;
             // 
             // AIModuleProp
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 18F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.Controls.Add(this.btnClearCount);
             this.Controls.Add(this.panel3);
             this.Controls.Add(this.panel2);
-            this.Margin = new System.Windows.Forms.Padding(4);
             this.Name = "AIModuleProp";
-            this.Size = new System.Drawing.Size(400, 657);
+            this.Size = new System.Drawing.Size(541, 673);
             this.tableLayoutPanel3.ResumeLayout(false);
             this.tableLayoutPanel3.PerformLayout();
             this.tableLayoutPanel2.ResumeLayout(false);
@@ -348,5 +349,6 @@
         private System.Windows.Forms.Panel panel3;
         private System.Windows.Forms.Panel panel1;
         private System.Windows.Forms.Label lblAreaFilter;
+        private System.Windows.Forms.Button btnClearCount;
     }
 }

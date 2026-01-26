@@ -305,5 +305,6 @@ namespace PureGate.Property
                 item.SubItems[2].Text = hasNG ? "True" : "False";
             }
         }
+
     }
 }

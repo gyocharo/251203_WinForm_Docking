@@ -1,11 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Windows.Forms.DataVisualization.Charting;
 using WeifenLuo.WinFormsUI.Docking;
@@ -24,32 +19,96 @@ namespace PureGate
 
         private void InitializeChart()
         {
-            // 차트 컨트롤 생성
+            // 차트 객체 생성 및 기본 설정
             chart = new Chart
             {
-                Dock = DockStyle.Fill
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                Name = "ResultChart" // 이름 명시
             };
-            this.Controls.Add(chart);
 
-            // 차트 영역 추가
-            ChartArea chartArea = new ChartArea("MainArea");
+            // 중요: 폼의 컨트롤 목록에 추가하고 맨 앞으로 보냄
+            this.Controls.Add(chart);
+            chart.BringToFront();
+
+            ChartArea chartArea = new ChartArea("MainArea")
+            {
+                BackColor = Color.Transparent
+            };
             chart.ChartAreas.Add(chartArea);
 
-            // Series 생성 및 Doughnut 타입
-            Series series = new Series("Data")
+            Series series = new Series("StatSeries")
             {
-                ChartType = SeriesChartType.Doughnut
+                ChartType = SeriesChartType.Doughnut,
+                Font = new Font("맑은 고딕", 12f, FontStyle.Bold)
             };
 
-            // 최소 데이터 포인트 추가 (실행 시 보여주기 위함)
-            series.Points.AddXY("A", 30);
-            series.Points.AddXY("B", 70);
+            // 도넛 스타일 설정
+            series["PieDrawingStyle"] = "SoftEdge";
+            series["DoughnutRadius"] = "50";
+            series["PieLabelStyle"] = "Inside"; // 라벨이 안쪽에 나오게
 
             chart.Series.Add(series);
 
-            // 레전드 추가 (선택 사항)
-            Legend legend = new Legend();
+            // 범례 설정
+            Legend legend = new Legend
+            {
+                Docking = Docking.Bottom,
+                Alignment = StringAlignment.Center,
+                BackColor = Color.Transparent
+            };
             chart.Legends.Add(legend);
+
+            // 초기 상태에서 "검사 대기" 상태라도 그리게 함
+            UpdateStatistics(0, 0);
         }
+
+        /// <summary>
+        /// 외부(MainForm 등)에서 OK/NG 개수를 받아 차트를 갱신하는 메서드
+        /// </summary>
+        public void UpdateStatistics(int okCount, int ngCount)
+        {
+            if (chart.InvokeRequired)
+            {
+                chart.Invoke(new Action(() => UpdateStatistics(okCount, ngCount)));
+                return;
+            }
+
+            Series series = chart.Series["StatSeries"];
+            series.Points.Clear();
+
+            int total = okCount + ngCount;
+
+            // total이 0이면 Ready 표시하고 종료
+            if (total == 0)
+            {
+                int idx = series.Points.AddXY("Waiting", 1);
+                series.Points[idx].Label = "Ready (0%)";
+                series.Points[idx].Color = Color.LightGray;
+                return;
+            }
+
+            // 🔴 수치가 변하게 하는 핵심 로직
+            double okRate = (double)okCount / total * 100;
+            double ngRate = (double)ngCount / total * 100;
+
+            // OK 추가
+            int oIdx = series.Points.AddXY("OK", okCount);
+            series.Points[oIdx].Label = $"OK {okRate:F0}%"; // 예: OK 95%
+            series.Points[oIdx].Color = Color.DodgerBlue;
+            series.Points[oIdx].LegendText = $"OK ({okCount})";
+
+            // NG 추가
+            int nIdx = series.Points.AddXY("NG", ngCount);
+            series.Points[nIdx].Label = $"NG {ngRate:F0}%"; // 예: NG 5%
+            series.Points[nIdx].Color = Color.OrangeRed;
+            series.Points[nIdx].LegendText = $"NG ({ngCount})";
+
+            // 즉시 반영
+            chart.Invalidate();
+            chart.Update();
+        }
+
+
     }
 }

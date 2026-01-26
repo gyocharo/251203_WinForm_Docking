@@ -41,6 +41,10 @@ namespace PureGate
         const int STEP_SLIDING = 2;
         int _posSliding = 120;
 
+        //StatisticForm의 차트를 업데이트하도록 코드를 추가하기 위한 변수 지정. 전체 갯수(OK/NG)를 추적하기 위해
+        private int _totalOkCount = 0;
+        private int _totalNgCount = 0;
+
         public MainForm()
         {
             InitializeComponent();
@@ -403,6 +407,8 @@ namespace PureGate
             Point location = btnImage.PointToScreen(new Point(btnImage.Width, 0));
             dropDown.Show(location);
         }
+
+       
 
         // Overview 버튼을 위한 초기화 메서드
         #region

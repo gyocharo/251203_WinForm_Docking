@@ -66,6 +66,9 @@ namespace PureGate.Core
 
         private string _loadedImageDir = "";
 
+        private int _okCount = 0;
+        private int _ngCount = 0;
+
         public InspStage() { }
 
         public ImageSpace ImageSpace
@@ -752,22 +755,18 @@ namespace PureGate.Core
         {
             if (UseCamera)
             {
-                if (!Grab(0))
-                    return false;
+                if (!Grab(0)) return false;
             }
             else
             {
-                if (!VirtualGrab())
-                    return false;
+                if (!VirtualGrab()) return false;
             }
 
             ResetDisplay();
 
-            // ✅ ROI(검사 윈도우)가 하나도 없으면: AIModuleProp의 "적용"과 동일 흐름으로 검사
-            //    (검사 버튼 누를 때마다 다음 이미지로 넘어가는 VirtualGrab/Grab 흐름은 그대로 유지됨)
+            // 1. ROI가 없을 때 (AI 모듈 직접 실행 케이스)
             if (CurModel != null && (CurModel.InspWindowList == null || CurModel.InspWindowList.Count == 0))
             {
-                // 모델/엔진이 로드된 경우에만 실행 (안전 가드)
                 if (AIModule != null && AIModule.IsEngineLoaded)
                 {
                     Bitmap bitmap = GetBitmap();
@@ -777,16 +776,15 @@ namespace PureGate.Core
                         Bitmap resultImage = AIModule.GetResultImage();
                         UpdateDisplay(resultImage);
 
-                        // ✅ Saige CLS 분류 결과에 따라 저장 (실패해도 검사 흐름엔 영향 없게)
                         TrySaveClsResultImage(resultImage);
 
-                        // ✅ 통계 저장(1검사=1레코드)
                         try
                         {
                             if (AIModule.TryGetLastClsTop1(out string label, out float score) && !string.IsNullOrWhiteSpace(label))
                             {
                                 bool ok = string.Equals(label, "Good", StringComparison.OrdinalIgnoreCase);
 
+                                // --- 기존 History 저장 로직 ---
                                 string modelName = "";
                                 if (CurModel != null && !string.IsNullOrWhiteSpace(CurModel.ModelPath))
                                     modelName = Path.GetFileNameWithoutExtension(CurModel.ModelPath);
@@ -800,9 +798,12 @@ namespace PureGate.Core
                                     Total = 1,
                                     Ok = ok ? 1 : 0,
                                     Ng = ok ? 0 : 1,
-                                    NgClass = ok ? "" : label,  // ✅ NG일 때 클래스명 저장
+                                    NgClass = ok ? "" : label,
                                     Score = score
                                 });
+
+                                // ✅ 추가된 코드: UI에 결과 전송 (메시지 박스 포함된 함수)
+                                UpdateResultUI(ok);
                             }
                         }
                         catch (Exception ex)
@@ -813,19 +814,19 @@ namespace PureGate.Core
                         return true;
                     }
                 }
-
-                // 엔진이 없거나 이미지가 없으면 "검사 실패"로 처리하지 않고,
-                // 다음 검사 버튼에서 계속 다음 이미지로 넘어가도록 true 유지
                 return true;
             }
 
-            // ✅ ROI가 있으면 기존 검사 로직 그대로
+            // 2. ROI가 있는 기존 검사 로직 케이스
             bool isDefect;
             if (!_inspWorker.RunInspect(out isDefect))
                 return false;
 
-            return true;
+            // ✅ 추가된 코드: ROI 검사 결과도 UI에 전송
+            // isDefect가 true이면 불량이므로, ok는 false가 되어야 함 (!isDefect)
+            UpdateResultUI(!isDefect);
 
+            return true;
         }
 
         private void TrySaveClsResultImage(Bitmap resultImage)
@@ -1101,12 +1102,20 @@ namespace PureGate.Core
 
         private void UpdateResultUI(bool isOK)
         {
-            // CameraForm을 찾아 화면에 결과를 표시합니다.
-            CameraForm cameraForm = MainForm.GetDockForm<CameraForm>();
-            if (cameraForm != null)
-            {
-                cameraForm.ShowResultOnScreen(isOK); // 이제 1단계 덕분에 오류가 사라집니다!
-            }
+            // 카운트 변수는 반드시 클래스 상단에 'private int _okCount = 0;' 처럼 선언되어 있어야 합니다.
+            if (isOK) _okCount++;
+            else _ngCount++;
+
+            // 차트 갱신
+            var sForm = MainForm.GetDockForm<StatisticForm>();
+            if (sForm != null) sForm.UpdateStatistics(_okCount, _ngCount);
+
+            // 카메라 화면 알림
+            var cForm = MainForm.GetDockForm<CameraForm>();
+            if (cForm != null) cForm.ShowResultOnScreen(isOK);
+
+            // 이전에 넣었던 메시지 박스도 이제 뜰 겁니다!
+            // MessageBox.Show($"결과 반영됨: {isOK}"); 
         }
 
 
