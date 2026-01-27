@@ -42,12 +42,6 @@ namespace PureGate.Property
             this.btnSelAIModel = new System.Windows.Forms.Button();
             this.Txt_ModuleInfo = new System.Windows.Forms.TextBox();
             this.lv_ClassInfos = new System.Windows.Forms.ListView();
-            this.columnHeader1 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.columnHeader2 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.columnHeader3 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.columnHeader4 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.columnHeader5 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.columnHeader6 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.lbx_ModelInformation = new System.Windows.Forms.ListBox();
             this.Lbl_ModuleInfo = new System.Windows.Forms.Label();
             this.label24 = new System.Windows.Forms.Label();
@@ -105,22 +99,15 @@ namespace PureGate.Property
             // Txt_ModuleInfo
             // 
             this.Txt_ModuleInfo.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.Txt_ModuleInfo.Location = new System.Drawing.Point(4, 282);
+            this.Txt_ModuleInfo.Location = new System.Drawing.Point(4, 275);
             this.Txt_ModuleInfo.Margin = new System.Windows.Forms.Padding(4);
             this.Txt_ModuleInfo.Multiline = true;
             this.Txt_ModuleInfo.Name = "Txt_ModuleInfo";
-            this.Txt_ModuleInfo.Size = new System.Drawing.Size(386, 20);
+            this.Txt_ModuleInfo.Size = new System.Drawing.Size(386, 27);
             this.Txt_ModuleInfo.TabIndex = 27;
             // 
             // lv_ClassInfos
             // 
-            this.lv_ClassInfos.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
-            this.columnHeader1,
-            this.columnHeader2,
-            this.columnHeader3,
-            this.columnHeader4,
-            this.columnHeader5,
-            this.columnHeader6});
             this.lv_ClassInfos.Dock = System.Windows.Forms.DockStyle.Fill;
             this.lv_ClassInfos.GridLines = true;
             this.lv_ClassInfos.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable;
@@ -133,36 +120,6 @@ namespace PureGate.Property
             this.lv_ClassInfos.TabIndex = 25;
             this.lv_ClassInfos.UseCompatibleStateImageBehavior = false;
             this.lv_ClassInfos.View = System.Windows.Forms.View.Details;
-            // 
-            // columnHeader1
-            // 
-            this.columnHeader1.Text = "클래스";
-            this.columnHeader1.Width = 50;
-            // 
-            // columnHeader2
-            // 
-            this.columnHeader2.Text = "색상";
-            this.columnHeader2.Width = 40;
-            // 
-            // columnHeader3
-            // 
-            this.columnHeader3.Text = "불량수";
-            this.columnHeader3.Width = 50;
-            // 
-            // columnHeader4
-            // 
-            this.columnHeader4.Text = "합계";
-            this.columnHeader4.Width = 40;
-            // 
-            // columnHeader5
-            // 
-            this.columnHeader5.Text = "불량 %";
-            this.columnHeader5.Width = 50;
-            // 
-            // columnHeader6
-            // 
-            this.columnHeader6.Text = "양품 %";
-            this.columnHeader6.Width = 50;
             // 
             // lbx_ModelInformation
             // 
@@ -183,9 +140,9 @@ namespace PureGate.Property
             this.Lbl_ModuleInfo.Location = new System.Drawing.Point(4, 252);
             this.Lbl_ModuleInfo.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.Lbl_ModuleInfo.Name = "Lbl_ModuleInfo";
-            this.Lbl_ModuleInfo.Size = new System.Drawing.Size(386, 26);
+            this.Lbl_ModuleInfo.Size = new System.Drawing.Size(386, 19);
             this.Lbl_ModuleInfo.TabIndex = 26;
-            this.Lbl_ModuleInfo.Text = "Module Information";
+            this.Lbl_ModuleInfo.Text = "모듈 정보";
             // 
             // label24
             // 
@@ -197,7 +154,7 @@ namespace PureGate.Property
             this.label24.Name = "label24";
             this.label24.Size = new System.Drawing.Size(386, 19);
             this.label24.TabIndex = 20;
-            this.label24.Text = "Model Information";
+            this.label24.Text = "모델 정보";
             // 
             // tableLayoutPanel3
             // 
@@ -215,8 +172,8 @@ namespace PureGate.Property
             this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 18.24324F));
             this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 81.75676F));
             this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 148F));
-            this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 26F));
-            this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 27F));
+            this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 19F));
+            this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 34F));
             this.tableLayoutPanel3.Size = new System.Drawing.Size(394, 306);
             this.tableLayoutPanel3.TabIndex = 19;
             // 
@@ -268,11 +225,11 @@ namespace PureGate.Property
             // lblAreaFilter
             // 
             this.lblAreaFilter.AutoSize = true;
-            this.lblAreaFilter.Location = new System.Drawing.Point(15, 46);
+            this.lblAreaFilter.Location = new System.Drawing.Point(3, 48);
             this.lblAreaFilter.Name = "lblAreaFilter";
-            this.lblAreaFilter.Size = new System.Drawing.Size(195, 18);
+            this.lblAreaFilter.Size = new System.Drawing.Size(238, 18);
             this.lblAreaFilter.TabIndex = 24;
-            this.lblAreaFilter.Text = "Area Filter (Min ~ Max)";
+            this.lblAreaFilter.Text = "영역 필터 (최소값 ~ 최대값)";
             // 
             // txtMaxArea
             // 
@@ -349,9 +306,6 @@ namespace PureGate.Property
         private System.Windows.Forms.TextBox Txt_ModuleInfo;
         private System.Windows.Forms.Label Lbl_ModuleInfo;
         private System.Windows.Forms.ListView lv_ClassInfos;
-        private System.Windows.Forms.ColumnHeader columnHeader1;
-        private System.Windows.Forms.ColumnHeader columnHeader2;
-        private System.Windows.Forms.ColumnHeader columnHeader3;
         private System.Windows.Forms.ListBox lbx_ModelInformation;
         private System.Windows.Forms.Label label24;
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel3;
@@ -364,8 +318,5 @@ namespace PureGate.Property
         private System.Windows.Forms.Panel panel3;
         private System.Windows.Forms.Panel panel1;
         private System.Windows.Forms.Label lblAreaFilter;
-        private System.Windows.Forms.ColumnHeader columnHeader4;
-        private System.Windows.Forms.ColumnHeader columnHeader5;
-        private System.Windows.Forms.ColumnHeader columnHeader6;
     }
 }
