@@ -1,4 +1,6 @@
-﻿namespace PureGate.Property
+﻿using PureGate.Core;
+
+namespace PureGate.Property
 {
     partial class AIModuleProp
     {
@@ -13,9 +15,16 @@
         /// <param name="disposing">관리되는 리소스를 삭제해야 하면 true이고, 그렇지 않으면 false입니다.</param>
         protected override void Dispose(bool disposing)
         {
-            if (disposing && (components != null))
+            if (disposing)
             {
-                components.Dispose();
+                // [ADD] 이벤트 구독 해제
+                try { Global.Inst.InspStage.InspectionCompleted -= InspStage_InspectionCompleted; }
+                catch { }
+
+                if (components != null)
+                {
+                    components.Dispose();
+                }
             }
             base.Dispose(disposing);
         }
@@ -28,26 +37,28 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.btnInspAI = new System.Windows.Forms.Button();
             this.txtAIModelPath = new System.Windows.Forms.TextBox();
             this.btnLoadModel = new System.Windows.Forms.Button();
             this.btnSelAIModel = new System.Windows.Forms.Button();
             this.Txt_ModuleInfo = new System.Windows.Forms.TextBox();
             this.lv_ClassInfos = new System.Windows.Forms.ListView();
+            this.columnHeader1 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader2 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeader3 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeader4 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeader5 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader6 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.lbx_ModelInformation = new System.Windows.Forms.ListBox();
             this.Lbl_ModuleInfo = new System.Windows.Forms.Label();
             this.label24 = new System.Windows.Forms.Label();
             this.tableLayoutPanel3 = new System.Windows.Forms.TableLayoutPanel();
             this.tableLayoutPanel2 = new System.Windows.Forms.TableLayoutPanel();
+            this.cbAIModelType = new System.Windows.Forms.ComboBox();
             this.panel1 = new System.Windows.Forms.Panel();
             this.lblAreaFilter = new System.Windows.Forms.Label();
             this.txtMaxArea = new System.Windows.Forms.TextBox();
             this.txtMinArea = new System.Windows.Forms.TextBox();
             this.dasda = new System.Windows.Forms.Label();
-            this.cbAIModelType = new System.Windows.Forms.ComboBox();
             this.panel2 = new System.Windows.Forms.Panel();
             this.panel3 = new System.Windows.Forms.Panel();
             this.tableLayoutPanel3.SuspendLayout();
@@ -57,18 +68,6 @@
             this.panel3.SuspendLayout();
             this.SuspendLayout();
             // 
-            // btnInspAI
-            // 
-            this.btnInspAI.Dock = System.Windows.Forms.DockStyle.Right;
-            this.btnInspAI.Location = new System.Drawing.Point(276, 195);
-            this.btnInspAI.Margin = new System.Windows.Forms.Padding(4);
-            this.btnInspAI.Name = "btnInspAI";
-            this.btnInspAI.Size = new System.Drawing.Size(118, 50);
-            this.btnInspAI.TabIndex = 9;
-            this.btnInspAI.Text = "AI 검사";
-            this.btnInspAI.UseVisualStyleBackColor = true;
-            this.btnInspAI.Click += new System.EventHandler(this.btnInspAI_Click);
-            // 
             // txtAIModelPath
             // 
             this.txtAIModelPath.Dock = System.Windows.Forms.DockStyle.Top;
@@ -76,16 +75,16 @@
             this.txtAIModelPath.Margin = new System.Windows.Forms.Padding(4);
             this.txtAIModelPath.Name = "txtAIModelPath";
             this.txtAIModelPath.ReadOnly = true;
-            this.txtAIModelPath.Size = new System.Drawing.Size(390, 28);
+            this.txtAIModelPath.Size = new System.Drawing.Size(386, 28);
             this.txtAIModelPath.TabIndex = 6;
             // 
             // btnLoadModel
             // 
             this.btnLoadModel.Dock = System.Windows.Forms.DockStyle.Right;
-            this.btnLoadModel.Location = new System.Drawing.Point(276, 136);
+            this.btnLoadModel.Location = new System.Drawing.Point(272, 179);
             this.btnLoadModel.Margin = new System.Windows.Forms.Padding(4);
             this.btnLoadModel.Name = "btnLoadModel";
-            this.btnLoadModel.Size = new System.Drawing.Size(118, 51);
+            this.btnLoadModel.Size = new System.Drawing.Size(118, 64);
             this.btnLoadModel.TabIndex = 8;
             this.btnLoadModel.Text = "모델 로딩";
             this.btnLoadModel.UseVisualStyleBackColor = true;
@@ -94,10 +93,10 @@
             // btnSelAIModel
             // 
             this.btnSelAIModel.Dock = System.Windows.Forms.DockStyle.Right;
-            this.btnSelAIModel.Location = new System.Drawing.Point(276, 77);
+            this.btnSelAIModel.Location = new System.Drawing.Point(272, 104);
             this.btnSelAIModel.Margin = new System.Windows.Forms.Padding(4);
             this.btnSelAIModel.Name = "btnSelAIModel";
-            this.btnSelAIModel.Size = new System.Drawing.Size(118, 51);
+            this.btnSelAIModel.Size = new System.Drawing.Size(118, 67);
             this.btnSelAIModel.TabIndex = 7;
             this.btnSelAIModel.Text = "AI모델 선택";
             this.btnSelAIModel.UseVisualStyleBackColor = true;
@@ -110,15 +109,18 @@
             this.Txt_ModuleInfo.Margin = new System.Windows.Forms.Padding(4);
             this.Txt_ModuleInfo.Multiline = true;
             this.Txt_ModuleInfo.Name = "Txt_ModuleInfo";
-            this.Txt_ModuleInfo.Size = new System.Drawing.Size(390, 20);
+            this.Txt_ModuleInfo.Size = new System.Drawing.Size(386, 20);
             this.Txt_ModuleInfo.TabIndex = 27;
             // 
             // lv_ClassInfos
             // 
             this.lv_ClassInfos.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.columnHeader1,
+            this.columnHeader2,
             this.columnHeader3,
             this.columnHeader4,
-            this.columnHeader5});
+            this.columnHeader5,
+            this.columnHeader6});
             this.lv_ClassInfos.Dock = System.Windows.Forms.DockStyle.Fill;
             this.lv_ClassInfos.GridLines = true;
             this.lv_ClassInfos.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable;
@@ -127,23 +129,40 @@
             this.lv_ClassInfos.Margin = new System.Windows.Forms.Padding(4);
             this.lv_ClassInfos.MultiSelect = false;
             this.lv_ClassInfos.Name = "lv_ClassInfos";
-            this.lv_ClassInfos.Size = new System.Drawing.Size(390, 140);
+            this.lv_ClassInfos.Size = new System.Drawing.Size(386, 140);
             this.lv_ClassInfos.TabIndex = 25;
             this.lv_ClassInfos.UseCompatibleStateImageBehavior = false;
             this.lv_ClassInfos.View = System.Windows.Forms.View.Details;
             // 
+            // columnHeader1
+            // 
+            this.columnHeader1.Text = "클래스";
+            this.columnHeader1.Width = 50;
+            // 
+            // columnHeader2
+            // 
+            this.columnHeader2.Text = "색상";
+            this.columnHeader2.Width = 40;
+            // 
             // columnHeader3
             // 
-            this.columnHeader3.Text = "Name";
-            this.columnHeader3.Width = 110;
+            this.columnHeader3.Text = "불량수";
+            this.columnHeader3.Width = 50;
             // 
             // columnHeader4
             // 
-            this.columnHeader4.Text = "Color";
+            this.columnHeader4.Text = "합계";
+            this.columnHeader4.Width = 40;
             // 
             // columnHeader5
             // 
-            this.columnHeader5.Text = "IsNG";
+            this.columnHeader5.Text = "불량 %";
+            this.columnHeader5.Width = 50;
+            // 
+            // columnHeader6
+            // 
+            this.columnHeader6.Text = "양품 %";
+            this.columnHeader6.Width = 50;
             // 
             // lbx_ModelInformation
             // 
@@ -153,7 +172,7 @@
             this.lbx_ModelInformation.Location = new System.Drawing.Point(4, 23);
             this.lbx_ModelInformation.Margin = new System.Windows.Forms.Padding(4);
             this.lbx_ModelInformation.Name = "lbx_ModelInformation";
-            this.lbx_ModelInformation.Size = new System.Drawing.Size(390, 77);
+            this.lbx_ModelInformation.Size = new System.Drawing.Size(386, 77);
             this.lbx_ModelInformation.TabIndex = 24;
             // 
             // Lbl_ModuleInfo
@@ -164,7 +183,7 @@
             this.Lbl_ModuleInfo.Location = new System.Drawing.Point(4, 252);
             this.Lbl_ModuleInfo.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.Lbl_ModuleInfo.Name = "Lbl_ModuleInfo";
-            this.Lbl_ModuleInfo.Size = new System.Drawing.Size(390, 26);
+            this.Lbl_ModuleInfo.Size = new System.Drawing.Size(386, 26);
             this.Lbl_ModuleInfo.TabIndex = 26;
             this.Lbl_ModuleInfo.Text = "Module Information";
             // 
@@ -176,7 +195,7 @@
             this.label24.Location = new System.Drawing.Point(4, 0);
             this.label24.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label24.Name = "label24";
-            this.label24.Size = new System.Drawing.Size(390, 19);
+            this.label24.Size = new System.Drawing.Size(386, 19);
             this.label24.TabIndex = 20;
             this.label24.Text = "Model Information";
             // 
@@ -198,31 +217,41 @@
             this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 148F));
             this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 26F));
             this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 27F));
-            this.tableLayoutPanel3.Size = new System.Drawing.Size(398, 306);
+            this.tableLayoutPanel3.Size = new System.Drawing.Size(394, 306);
             this.tableLayoutPanel3.TabIndex = 19;
             // 
             // tableLayoutPanel2
             // 
             this.tableLayoutPanel2.ColumnCount = 1;
             this.tableLayoutPanel2.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.tableLayoutPanel2.Controls.Add(this.panel1, 0, 5);
             this.tableLayoutPanel2.Controls.Add(this.txtAIModelPath, 0, 0);
             this.tableLayoutPanel2.Controls.Add(this.cbAIModelType, 0, 1);
             this.tableLayoutPanel2.Controls.Add(this.btnSelAIModel, 0, 2);
             this.tableLayoutPanel2.Controls.Add(this.btnLoadModel, 0, 3);
-            this.tableLayoutPanel2.Controls.Add(this.btnInspAI, 0, 4);
+            this.tableLayoutPanel2.Controls.Add(this.panel1, 0, 4);
             this.tableLayoutPanel2.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tableLayoutPanel2.Location = new System.Drawing.Point(0, 0);
             this.tableLayoutPanel2.Name = "tableLayoutPanel2";
-            this.tableLayoutPanel2.RowCount = 6;
+            this.tableLayoutPanel2.RowCount = 5;
             this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 52.58855F));
             this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 47.41145F));
-            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 59F));
-            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 59F));
-            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 58F));
-            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 80F));
-            this.tableLayoutPanel2.Size = new System.Drawing.Size(398, 330);
+            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 75F));
+            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 72F));
+            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 82F));
+            this.tableLayoutPanel2.Size = new System.Drawing.Size(394, 330);
             this.tableLayoutPanel2.TabIndex = 20;
+            // 
+            // cbAIModelType
+            // 
+            this.cbAIModelType.Dock = System.Windows.Forms.DockStyle.Right;
+            this.cbAIModelType.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cbAIModelType.FormattingEnabled = true;
+            this.cbAIModelType.Location = new System.Drawing.Point(4, 57);
+            this.cbAIModelType.Margin = new System.Windows.Forms.Padding(4);
+            this.cbAIModelType.Name = "cbAIModelType";
+            this.cbAIModelType.Size = new System.Drawing.Size(386, 26);
+            this.cbAIModelType.TabIndex = 5;
+            this.cbAIModelType.SelectedIndexChanged += new System.EventHandler(this.cbAIModelType_SelectedIndexChanged);
             // 
             // panel1
             // 
@@ -231,9 +260,9 @@
             this.panel1.Controls.Add(this.txtMinArea);
             this.panel1.Controls.Add(this.dasda);
             this.panel1.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.panel1.Location = new System.Drawing.Point(3, 252);
+            this.panel1.Location = new System.Drawing.Point(3, 250);
             this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(392, 75);
+            this.panel1.Size = new System.Drawing.Size(388, 77);
             this.panel1.TabIndex = 23;
             // 
             // lblAreaFilter
@@ -271,18 +300,6 @@
             this.dasda.TabIndex = 17;
             this.dasda.Text = "~";
             // 
-            // cbAIModelType
-            // 
-            this.cbAIModelType.Dock = System.Windows.Forms.DockStyle.Right;
-            this.cbAIModelType.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cbAIModelType.FormattingEnabled = true;
-            this.cbAIModelType.Location = new System.Drawing.Point(4, 42);
-            this.cbAIModelType.Margin = new System.Windows.Forms.Padding(4);
-            this.cbAIModelType.Name = "cbAIModelType";
-            this.cbAIModelType.Size = new System.Drawing.Size(390, 26);
-            this.cbAIModelType.TabIndex = 5;
-            this.cbAIModelType.SelectedIndexChanged += new System.EventHandler(this.cbAIModelType_SelectedIndexChanged);
-            // 
             // panel2
             // 
             this.panel2.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
@@ -291,7 +308,7 @@
             this.panel2.Location = new System.Drawing.Point(0, 349);
             this.panel2.Margin = new System.Windows.Forms.Padding(4);
             this.panel2.Name = "panel2";
-            this.panel2.Size = new System.Drawing.Size(400, 308);
+            this.panel2.Size = new System.Drawing.Size(396, 308);
             this.panel2.TabIndex = 21;
             // 
             // panel3
@@ -301,7 +318,7 @@
             this.panel3.Dock = System.Windows.Forms.DockStyle.Top;
             this.panel3.Location = new System.Drawing.Point(0, 0);
             this.panel3.Name = "panel3";
-            this.panel3.Size = new System.Drawing.Size(400, 332);
+            this.panel3.Size = new System.Drawing.Size(396, 332);
             this.panel3.TabIndex = 22;
             // 
             // AIModuleProp
@@ -312,7 +329,7 @@
             this.Controls.Add(this.panel2);
             this.Margin = new System.Windows.Forms.Padding(4);
             this.Name = "AIModuleProp";
-            this.Size = new System.Drawing.Size(400, 657);
+            this.Size = new System.Drawing.Size(396, 657);
             this.tableLayoutPanel3.ResumeLayout(false);
             this.tableLayoutPanel3.PerformLayout();
             this.tableLayoutPanel2.ResumeLayout(false);
@@ -326,16 +343,15 @@
         }
 
         #endregion
-        private System.Windows.Forms.Button btnInspAI;
         private System.Windows.Forms.TextBox txtAIModelPath;
         private System.Windows.Forms.Button btnLoadModel;
         private System.Windows.Forms.Button btnSelAIModel;
         private System.Windows.Forms.TextBox Txt_ModuleInfo;
         private System.Windows.Forms.Label Lbl_ModuleInfo;
         private System.Windows.Forms.ListView lv_ClassInfos;
+        private System.Windows.Forms.ColumnHeader columnHeader1;
+        private System.Windows.Forms.ColumnHeader columnHeader2;
         private System.Windows.Forms.ColumnHeader columnHeader3;
-        private System.Windows.Forms.ColumnHeader columnHeader4;
-        private System.Windows.Forms.ColumnHeader columnHeader5;
         private System.Windows.Forms.ListBox lbx_ModelInformation;
         private System.Windows.Forms.Label label24;
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel3;
@@ -348,5 +364,8 @@
         private System.Windows.Forms.Panel panel3;
         private System.Windows.Forms.Panel panel1;
         private System.Windows.Forms.Label lblAreaFilter;
+        private System.Windows.Forms.ColumnHeader columnHeader4;
+        private System.Windows.Forms.ColumnHeader columnHeader5;
+        private System.Windows.Forms.ColumnHeader columnHeader6;
     }
 }

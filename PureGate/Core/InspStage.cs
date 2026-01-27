@@ -105,6 +105,19 @@ namespace PureGate.Core
 
         public eImageChannel SelImageChannel { get; set; } = eImageChannel.Gray;
 
+        public event Action<bool> InspectionCompleted;
+
+        private void RaiseInspectionCompleted(bool isOk)
+        {
+            try
+            {
+                InspectionCompleted?.Invoke(isOk);
+            }
+            catch (Exception ex)
+            {
+                SLogger.Write($"[InspectionCompleted] handler error: {ex.Message}", SLogger.LogType.Error);
+            }
+        }
 
         public bool Initialize()
         {
@@ -823,7 +836,9 @@ namespace PureGate.Core
 
                                 UpdateResultUI(ok);
 
-                                string modelName = "";
+                                RaiseInspectionCompleted(ok);
+
+                               string modelName = "";
                                 if (CurModel != null && !string.IsNullOrWhiteSpace(CurModel.ModelPath))
                                     modelName = Path.GetFileNameWithoutExtension(CurModel.ModelPath);
 
@@ -1016,6 +1031,8 @@ namespace PureGate.Core
             // 핵심: 검사가 끝나자마자 결과 UI 업데이트 호출
             // 결함이 없으면(false) -> OK(true)를 UI에 보냄
             UpdateResultUI(!isDefect);
+
+            RaiseInspectionCompleted(!isDefect);
 
             // ROI 검사도 1검사=1레코드로 저장
             try

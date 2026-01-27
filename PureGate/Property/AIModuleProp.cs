@@ -28,6 +28,12 @@ namespace PureGate.Property
 
         public static AIModuleProp saigeaiprop;
 
+        // 누적 통계 필드
+        private int _totalInspections = 0; // 합계(전체 검사 횟수)
+        private readonly Dictionary<string, int> _ngCountByClass =
+            new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+
         public AIModuleProp()
         {
             InitializeComponent();
@@ -42,6 +48,49 @@ namespace PureGate.Property
             txtMinArea.TextChanged += (s, e) => { UpdateClassInfoResultUI(); };
 
             this.AutoScroll = true;
+            Global.Inst.InspStage.InspectionCompleted += InspStage_InspectionCompleted;
+        }
+
+        private void InspStage_InspectionCompleted(bool isOk)
+        {
+            if (this.IsDisposed) return;
+
+            if (this.InvokeRequired)
+            {
+                this.BeginInvoke(new Action(() => OnInspectionCompleted()));
+            }
+            else
+            {
+                OnInspectionCompleted();
+            }
+        }
+
+        public void OnInspectionCompleted()
+        {
+            if (_saigeAI == null)
+                _saigeAI = Global.Inst.InspStage.AIModule;
+
+            if (_saigeAI == null) return;
+
+            // ListView에 클래스 row가 없으면 모델정보로 채움(안전 방어)
+            if (lv_ClassInfos.Items.Count == 0)
+            {
+                var mi = _saigeAI.GetModelInfo();
+                if (mi != null)
+                    SetModelInfo(mi, _engineType.ToString());
+            }
+
+            var result = _saigeAI.GetResult();
+            AccumulateStatsFromResult(result);
+            UpdatePercentColumns();
+        }
+
+
+        // 통계 초기화
+        private void ResetStats()
+        {
+            _totalInspections = 0;
+            _ngCountByClass.Clear();
         }
 
         private void btnSelAIModel_Click(object sender, EventArgs e)
@@ -101,7 +150,7 @@ namespace PureGate.Property
                     MessageBox.Show("모델 정보가 null입니다.", "오류", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
-
+                ResetStats();
                 UpdateModelInfoUI();
             }
             catch (Exception ex)
@@ -112,28 +161,6 @@ namespace PureGate.Property
 
                 MessageBox.Show(msg, "모델 로딩 실패");
             }
-        }
-
-        private void btnInspAI_Click(object sender, EventArgs e)
-        {
-            if (_saigeAI == null)
-            {
-                MessageBox.Show("AI 모듈이 초기화되지 않았습니다.", "오류", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            Bitmap bitmap = Global.Inst.InspStage.GetBitmap();
-            if (bitmap is null)
-            {
-                MessageBox.Show("현재 이미지가 없습니다.", "오류", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            _saigeAI.InspAIModule(bitmap);
-            Bitmap resultImage = _saigeAI.GetResultImage();
-
-            Global.Inst.InspStage.UpdateDisplay(resultImage);
-            UpdateClassInfoResultUI();
         }
 
         private void cbAIModelType_SelectedIndexChanged(object sender, EventArgs e)
@@ -155,6 +182,7 @@ namespace PureGate.Property
                 lbx_ModelInformation.Items.Clear();
                 lv_ClassInfos.Items.Clear();
                 Txt_ModuleInfo.Clear();
+                ResetStats();
             }
             _engineType = engineType;
             UpdateAreaFilterUI();
@@ -188,13 +216,17 @@ namespace PureGate.Property
             lbx_ModelInformation.Items.Add($"Target Text Shape : {model.TargetTextShape}");
 
             lv_ClassInfos.Items.Clear();
+
             for (int i = 0; i < model.ClassInfos.Length; i++)
             {
-                string[] row = { model.ClassInfos[i].Name, "", model.ClassIsNG[i].ToString() };
-                var listViewItem = new ListViewItem(row);
-                listViewItem.SubItems[1].BackColor = model.ClassInfos[i].Color;
-                listViewItem.UseItemStyleForSubItems = false;
-                lv_ClassInfos.Items.Add(listViewItem);
+                // [0]=클래스, [1]=색상, [2]=불량수, [3]=합계, [4]=불량%, [5]=양품%
+                string[] row = { model.ClassInfos[i].Name, "", "0", "0", "0.00 %", "0.00 %" };
+
+                var item = new ListViewItem(row);
+                item.SubItems[1].BackColor = model.ClassInfos[i].Color;
+                item.UseItemStyleForSubItems = false;
+
+                lv_ClassInfos.Items.Add(item);
             }
 
             Txt_ModuleInfo.Text = module;
@@ -238,72 +270,114 @@ namespace PureGate.Property
             lbx_ModelInformation.Items.Add($"ModelPath : {_modelPath}");
 
             SetModelInfo(modelInfo, _engineType.ToString());
+            UpdatePercentColumns();
         }
 
         private void UpdateClassInfoResultUI()
         {
-            if (_saigeAI == null) return;
+            UpdatePercentColumns();
+        }
 
-            var result = _saigeAI.GetResult();
-            if (result == null) return;
+        // 검사 1회 결과에서 NG 클래스 뽑아서 누적
+        private void AccumulateStatsFromResult(object result)
+        {
+            _totalInspections++;
+
+            HashSet<string> ngClassesThisRun = GetNgClassesFromResult(result);
+
+            foreach (var cls in ngClassesThisRun)
+            {
+                if (_ngCountByClass.ContainsKey(cls)) _ngCountByClass[cls]++;
+                else _ngCountByClass[cls] = 1;
+            }
+        }
+
+        // 결과 객체에서 NG 클래스명 추출
+        private HashSet<string> GetNgClassesFromResult(object result)
+        {
+            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             switch (_engineType)
             {
-                case AIEngineType.IAD:
-                    UpdateIADClassInfo(result as IADResult);
-                    break;
                 case AIEngineType.DET:
-                    UpdateDetectionClassInfo(result as DetectionResult);
-                    break;
+                    {
+                        var det = result as DetectionResult;
+                        if (det?.DetectedObjects == null) break;
+
+                        foreach (var o in det.DetectedObjects)
+                        {
+                            var name = o?.ClassInfo?.Name;
+                            if (!string.IsNullOrWhiteSpace(name)) set.Add(name);
+                        }
+                        break;
+                    }
+
                 case AIEngineType.SEG:
-                    UpdateSegmentationClassInfo(result as SegmentationResult);
-                    break;
+                    {
+                        var seg = result as SegmentationResult;
+                        if (seg?.SegmentedObjects == null) break;
+
+                        foreach (var o in seg.SegmentedObjects)
+                        {
+                            var name = o?.ClassInfo?.Name;
+                            if (!string.IsNullOrWhiteSpace(name)) set.Add(name);
+                        }
+                        break;
+                    }
+
+                case AIEngineType.IAD:
+                    {
+                        var iad = result as IADResult;
+                        if (iad?.SegmentedObjects == null) break;
+
+                        foreach (var o in iad.SegmentedObjects)
+                        {
+                            var name = o?.ClassInfo?.Name;
+                            if (!string.IsNullOrWhiteSpace(name)) set.Add(name);
+                        }
+                        break;
+                    }
             }
+
+            return set;
         }
 
-        private void UpdateDetectionClassInfo(DetectionResult detResult)
+        // 6컬럼 인덱스 기준으로 누적값을 ListView에 반영
+        // [2]=불량수, [3]=합계, [4]=불량%, [5]=양품%
+        private void UpdatePercentColumns()
         {
-            if (detResult == null || lv_ClassInfos.Items.Count == 0) return;
+            if (lv_ClassInfos.Items.Count == 0) return;
+
+            int total = _totalInspections;
 
             for (int i = 0; i < lv_ClassInfos.Items.Count; i++)
             {
                 var item = lv_ClassInfos.Items[i];
-                string className = item.Text;
-                bool hasNG = detResult.DetectedObjects.Any(o =>
-                    string.Equals(o.ClassInfo.Name, className, StringComparison.OrdinalIgnoreCase));
+                string className = item.Text; // [0]
 
-                item.SubItems[2].Text = hasNG ? "True" : "False";
+                _ngCountByClass.TryGetValue(className, out int ngCount);
+
+                int okCount = Math.Max(0, total - ngCount);
+
+                double ngPct = (total > 0) ? (ngCount * 100.0 / total) : 0.0;
+                double okPct = (total > 0) ? (okCount * 100.0 / total) : 0.0;
+
+                EnsureSubItemCount(item, 6);
+
+                item.SubItems[2].Text = ngCount.ToString();            // 불량수
+                item.SubItems[3].Text = total.ToString();              // 합계
+                item.SubItems[4].Text = ngPct.ToString("0.00") + " %"; // 불량 %
+                item.SubItems[5].Text = okPct.ToString("0.00") + " %"; // 양품 %
             }
+
+            lv_ClassInfos.Refresh();
         }
 
-        private void UpdateSegmentationClassInfo(SegmentationResult segResult)
+        // SubItems 개수 안전 보장
+        private static void EnsureSubItemCount(ListViewItem item, int count)
         {
-            if (segResult == null || lv_ClassInfos.Items.Count == 0) return;
-
-            for (int i = 0; i < lv_ClassInfos.Items.Count; i++)
-            {
-                var item = lv_ClassInfos.Items[i];
-                string className = item.Text;
-                bool hasNG = segResult.SegmentedObjects.Any(o =>
-                    string.Equals(o.ClassInfo.Name, className, StringComparison.OrdinalIgnoreCase));
-
-                item.SubItems[2].Text = hasNG ? "True" : "False";
-            }
-        }
-
-        private void UpdateIADClassInfo(IADResult iadResult)
-        {
-            if (iadResult == null || lv_ClassInfos.Items.Count == 0) return;
-
-            for (int i = 0; i < lv_ClassInfos.Items.Count; i++)
-            {
-                var item = lv_ClassInfos.Items[i];
-                string className = item.Text;
-                bool hasNG = iadResult.SegmentedObjects.Any(o =>
-                    string.Equals(o.ClassInfo.Name, className, StringComparison.OrdinalIgnoreCase));
-
-                item.SubItems[2].Text = hasNG ? "True" : "False";
-            }
+            while (item.SubItems.Count < count)
+                item.SubItems.Add("");
         }
     }
 }
