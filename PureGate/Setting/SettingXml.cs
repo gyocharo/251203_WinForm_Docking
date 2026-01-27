@@ -87,6 +87,8 @@ namespace PureGate.Setting
         public string ModelDir { get; set; } = "";
         public string ImageDir { get; set; } = "";
 
+        public long ExposureTime { get; set; } = 15000; //단위 us
+
         public CameraType CamType { get; set; } = CameraType.WebCam;
 
         public bool CycleMode { get; set; } = false;
