@@ -21,6 +21,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using WeifenLuo.WinFormsUI.Docking;
+using PureGate.UIControl;
 
 namespace PureGate
 {
@@ -43,6 +44,11 @@ namespace PureGate
 
         //닫기 창 불타입 선언
         private bool _isClosing = false;
+
+        //로고 필드 선언
+        private SvgLikeLogo _logo;
+        private const int LOGO_H_EXPANDED = 130; // 펼쳤을 때 로고 영역 높이 (기존 96 -> 130)
+        private const int LOGO_H_COLLAPSED = 70; // 접었을 때 로고 영역 높이 (기존 48 -> 70)
 
         public MainForm()
         {
@@ -160,6 +166,14 @@ namespace PureGate
 
             SideMenu.Width = _posSliding;
 
+            if (_logo != null)
+            {
+                _logo.Height = (SideMenu.Width <= MIN_SLIDING_WIDTH + 1)
+                    ? LOGO_H_COLLAPSED          // ✅ 접힘 높이
+                    : LOGO_H_EXPANDED;          // ✅ 펼침 높이
+            }
+
+
             _dockPanel.SuspendLayout();
             AdjustDockPanel();
             _dockPanel.ResumeLayout();
@@ -171,26 +185,20 @@ namespace PureGate
         // 메인 이미지로고 배경 흰색을 투명 처리하기 위한 기능
         private void Form1_Load(object sender, EventArgs e)
         {
-            // 리소스 이미지 불러오기
-            Bitmap bmp = new Bitmap(Properties.Resources.이미지);
+            var parent = pictureBox1.Parent; // SideMenu
 
-            // 흰색을 투명 처리
-            for (int y = 0; y < bmp.Height; y++)
+            _logo = new SvgLikeLogo
             {
-                for (int x = 0; x < bmp.Width; x++)
-                {
-                    Color c = bmp.GetPixel(x, y);
-                    if (c.R > 180 && c.G > 180 && c.B > 180) // 거의 흰색
-                    {
-                        bmp.SetPixel(x, y, Color.Transparent);
-                    }
-                }
-            }
+                Dock = DockStyle.Top,
+                Height = LOGO_H_EXPANDED,
+                BackColor = Color.Transparent
+            };
 
-            // PictureBox에 적용
-            pictureBox1.Image = bmp;
-            // PictureBox 배경색을 SideMenu와 동일하게
-            pictureBox1.BackColor = SideMenu.BackColor;
+            parent.Controls.Remove(pictureBox1);
+            pictureBox1.Dispose();
+
+            parent.Controls.Add(_logo);
+            parent.Controls.SetChildIndex(_logo, parent.Controls.Count - 1);
         }
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)

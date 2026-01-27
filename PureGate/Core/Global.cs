@@ -22,6 +22,8 @@ namespace PureGate.Core
 
         private InspStage _stage = new InspStage();
 
+        public string LoginUserId { get; set; } = "";
+
         public InspStage InspStage
         {
             get { return _stage; }
@@ -34,6 +36,7 @@ namespace PureGate.Core
 
         public void Initialize()
         {
+            LoginUserId = LoginUserId ?? "";  
             _stage.Initialize();
         }
 
@@ -41,5 +44,8 @@ namespace PureGate.Core
         {
             _stage.Dispose();
         }
+        
+
+
     }
 }
