@@ -153,20 +153,6 @@ namespace PureGate
 
         public void AddModelResult(Model curModel)
         {
-            // ✅ UI 스레드 체크
-            if (InvokeRequired)
-            {
-                try
-                {
-                    Invoke(new Action(() => AddModelResult(curModel)));
-                }
-                catch (ObjectDisposedException)
-                {
-                    SLogger.Write("[ResultForm] Form disposed, skipping update");
-                }
-                return;
-            }
-
             if (curModel is null)
             {
                 SLogger.Write("[ResultForm] AddModelResult - curModel is null", SLogger.LogType.Error);
@@ -247,20 +233,6 @@ namespace PureGate
 
         public void AddWindowResult(InspWindow inspWindow)
         {
-            // ✅ UI 스레드 체크
-            if (InvokeRequired)
-            {
-                try
-                {
-                    Invoke(new Action(() => AddWindowResult(inspWindow)));
-                }
-                catch (ObjectDisposedException)
-                {
-                    SLogger.Write("[ResultForm] Form disposed, skipping update");
-                }
-                return;
-            }
-
             if (inspWindow is null)
             {
                 SLogger.Write("[ResultForm] AddWindowResult - inspWindow is null", SLogger.LogType.Error);
