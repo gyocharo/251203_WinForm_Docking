@@ -310,18 +310,18 @@ namespace PureGate.UIControl
                     DrawDiagram(g);
                     DrawInspectHighlight(g);
 
-                    // 3. ✅ [추가] OK/NG 결과 그리기 (이미지 위에 덮어쓰기)
+                    // 3. [추가] OK/NG 결과 그리기 (이미지 위에 덮어쓰기)
                     if (this.WorkingState == "OK" || this.WorkingState == "NG")
                     {
                         // OK는 초록, NG는 빨강
                         Color textColor = (this.WorkingState == "OK") ? Color.Lime : Color.Red;
 
                         // 폰트 크기를 100으로 설정하여 매우 크게 만듭니다.
-                        using (Font font = new Font("Arial", 100, FontStyle.Bold))
+                        using (Font font = new Font("Arial", 70, FontStyle.Bold))
                         using (SolidBrush brush = new SolidBrush(textColor))
                         {
                             // (50, 50) 위치에 글자를 그립니다.
-                            g.DrawString(this.WorkingState, font, brush, new PointF(50, 50));
+                            g.DrawString(this.WorkingState, font, brush, new PointF(0, 0));
                         }
                     }
 
@@ -431,15 +431,6 @@ namespace PureGate.UIControl
             lock (_lock)
             {
                 DrawRectInfo(g);
-            }
-
-            //#17_WORKING_STATE#4 작업 상태 화면에 표시
-            if (WorkingState != "")
-            {
-                float fontSize = 20.0f;
-                Color stateColor = Color.FromArgb(255, 128, 0);
-                PointF textPos = new PointF(10, 10);
-                DrawText(g, WorkingState, textPos, fontSize, stateColor);
             }
 
             //#13_INSP_RESULT#5 검사 양불판정 갯수 화면에 표시

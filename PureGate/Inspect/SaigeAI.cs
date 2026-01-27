@@ -181,6 +181,8 @@ namespace PureGate
             option.CalcClassActivationMap = false;
 
             _clsEngine.SetInferenceOption(option);
+
+            EnableClsOverlayDraw = true;
         }
 
 

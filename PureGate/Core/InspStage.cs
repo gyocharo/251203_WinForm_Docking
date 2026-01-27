@@ -350,6 +350,40 @@ namespace PureGate.Core
         public void TryInspection(InspWindow inspWindow)
         {
             UpdateDiagramEntity();
+
+            // ✅ ROI가 없거나 선택된 ROI가 없을 때도 검사 + OK/NG 표시
+            if (inspWindow == null)
+            {
+                // 1) 모델에 ROI 자체가 0개면: CLS(전체 이미지) 검사로 처리
+                if (CurModel != null && (CurModel.InspWindowList == null || CurModel.InspWindowList.Count == 0))
+                {
+                    if (AIModule != null && AIModule.IsEngineLoaded)
+                    {
+                        Bitmap bitmap = GetBitmap();
+                        if (bitmap != null)
+                        {
+                            AIModule.InspAIModule(bitmap);
+                            Bitmap resultImage = AIModule.GetResultImage();
+                            UpdateDisplay(resultImage);
+
+                            if (AIModule.TryGetLastClsTop1(out string label, out float score) && !string.IsNullOrWhiteSpace(label))
+                            {
+                                bool ok = string.Equals(label, "Good", StringComparison.OrdinalIgnoreCase);
+                                UpdateResultUI(ok);   // ✅ 여기서 무조건 OK/NG 뜸(검사 실행된 경우)
+                            }
+                        }
+                    }
+                    return; // 여기서 끝 (엔진/이미지 없으면 표시 안 함)
+                }
+
+                // 2) ROI는 있는데 "선택만 안 된 상태"면: ROI 전체 검사로 처리
+                bool isDefect;
+                if (_inspWorker.RunInspect(out isDefect))
+                    UpdateResultUI(!isDefect);
+
+                return;
+            }
+
             InspWorker.TryInspect(inspWindow, InspectType.InspNone);
         }
 
@@ -786,6 +820,8 @@ namespace PureGate.Core
                             if (AIModule.TryGetLastClsTop1(out string label, out float score) && !string.IsNullOrWhiteSpace(label))
                             {
                                 bool ok = string.Equals(label, "Good", StringComparison.OrdinalIgnoreCase);
+
+                                UpdateResultUI(ok);
 
                                 string modelName = "";
                                 if (CurModel != null && !string.IsNullOrWhiteSpace(CurModel.ModelPath))
