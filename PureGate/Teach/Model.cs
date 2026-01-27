@@ -17,6 +17,9 @@ namespace PureGate.Teach
 
         public string InspectImagePath { get; set; } = "";
 
+        public string SaigeModelPath { get; set; } = "";
+        public global::PureGate.AIEngineType SaigeEngineType { get; set; } = global::PureGate.AIEngineType.IAD;
+
         public List<InspWindow> InspWindowList { get; set; }
 
         public Model()

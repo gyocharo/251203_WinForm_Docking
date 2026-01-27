@@ -113,6 +113,7 @@ namespace PureGate.Property
                     _aiAlgo.ModelPath = _modelPath;
                     _aiAlgo.EngineType = _engineType;
                 }
+                Global.Inst.InspStage.SetSaigeModelInfo(_modelPath, _engineType);
 
                 UpdateModelInfoUI();
             }

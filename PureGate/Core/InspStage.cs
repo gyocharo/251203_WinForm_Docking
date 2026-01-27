@@ -105,6 +105,36 @@ namespace PureGate.Core
 
         public eImageChannel SelImageChannel { get; set; } = eImageChannel.Gray;
 
+        public void SetSaigeModelInfo(string saigeModelPath, AIEngineType engineType)
+        {
+            if (_model == null) return;
+            _model.SaigeModelPath = saigeModelPath ?? string.Empty;
+            _model.SaigeEngineType = engineType;
+        }
+
+        /// <summary>
+        /// 모델(.xml)에 저장된 Saige AI 정보를 기반으로 엔진을 자동 로드합니다.
+        /// (모델 재시작/최근 모델 로딩 시 AI도 함께 복구)
+        /// </summary>
+        private void TryAutoLoadSaigeFromModel()
+        {
+            if (_model == null) return;
+
+            string path = _model.SaigeModelPath;
+            if (string.IsNullOrWhiteSpace(path)) return;
+            if (!File.Exists(path)) return;
+
+            try
+            {
+                AIModule.LoadEngine(path, _model.SaigeEngineType);
+            }
+            catch (Exception ex)
+            {
+                // AI 자동 로드는 실패해도 모델 자체 로드는 계속 진행되어야 함
+                SLogger.Write($"Saige AI 자동 로드 실패: {ex.Message}", SLogger.LogType.Error);
+            }
+        }
+
 
         public bool Initialize()
         {
@@ -676,6 +706,7 @@ namespace PureGate.Core
                 Global.Inst.InspStage.SetImageBuffer(inspImagePath);
             }
 
+            TryAutoLoadSaigeFromModel();
             UpdateDiagramEntity();
 
             //#16_LAST_MODELOPEN#3 마지막 저장 모델 경로를 레지스트리에 저장
