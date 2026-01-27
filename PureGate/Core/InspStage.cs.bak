@@ -8,20 +8,20 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
-using _251203_WinForm_Docking.Algorithm;
-using _251203_WinForm_Docking.Grab;
-using _251203_WinForm_Docking.Setting;
-using _251203_WinForm_Docking.Teach;
+using PureGate.Algorithm;
+using PureGate.Grab;
+using PureGate.Setting;
+using PureGate.Teach;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
 using System.IO;
-using _251203_WinForm_Docking.Inspect;
+using PureGate.Inspect;
 using Microsoft.Win32;
-using _251203_WinForm_Docking.Util;
+using PureGate.Util;
 using System.Windows.Forms;
-using _251203_WinForm_Docking.Sequence;
+using PureGate.Sequence;
 
-namespace _251203_WinForm_Docking.Core
+namespace PureGate.Core
 {
     public class InspStage : IDisposable
     {
@@ -63,6 +63,8 @@ namespace _251203_WinForm_Docking.Core
         private string _serialID;
 
         private bool _isInspectMode = false;
+
+        private string _loadedImageDir = "";
 
         public InspStage() { }
 
@@ -106,6 +108,8 @@ namespace _251203_WinForm_Docking.Core
 
         public bool Initialize()
         {
+            LoadSetting();
+
             SLogger.Write("InspStage 초기화!");
             _imageSpace = new ImageSpace();
 
@@ -116,7 +120,7 @@ namespace _251203_WinForm_Docking.Core
             _imageLoader = new ImageLoader();
 
             //#16_LAST_MODELOPEN#2 REGISTRY 키 생성
-            _regKey = Registry.CurrentUser.CreateSubKey("Software\\JidamVision");
+            _regKey = Registry.CurrentUser.CreateSubKey("Software\\WinDocking");
 
             _model = new Model();
 
@@ -356,8 +360,10 @@ namespace _251203_WinForm_Docking.Core
             var propForm = MainForm.GetDockForm<PropertiesForm>();
             if(propForm != null)
             {
-                if(inspWindow is null){
-                    propForm.ResetProperty();
+                if (inspWindow is null)
+                {
+                    // ROI 선택 전에는 AIModuleProp만 표시
+                    propForm.ShowAIModuleOnly();
                     return;
                 }
 
@@ -443,14 +449,61 @@ namespace _251203_WinForm_Docking.Core
             _model.DelInspWindowList(inspWindowList);
             UpdateDiagramEntity();
         }
-
+            
         public bool Grab(int bufferIndex)
         {
             if (_grabManager == null)
                 return false;
 
+            CheckImageBuffer();
+
             if (!_grabManager.Grab(bufferIndex, true))
                 return false;
+
+            return true;
+        }
+
+        public bool ApplyCameraSetting()
+        {
+            StopCycle(); // 실행중 정지
+
+            // 최신 설정 반영
+            _camType = SettingXml.Inst.CamType;
+
+            // 기존 카메라 정리
+            if (_grabManager != null)
+            {
+                try { _grabManager.TransferCompleted -= _multiGrab_TransferCompleted; } catch { }
+                _grabManager.Dispose();
+                _grabManager = null;
+            }
+
+            // 새 카메라 생성
+            switch (_camType)
+            {
+                case CameraType.WebCam:
+                    _grabManager = new WebCam();
+                    break;
+                case CameraType.HikRobot:
+                    _grabManager = new HikRobotCam();
+                    break;
+                case CameraType.None:
+                default:
+                    _grabManager = null;
+                    break;
+            }
+
+            // 카메라 있으면 초기화 + 버퍼 세팅
+            if (_grabManager != null && _grabManager.InitGrab())
+            {
+                _grabManager.TransferCompleted += _multiGrab_TransferCompleted;
+                InitModelGrab(MAX_GRAB_BUF);
+            }
+
+            // 런타임 상태 갱신
+            UseCamera = (SettingXml.Inst.CamType != CameraType.None);
+            CheckImageBuffer();
+            ResetDisplay();
 
             return true;
         }
@@ -463,6 +516,18 @@ namespace _251203_WinForm_Docking.Core
 
             _imageSpace.Split(bufferIndex);
 
+            if (SaveCamImage && Directory.Exists(_capturePath))
+            {
+                Mat curImage = GetMat(0, eImageChannel.Color);
+
+                if (curImage != null)
+                {
+                    string imageName = $"{++SaveImageIndex:D4}.png";
+                    string savePath = Path.Combine(_capturePath, imageName);
+                    curImage.SaveImage(savePath);
+                }
+            }
+
             DisplayGrabImage(bufferIndex);
 
             //#8_LIVE#2 LIVE 모드일때, Grab을 계속 실행하여, 반복되도록 구현
@@ -473,6 +538,9 @@ namespace _251203_WinForm_Docking.Core
                 await Task.Delay(100);
                 _grabManager.Grab(bufferIndex, true);
             }
+
+            if (_isInspectMode)
+                RunInspect();
         }
 
         private void DisplayGrabImage(int bufferIndex)
@@ -480,8 +548,17 @@ namespace _251203_WinForm_Docking.Core
             var cameraForm = MainForm.GetDockForm<CameraForm>();
             if (cameraForm != null)
             {
-                cameraForm.UpdateDisplay();
+                // UI 스레드에서 실행되도록 보장
+                if (cameraForm.InvokeRequired)
+                {
+                    cameraForm.Invoke(new Action(() => cameraForm.UpdateDisplay()));
+                }
+                else
+                {
+                    cameraForm.UpdateDisplay();
+                }
             }
+
         }
 
         public void UpdateDisplay(Bitmap bitmap)
@@ -489,8 +566,17 @@ namespace _251203_WinForm_Docking.Core
             var cameraForm = MainForm.GetDockForm<CameraForm>();
             if (cameraForm != null)
             {
-                cameraForm.UpdateDisplay(bitmap);
+                // UI 스레드에서 실행되도록 보장
+                if (cameraForm.InvokeRequired)
+                {
+                    cameraForm.Invoke(new Action(() => cameraForm.UpdateDisplay(bitmap)));
+                }
+                else
+                {
+                    cameraForm.UpdateDisplay(bitmap);
+                }
             }
+
         }
 
         public void SetPreviewImage(eImageChannel channel)
@@ -609,7 +695,7 @@ namespace _251203_WinForm_Docking.Core
                 Global.Inst.InspStage.CurModel.SaveAs(filePath);
         }
 
-        private bool LastestModelOpen()
+        public bool LastestModelOpen()
         {
             if (_lastestModelOpen)
                 return true;
@@ -636,15 +722,24 @@ namespace _251203_WinForm_Docking.Core
             if (!UseCamera)
             {
                 string inspImagePath = CurModel.InspectImagePath;
-                if (inspImagePath == "")
-                    return;
-
                 string inspImageDir = Path.GetDirectoryName(inspImagePath);
+
                 if (!Directory.Exists(inspImageDir))
                     return;
 
-                if (!_imageLoader.IsLoadedImages())
+                // ✅ 폴더가 바뀌었으면 무조건 다시 로드
+                if (_loadedImageDir != inspImageDir)
+                {
                     _imageLoader.LoadImages(inspImageDir);
+                    _imageLoader.Reset();          // ← 이전 인덱스 제거
+                    _loadedImageDir = inspImageDir;
+                }
+                else
+                {
+                    // 같은 폴더지만 아직 로드 안 된 경우
+                    if (!_imageLoader.IsLoadedImages())
+                        _imageLoader.LoadImages(inspImageDir);
+                }
             }
 
             if (isCycle)
@@ -668,11 +763,105 @@ namespace _251203_WinForm_Docking.Core
 
             ResetDisplay();
 
+            // ✅ ROI(검사 윈도우)가 하나도 없으면: AIModuleProp의 "적용"과 동일 흐름으로 검사
+            //    (검사 버튼 누를 때마다 다음 이미지로 넘어가는 VirtualGrab/Grab 흐름은 그대로 유지됨)
+            if (CurModel != null && (CurModel.InspWindowList == null || CurModel.InspWindowList.Count == 0))
+            {
+                // 모델/엔진이 로드된 경우에만 실행 (안전 가드)
+                if (AIModule != null && AIModule.IsEngineLoaded)
+                {
+                    Bitmap bitmap = GetBitmap();
+                    if (bitmap != null)
+                    {
+                        AIModule.InspAIModule(bitmap);
+                        Bitmap resultImage = AIModule.GetResultImage();
+                        UpdateDisplay(resultImage);
+
+                        // ✅ Saige CLS 분류 결과에 따라 저장 (실패해도 검사 흐름엔 영향 없게)
+                        TrySaveClsResultImage(resultImage);
+
+                        return true;
+                    }
+                }
+
+                // 엔진이 없거나 이미지가 없으면 "검사 실패"로 처리하지 않고,
+                // 다음 검사 버튼에서 계속 다음 이미지로 넘어가도록 true 유지
+                return true;
+            }
+
+            // ✅ ROI가 있으면 기존 검사 로직 그대로
             bool isDefect;
             if (!_inspWorker.RunInspect(out isDefect))
                 return false;
 
             return true;
+
+        }
+
+        private void TrySaveClsResultImage(Bitmap resultImage)
+        {
+            if (resultImage == null) return;
+            if (AIModule == null) return;
+
+            // CLS가 아닐 수도 있으니 라벨이 없으면 그냥 종료
+            if (!AIModule.TryGetLastClsTop1(out string label, out float score)) return;
+            if (string.IsNullOrWhiteSpace(label)) return;
+
+            try
+            {
+                string dateFolder = DateTime.Now.ToString("yyyy-MM-dd");
+
+                // 라벨명 폴더 안전 처리
+                string safeLabel = SanitizePathSegment(label);
+
+                string root;
+                string targetDir;
+
+                if (string.Equals(label, "Good", StringComparison.OrdinalIgnoreCase))
+                {
+                    root = @"D:\Good";
+                    targetDir = Path.Combine(root, dateFolder);
+                }
+                else
+                {
+                    root = @"D:\NG";
+                    targetDir = Path.Combine(root, safeLabel, dateFolder);
+                }
+
+                // 폴더 없으면 생성 (Good/NG 모두)
+                Directory.CreateDirectory(targetDir);
+
+                // 파일명: 시간_라벨.jpg (충돌 방지)
+                string ts = DateTime.Now.ToString("HH.mm.ss.ff");
+                string fileName = $"{ts}_{safeLabel}.jpg";
+                string fullPath = Path.Combine(targetDir, fileName);
+
+                // 이미지 저장 (resultImage는 화면 표시용일 수 있으니 Clone해서 저장)
+                using (Bitmap clone = (Bitmap)resultImage.Clone())
+                {
+                    clone.Save(fullPath, System.Drawing.Imaging.ImageFormat.Jpeg);
+                }
+
+                SLogger.Write($"[AI-CLS Save] {label}({score:0.000}) -> {fullPath}", SLogger.LogType.Info);
+            }
+            catch (Exception ex)
+            {
+                // 저장 실패해도 기존 검사/넘김 흐름은 그대로 유지
+                SLogger.Write($"[AI-CLS Save] Failed: {ex.Message}", SLogger.LogType.Error);
+            }
+        }
+
+        private string SanitizePathSegment(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return "Unknown";
+
+            foreach (char c in Path.GetInvalidFileNameChars())
+                name = name.Replace(c, '_');
+
+            // 너무 길면 잘라서 Windows 경로 문제 방지
+            if (name.Length > 80) name = name.Substring(0, 80);
+
+            return name.Trim();
         }
 
         public void StopCycle()
@@ -694,6 +883,12 @@ namespace _251203_WinForm_Docking.Core
             string imagePath = _imageLoader.GetNextImagePath();
             if (imagePath == "")
                 return false;
+
+            if (_model != null)
+            {
+                _model.InspectImagePath = imagePath;
+                SLogger.Write($"[InspStage] Updated InspectImagePath: {Path.GetFileName(imagePath)}");
+            }
 
             Global.Inst.InspStage.SetImageBuffer(imagePath);
 
@@ -746,6 +941,27 @@ namespace _251203_WinForm_Docking.Core
             }
         }
 
+        private void RunInspect()
+        {
+            // 검사 시작 전 상태 초기화
+            ResetDisplay();
+
+            bool isDefect = false;
+            // 실제 AI 검사가 실행되는 구간
+            if (!_inspWorker.RunInspect(out isDefect))
+            {
+                SLogger.Write("Failed to inspect", SLogger.LogType.Error);
+            }
+
+            // ✅ 핵심: 검사가 끝나자마자 결과 UI 업데이트 호출
+            // 결함이 없으면(false) -> OK(true)를 UI에 보냄
+            UpdateResultUI(!isDefect);
+
+            // 제어기로 결과 전송
+            VisionSequence.Inst.VisionCommand(Vision2Mmi.InspDone, isDefect);
+        }
+
+
         //검사를 위한 준비 작업
         public bool InspectReady(string lotNumber, string serialID)
         {
@@ -765,6 +981,32 @@ namespace _251203_WinForm_Docking.Core
         public bool StartAutoRun()
         {
             SLogger.Write("Action : StartAutoRun");
+            
+            if (SaveCamImage && _model != null)
+            {
+                SaveImageIndex = 0;
+
+                _capturePath = Path.Combine(Path.GetDirectoryName(_model.ModelPath), "Capture");
+                if (!Directory.Exists(_capturePath))
+                {
+                    Directory.CreateDirectory(_capturePath);
+                }
+                else
+                {
+                    string[] files = Directory.GetFiles(_capturePath);
+                    foreach (string file in files)
+                    {
+                        try
+                        {
+                            File.Delete(file);
+                        }
+                        catch (Exception ex)
+                        {
+                            SLogger.Write($"Failed to delete file: {file}. Exception: {ex.Message}", SLogger.LogType.Error);
+                        }
+                    }
+                }
+            }
 
             string modelPath = CurModel.ModelPath;
             if (modelPath == "")
@@ -795,6 +1037,27 @@ namespace _251203_WinForm_Docking.Core
                 cameraForm.SetWorkingState(workingState);
             }
         }
+
+        public void SetExposure(long exposureTime)
+        {
+            if (_grabManager != null)
+            {
+                _grabManager.SetExposureTime(exposureTime);
+            }
+        }
+
+        private void UpdateResultUI(bool isOK)
+        {
+            // CameraForm을 찾아 화면에 결과를 표시합니다.
+            CameraForm cameraForm = MainForm.GetDockForm<CameraForm>();
+            if (cameraForm != null)
+            {
+                cameraForm.ShowResultOnScreen(isOK); // 이제 1단계 덕분에 오류가 사라집니다!
+            }
+        }
+
+
+
 
         #region Disposable
 

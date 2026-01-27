@@ -163,18 +163,12 @@ namespace PureGate.Inspect
         /// 검사 결과 상태 문자열 반환 (NG 시 InspType 포함)        
         public string GetStatusString()
         {
-            if (!IsDefect)
-                return "OK";
-
-            // ✅ AIModule(CLS) 같은 경우 ResultValue에 NG 클래스(라벨)를 넣어두면
-            //    Status 컬럼에서 "NG (라벨)" 형태로 표시할 수 있음
-            if (InspType == InspectType.InspAIModule && !string.IsNullOrWhiteSpace(ResultValue))
+            if (IsDefect)
             {
-                return IsDefect ? $"NG ({ResultValue})" : $"OK ({ResultValue})";
+                // NG인 경우 검사 타입도 함께 표시
+                return $"NG ({InspType})";
             }
-
-            // 기본: 검사 타입 표시
-            return IsDefect ? "NG" : "OK";
+            return "OK";
         }
     }
 }

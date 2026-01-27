@@ -62,6 +62,8 @@ namespace PureGate.Inspect
             Model curMode = Global.Inst.InspStage.CurModel;
             List<InspWindow> inspWindowList = curMode.InspWindowList;
 
+            SLogger.Write($"[InspWorker] RunInspect started - Model: {curMode?.ModelName}, Windows: {inspWindowList?.Count}");
+
             try
             {
                 // 1. 데이터 업데이트
@@ -86,27 +88,55 @@ namespace PureGate.Inspect
             finally
             {
                 // 3. ✅ [핵심] 상단에서 에러가 나도 이곳은 '무조건' 실행됩니다.
-                int totalCnt = 0; int okCnt = 0; int ngCnt = 0;
-                foreach (var inspWindow in inspWindowList)
+                //     - isDefect 전역 결과 체크
+                //     - ResultForm & CameraForm 업데이트
+
+                // isDefect 계산
+                foreach (var window in inspWindowList)
                 {
-                    totalCnt++;
-                    if (inspWindow.IsDefect()) { isDefect = true; ngCnt++; }
-                    else { okCnt++; }
-                    DisplayResult(inspWindow, InspectType.InspNone);
+                    if (window.InspResultList.Count > 0)
+                    {
+                        bool anyDefect = window.InspResultList.Any(r => r.IsDefect);
+                        if (anyDefect) isDefect = true;
+                    }
                 }
 
-                var cameraForm = MainForm.GetDockForm<CameraForm>();
+                // 로그 출력
+                if (isDefect)
+                {
+                    SLogger.Write($"UI_CHECK: isDefect=true 이므로 무조건 NG가 떠야 합니다.", SLogger.LogType.Info);
+                }
+                else
+                {
+                    SLogger.Write($"UI_CHECK: isDefect=false 이므로 무조건 OK가 떠야 합니다.", SLogger.LogType.Info);
+                }
+
+                // 4. ✅ ResultForm 업데이트
+                SLogger.Write($"[InspWorker] Attempting to update ResultForm...");
+                ResultForm resultForm = MainForm.GetDockForm<ResultForm>();
+                if (resultForm != null)
+                {
+                    SLogger.Write($"[InspWorker] ResultForm found! Calling AddModelResult...");
+                    resultForm.AddModelResult(curMode);
+                    SLogger.Write($"[InspWorker] AddModelResult completed");
+                }
+                else
+                {
+                    SLogger.Write($"[InspWorker] ResultForm is null!", SLogger.LogType.Error);
+                }
+
+                // 5. CameraForm 업데이트
+                CameraForm cameraForm = MainForm.GetDockForm<CameraForm>();
                 if (cameraForm != null)
                 {
-                    cameraForm.SetInspResultCount(totalCnt, okCnt, ngCnt);
-
-                    // 🔴 이 로그가 뜨는지 다시 확인하세요. 무조건 떠야 합니다.
                     string finalResult = isDefect ? "NG" : "OK";
                     SLogger.Write($"UI_CHECK: Result is {finalResult}", SLogger.LogType.Info);
 
                     cameraForm.ShowResultOnScreen(!isDefect);
                 }
             }
+
+            SLogger.Write($"[InspWorker] RunInspect completed");
             return true;
         }
 

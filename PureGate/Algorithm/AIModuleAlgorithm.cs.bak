@@ -20,10 +20,6 @@ namespace PureGate.Algorithm
         public string ModelPath { get; set; }
         public AIEngineType EngineType { get; set; }
 
-        // CLS 결과 저장용 (Status에 NG 클래스 표기용)
-        public string LastClsLabel { get; private set; } = "";
-        public float LastClsScore { get; private set; } = 0f;
-
         private SaigeAI _saigeAI;
         private List<DrawInspectInfo> _resultAreas;
 
@@ -35,11 +31,6 @@ namespace PureGate.Algorithm
         public override bool DoInspect()
         {
             ResetResult();
-
-            LastClsLabel = "";
-            LastClsScore = 0f;
-            LastClsLabel = "";
-            LastClsScore = 0f;
 
             if (!IsUse)
                 return false;
@@ -77,8 +68,6 @@ namespace PureGate.Algorithm
                 HandleDetection(result as DetectionResult);
             else if (EngineType == AIEngineType.SEG)
                 HandleSegmentation(result as SegmentationResult);
-            else if (EngineType == AIEngineType.CLS)
-                HandleClassification();
 
             IsInspected = true;
             return true;
@@ -158,55 +147,6 @@ namespace PureGate.Algorithm
                 );
             }
             ResultString.Add($"Segment Count : {seg.SegmentedObjects.Length}");
-        }
-
-        
-
-        private void HandleClassification()
-        {
-            // SaigeAI.InspAIModule()가 호출되면 SaigeAI 내부에 CLS Top1(label/score)이 저장됩니다.
-            if (_saigeAI == null)
-                return;
-
-            // SaigeAI에서 Top1(label/score) 추출
-            if (!_saigeAI.TryGetLastClsTop1(out string label, out float score))
-            {
-                LastClsLabel = "";
-                LastClsScore = 0f;
-                IsDefect = false;
-                ResultString.Add("CLS Result : (no label)");
-                return;
-            }
-
-            LastClsLabel = label ?? "";
-            LastClsScore = score;
-
-            bool isOk = IsOkLabel(LastClsLabel);
-            IsDefect = !isOk;
-
-            ResultString.Add($"CLS Result : {(IsDefect ? "NG" : "OK")}");
-            ResultString.Add($"Label : {LastClsLabel}");
-            ResultString.Add($"Score : {LastClsScore:N3}");
-
-            string overlay = $"{LastClsLabel} ({LastClsScore:N3})";
-            _resultAreas.Add(
-                new DrawInspectInfo(
-                    InspRect,
-                    overlay,
-                    InspectType.InspAIModule,
-                    IsDefect ? DecisionType.Defect : DecisionType.Info
-                )
-            );
-        }
-
-        private bool IsOkLabel(string label)
-        {
-            // SaigeAI.DrawCLSResultOverlay() 기준: label이 "Good"이면 OK로 취급
-            // (대소문자 차이는 허용)
-            if (string.IsNullOrWhiteSpace(label))
-                return false;
-
-            return label.Trim().Equals("Good", System.StringComparison.OrdinalIgnoreCase);
         }
 
         public override int GetResultRect(out List<DrawInspectInfo> resultArea)

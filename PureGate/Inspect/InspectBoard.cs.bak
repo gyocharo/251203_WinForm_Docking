@@ -71,17 +71,8 @@ namespace PureGate.Inspect
                         inspResult.ResultValue = $"{blobAlgo.OutBlobCount}/{min}~{max}";
                         break;
                     case InspectType.InspAIModule:
-                        {
-                            AIModuleAlgorithm AIModuleAlgo = algo as AIModuleAlgorithm;
-
-                            // ✅ CLS는 NG 클래스(라벨)를 Status에 표시하기 위해 ResultValue에 저장
-                            if (AIModuleAlgo != null && AIModuleAlgo.EngineType == AIEngineType.CLS && AIModuleAlgo.IsDefect)
-                            {
-                                if (!string.IsNullOrWhiteSpace(AIModuleAlgo.LastClsLabel))
-                                    inspResult.ResultValue = AIModuleAlgo.LastClsLabel;
-                            }
-                            break;
-                        }
+                        AIModuleAlgorithm AIModuleAlgo = algo as AIModuleAlgorithm;
+                        break;
                 }
 
                 List<DrawInspectInfo> resultArea = new List<DrawInspectInfo>();

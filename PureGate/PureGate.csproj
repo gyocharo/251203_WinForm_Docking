@@ -321,6 +321,9 @@
     <EmbeddedResource Include="Property\MatchInspProp.resx">
       <DependentUpon>MatchInspProp.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="ResultForm.resx">
+      <DependentUpon>ResultForm.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="RunForm.resx">
       <DependentUpon>RunForm.cs</DependentUpon>
     </EmbeddedResource>

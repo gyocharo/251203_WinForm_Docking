@@ -780,6 +780,9 @@ namespace PureGate.Core
                         // ✅ Saige CLS 분류 결과에 따라 저장 (실패해도 검사 흐름엔 영향 없게)
                         TrySaveClsResultImage(resultImage);
 
+                        // ✅ ROI가 없을 때(AIModule 단독 검사)도 ResultForm에 결과가 누적되도록 추가
+                        TryUpdateResultFormForAIModuleOnly();
+
                         return true;
                     }
                 }
@@ -796,6 +799,70 @@ namespace PureGate.Core
 
             return true;
 
+        }
+
+        private void TryUpdateResultFormForAIModuleOnly()
+        {
+            try
+            {
+                ResultForm resultForm = MainForm.GetDockForm<ResultForm>();
+                if (resultForm == null)
+                {
+                    SLogger.Write("[InspStage] ResultForm is null (cannot update).", SLogger.LogType.Error);
+                    return;
+                }
+
+                // 현재 검사 중인 이미지 파일명 (ResultForm도 내부에서 가져오지만, 여기서도 안전하게 확보)
+                string imageFileName = "";
+                if (CurModel != null && !string.IsNullOrEmpty(CurModel.InspectImagePath))
+                    imageFileName = Path.GetFileName(CurModel.InspectImagePath);
+
+                // ✅ CLS Top1 결과 얻기 (라벨/스코어)
+                string label = "";
+                float score = 0f;
+                bool hasCls = (AIModule != null) && AIModule.TryGetLastClsTop1(out label, out score);
+
+                bool isOk = hasCls && IsOkClsLabel(label);
+                bool isDefect = hasCls ? !isOk : false;  // CLS 결과가 없으면 일단 OK로 취급(원하면 Unknown 처리로 바꿔도 됨)
+
+                // ✅ ResultForm에 들어갈 "가짜 Window 1개 + Result 1개" 생성
+                var window = new InspWindow(InspWindowType.None, "AIModule");
+                window.UID = "AIModule";
+
+                var res = new InspResult();
+                res.ObjectID = "AIModule";
+                res.ObjectType = InspWindowType.None;
+                res.InspType = InspectType.InspAIModule;
+                res.IsDefect = isDefect;
+
+                // ⭐ Status를 CLS 결과대로 보이게 하려면(네가 만든 GetStatusString 로직 기준)
+                // - NG면 라벨명을 ResultValue에 넣어두는 게 핵심
+                res.ResultValue = hasCls ? label : "";
+
+                // 상세창용 텍스트
+                if (hasCls)
+                    res.ResultInfos = $"CLS: {(isDefect ? "NG" : "OK")}, Label={label}, Score={score:0.000}";
+                else
+                    res.ResultInfos = "AIModule inspected (no CLS top1 info)";
+
+                // 파일명 파싱(LOT/PART/SN/CAM/LINE/ST)
+                res.ParseImageFileName(imageFileName);
+
+                window.AddInspResult(res);
+
+                // ✅ ResultForm에 “윈도우 1개 결과”로 추가 (내부에서 이력 누적 + TreeListView 갱신)
+                resultForm.AddWindowResult(window);
+            }
+            catch (Exception ex)
+            {
+                SLogger.Write($"[InspStage] TryUpdateResultFormForAIModuleOnly failed: {ex.Message}", SLogger.LogType.Error);
+            }
+        }
+
+        // ✅ 정상 라벨 규칙
+        public static bool IsOkClsLabel(string label)
+        {
+            return string.Equals(label?.Trim(), "Good", StringComparison.OrdinalIgnoreCase);
         }
 
         private void TrySaveClsResultImage(Bitmap resultImage)
@@ -883,6 +950,12 @@ namespace PureGate.Core
             string imagePath = _imageLoader.GetNextImagePath();
             if (imagePath == "")
                 return false;
+
+            if (_model != null)
+            {
+                _model.InspectImagePath = imagePath;
+                SLogger.Write($"[InspStage] Updated InspectImagePath: {Path.GetFileName(imagePath)}");
+            }
 
             Global.Inst.InspStage.SetImageBuffer(imagePath);
 

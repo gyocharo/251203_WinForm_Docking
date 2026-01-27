@@ -34,7 +34,7 @@ namespace PureGate.UIControl
             lblTitle = new Label
             {
                 Text = "최근 불량 (NG) 이미지",
-                Font = new Font("맑은 고딕", 10F, FontStyle.Bold),
+                Font = new Font("맑은 고딕", 9F, FontStyle.Bold),
                 ForeColor = Color.Red,
                 AutoSize = false,
                 Height = 30,
@@ -49,7 +49,7 @@ namespace PureGate.UIControl
                 Dock = DockStyle.Fill,
                 AutoScroll = true,
                 BackColor = Color.FromArgb(45, 45, 48),
-                Padding = new Padding(5),
+                Padding = new Padding(4),
                 WrapContents = true
             };
 
@@ -143,7 +143,7 @@ namespace PureGate.UIControl
             Panel thumbnailPanel = new Panel
             {
                 Width = THUMBNAIL_SIZE + 10,
-                Height = THUMBNAIL_SIZE + 35,
+                Height = THUMBNAIL_SIZE + 25,
                 Margin = new Padding(5),
                 BackColor = Color.FromArgb(60, 60, 65),
                 BorderStyle = BorderStyle.FixedSingle
