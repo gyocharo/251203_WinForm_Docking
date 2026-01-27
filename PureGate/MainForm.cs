@@ -63,7 +63,11 @@ namespace PureGate
 
             this.Shown += (s, e) =>
             {
-                bool loaded = Global.Inst.InspStage.LastestModelOpen(); 
+                bool loaded = Global.Inst.InspStage.LastestModelOpen();
+
+                var m = Global.Inst?.InspStage?.CurModel;
+                if (m != null && !string.IsNullOrWhiteSpace(m.ModelPath))
+                    ApplyModelToUI();
             };
         }
 
@@ -546,24 +550,55 @@ namespace PureGate
 
         private void modelNewMenuItem_Click(object sender, EventArgs e)
         {
-            NewModel newModel = new NewModel();
-            newModel.ShowDialog();
-
-            Model curModel = Global.Inst.InspStage.CurModel;
-            if (curModel != null)
+            try
             {
-                this.Text = GetModelTitle(curModel);
+                // 1️⃣ 모델 디렉터리 존재 보장
+                SettingXml.Inst.EnsureModelDir();
+
+                // 2️⃣ 기존 로직
+                NewModel newModel = new NewModel();
+                newModel.ShowDialog();
+
+                Model curModel = Global.Inst.InspStage.CurModel;
+                if (curModel != null)
+                {
+                    this.Text = GetModelTitle(curModel);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"모델 디렉터리 준비 실패:\n{ex.Message}",
+                    "오류",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
             }
         }
 
         private void modelOpenMenuItem_Click(object sender, EventArgs e)
         {
+            try
+            {
+                // 모델 디렉터리 존재 보장
+                SettingXml.Inst.EnsureModelDir();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"모델 디렉터리 준비 실패:\n{SettingXml.Inst.ModelDir}\n{ex.Message}",
+                    "오류",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return;
+            }
+
             using (OpenFileDialog openFileDialog = new OpenFileDialog())
             {
                 openFileDialog.Title = "모델 파일 선택";
                 openFileDialog.Filter = "Model Files|*.xml;";
                 openFileDialog.Multiselect = false;
                 openFileDialog.InitialDirectory = SettingXml.Inst.ModelDir;
+
                 if (openFileDialog.ShowDialog() == DialogResult.OK)
                 {
                     string filePath = openFileDialog.FileName;
@@ -577,12 +612,44 @@ namespace PureGate
 
         private void modelSaveMenuItem_Click(object sender, EventArgs e)
         {
-            Global.Inst.InspStage.SaveModel("");
+            if (!EnsureModelLoadedOrWarn())
+                return;
+
+            try
+            {
+                SettingXml.Inst.EnsureModelDir(); // (선택이지만 권장)
+                Global.Inst.InspStage.SaveModel("");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"모델 저장 실패:\n{ex.Message}",
+                    "오류",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
         }
 
         private void modelSaveAsMenuItem_Click(object sender, EventArgs e)
         {
-            //다른이름으로 모델 파일 저장
+            if (!EnsureModelLoadedOrWarn())
+                return;
+
+            try
+            {
+                // 모델 디렉터리 존재 보장
+                SettingXml.Inst.EnsureModelDir();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"모델 디렉터리 준비 실패:\n{SettingXml.Inst.ModelDir}\n{ex.Message}",
+                    "오류",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return;
+            }
+
             using (SaveFileDialog saveFileDialog = new SaveFileDialog())
             {
                 saveFileDialog.InitialDirectory = SettingXml.Inst.ModelDir;
@@ -592,10 +659,44 @@ namespace PureGate
 
                 if (saveFileDialog.ShowDialog() == DialogResult.OK)
                 {
-                    string filePath = saveFileDialog.FileName;
-                    Global.Inst.InspStage.SaveModel(filePath);
+                    try
+                    {
+                        string filePath = saveFileDialog.FileName;
+                        Global.Inst.InspStage.SaveModel(filePath);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(
+                            $"모델 저장 실패:\n{ex.Message}",
+                            "오류",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error);
+                    }
                 }
             }
+        }
+
+        private bool EnsureModelLoadedOrWarn()
+        {
+            var stage = Global.Inst?.InspStage;
+
+            // 모델 객체 자체가 없거나
+            if (stage?.CurModel == null)
+            {
+                MessageBox.Show("모델을 오픈하거나 새로 만든 다음에 해주세요.", "안내",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return false;
+            }
+
+            // 핵심: ModelPath가 비어있으면 '진짜로 열린 모델'이 아님
+            if (string.IsNullOrWhiteSpace(stage.CurModel.ModelPath))
+            {
+                MessageBox.Show("모델을 오픈하거나 새로 만든 다음에 해주세요.", "안내",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return false;
+            }
+
+            return true; ;
         }
 
         #endregion // 모델 버튼 클릭 시 동적으로 생성되는 4가지의 탭 기능들 

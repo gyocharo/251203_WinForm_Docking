@@ -80,6 +80,17 @@ namespace PureGate.Setting
             return setting;
         }
 
+        public void EnsureModelDir()
+        {
+            if (string.IsNullOrWhiteSpace(ModelDir))
+                throw new InvalidOperationException("ModelDir가 설정되지 않았습니다.");
+
+            if (!Directory.Exists(ModelDir))
+            {
+                Directory.CreateDirectory(ModelDir);
+            }
+        }
+
         public SettingXml() { }
 
         public string MachineName { get; set; } = "VISION02";
