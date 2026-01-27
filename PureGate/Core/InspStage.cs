@@ -163,12 +163,6 @@ namespace PureGate.Core
             VisionSequence.Inst.InitSequence();
             VisionSequence.Inst.SeqCommand += SeqCommand;
 
-            //#16_LAST_MODELOPEN#5 마지막 모델 열기 여부 확인
-            if (!LastestModelOpen())
-            {
-                MessageBox.Show("모델 열기 실패!");
-            }
-
             return true;
         }
 
@@ -742,21 +736,22 @@ namespace PureGate.Core
                 Global.Inst.InspStage.CurModel.SaveAs(filePath);
         }
 
-        public bool LastestModelOpen()
+        public bool LastestModelOpen(IWin32Window owner = null)
         {
-            if (_lastestModelOpen)
-                return true;
-
+            if (_lastestModelOpen) return true;
             _lastestModelOpen = true;
 
-            string lastestModel = (string)_regKey.GetValue("LastestModelPath");
-            if (File.Exists(lastestModel) == false)
+            string lastestModel = _regKey.GetValue("LastestModelPath") as string;
+            if (string.IsNullOrWhiteSpace(lastestModel) || !File.Exists(lastestModel))
                 return true;
 
-            DialogResult result = MessageBox.Show($"최근 모델을 로딩할까요?\r\n{lastestModel}", "Question", MessageBoxButtons.YesNo);
-            if (result == DialogResult.No)
-                return true;
+            var result = MessageBox.Show(
+                owner,
+                $"최근 모델을 로딩할까요?\r\n{lastestModel}",
+                "Question",
+                MessageBoxButtons.YesNo);
 
+            if (result == DialogResult.No) return true;
             return LoadModel(lastestModel);
         }
 

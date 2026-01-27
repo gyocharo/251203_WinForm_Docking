@@ -125,6 +125,12 @@
     <Compile Include="Inspect\InspResult.cs" />
     <Compile Include="Inspect\InspWorker.cs" />
     <Compile Include="Inspect\SaigeAI.cs" />
+    <Compile Include="LoadingForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="LoadingForm.Designer.cs">
+      <DependentUpon>LoadingForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="LogForm.cs">
       <SubType>Form</SubType>
     </Compile>

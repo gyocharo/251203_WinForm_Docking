@@ -50,6 +50,8 @@ namespace PureGate
         private const int LOGO_H_EXPANDED = 130; // 펼쳤을 때 로고 영역 높이 (기존 96 -> 130)
         private const int LOGO_H_COLLAPSED = 70; // 접었을 때 로고 영역 높이 (기존 48 -> 70)
 
+        private bool _modelUiAppliedOnce = false;
+
         public MainForm()
         {
             InitializeComponent();
@@ -57,13 +59,13 @@ namespace PureGate
             InitializeEvents();
             InitializeDocking();
             _dockPanel.Theme = new NoToolWindowCaptionTheme();
-            Global.Inst.Initialize();
             LoadDockingWindows();
             LoadSetting();
 
             this.Shown += (s, e) =>
             {
-                bool loaded = Global.Inst.InspStage.LastestModelOpen();
+                if (_modelUiAppliedOnce) return;
+                _modelUiAppliedOnce = true;
 
                 var m = Global.Inst?.InspStage?.CurModel;
                 if (m != null && !string.IsNullOrWhiteSpace(m.ModelPath))
