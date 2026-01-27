@@ -658,42 +658,6 @@ namespace PureGate.Core
             }
         }
 
-        private void TryAutoLoadSaigeAIFromModel()
-        {
-            if (_model == null || _model.InspWindowList == null)
-                return;
-
-            foreach (var win in _model.InspWindowList)
-            {
-                if (win == null || win.AlgorithmList == null)
-                    continue;
-
-                foreach (var algo in win.AlgorithmList)
-                {
-                    if (algo is PureGate.Algorithm.AIModuleAlgorithm aiAlgo)
-                    {
-                        // 저장된 Saige 모델 경로/타입이 있으면 자동 로드
-                        if (!string.IsNullOrEmpty(aiAlgo.ModelPath) && File.Exists(aiAlgo.ModelPath))
-                        {
-                            try
-                            {
-                                AIModule.LoadEngine(aiAlgo.ModelPath, aiAlgo.EngineType);
-                            }
-                            catch (Exception ex)
-                            {
-                                MessageBox.Show(
-                                    $"Saige AI 모델 자동 로드 실패\n\nPath: {aiAlgo.ModelPath}\nEngine: {aiAlgo.EngineType}\n\n{ex.Message}",
-                                    "Saige AI",
-                                    MessageBoxButtons.OK,
-                                    MessageBoxIcon.Warning);
-                            }
-                        }
-                        return; // 첫 번째 AIModuleAlgorithm만 로드하고 종료 (필요하면 정책 변경)
-                    }
-                }
-            }
-        }
-
         public bool LoadModel(string filePath)
         {
             SLogger.Write($"모델 로딩:{filePath}");
@@ -713,9 +677,6 @@ namespace PureGate.Core
             }
 
             UpdateDiagramEntity();
-
-            TryAutoLoadSaigeAIFromModel();
-
 
             //#16_LAST_MODELOPEN#3 마지막 저장 모델 경로를 레지스트리에 저장
             _regKey.SetValue("LastestModelPath", filePath);
