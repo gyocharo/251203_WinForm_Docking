@@ -30,23 +30,45 @@ namespace PureGate
             loading.Refresh();
             Application.DoEvents();
 
-            // 3) 메인폼 먼저 생성 (UI 골격만)
-            var mainForm = new MainForm(); // 생성만! Show 하지 말 것
+            loading.SetSteps(
+                "Initializing core services",
+                "Loading inspection model",
+                "Finalizing UI"
+            );
+            loading.SetProgress(null);
+
+            // 3) 메인폼 먼저 생성 (네 구조상 필요)
+            var mainForm = new MainForm(); // 생성만
 
             // 4) Core 초기화
-            loading.SetStatus("Initializing...");
+            loading.SetActiveStep(0);
+            loading.SetStatus("Initializing core services...");
             Application.DoEvents();
             Global.Inst.Initialize();
 
             // 5) 최근 모델 로드
-            loading.SetStatus("Loading model...");
+            loading.SetActiveStep(1);
+            loading.SetStatus("Loading inspection model...");
             Application.DoEvents();
-
             Global.Inst.InspStage.LastestModelOpen(loading);
 
-            // 6) 모델 반영(타이틀/이미지) — Shown에 맡기지 말고 지금 한 번 호출
-            loading.SetStatus("Ready...");
+            // 6) 마무리
+            loading.SetActiveStep(2);
+            loading.SetStatus("Starting runtime services...");
+            loading.Refresh();
             Application.DoEvents();
+
+            // (있으면) 실제 UI 반영 작업
+            // mainForm.ApplyLoadedModel();
+            // Application.DoEvents();
+
+            // 최소 표시시간 200ms 보장
+            var until = Environment.TickCount + 600;
+            while (Environment.TickCount < until)
+            {
+                Application.DoEvents();
+                System.Threading.Thread.Sleep(10);
+            }
 
             // 7) 로딩폼 닫고 메인폼 실행
             loading.Close();
