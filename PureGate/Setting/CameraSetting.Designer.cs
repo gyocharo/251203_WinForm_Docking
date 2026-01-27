@@ -80,6 +80,7 @@
             this.tbExposure.Name = "tbExposure";
             this.tbExposure.Size = new System.Drawing.Size(170, 28);
             this.tbExposure.TabIndex = 4;
+            this.tbExposure.Leave += new System.EventHandler(this.tbExposure_Leave);
             // 
             // label2
             // 

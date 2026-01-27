@@ -97,13 +97,24 @@ namespace PureGate.Teach
         //모델 다른 이름으로 저장함수
         public void SaveAs(string filePath)
         {
-            string fileName = Path.GetFileName(filePath);
-            if (Directory.Exists(filePath) == false)
-            {
-                ModelPath = Path.Combine(filePath, fileName + ".xml");
-                ModelName = fileName;
-                Save();
-            }
+            if (string.IsNullOrWhiteSpace(filePath))
+                return;
+
+            // 확장자 보정: 사용자가 TEST만 입력해도 TEST.xml로 저장되도록
+            if (!filePath.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+                filePath += ".xml";
+
+            // 폴더 존재 확인
+            string dir = Path.GetDirectoryName(filePath);
+            if (string.IsNullOrEmpty(dir) || Directory.Exists(dir) == false)
+                return;
+
+            // 모델 정보 갱신
+            ModelPath = filePath;
+            ModelName = Path.GetFileNameWithoutExtension(filePath);
+
+            // 실제 저장
+            Save();
         }
     }
 }

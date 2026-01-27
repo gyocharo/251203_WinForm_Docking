@@ -74,6 +74,12 @@ namespace PureGate.Property
                 {
                     _modelPath = openFileDialog.FileName;
                     txtAIModelPath.Text = _modelPath;
+
+                    if (_aiAlgo != null)
+                    {
+                        _aiAlgo.ModelPath = _modelPath;
+                        _aiAlgo.EngineType = _engineType;
+                    }
                 }
             }
         }
@@ -100,6 +106,12 @@ namespace PureGate.Property
                 {
                     MessageBox.Show("모델 정보가 null입니다.", "오류", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
+                }
+
+                if (_aiAlgo != null)
+                {
+                    _aiAlgo.ModelPath = _modelPath;
+                    _aiAlgo.EngineType = _engineType;
                 }
 
                 UpdateModelInfoUI();
@@ -157,6 +169,15 @@ namespace PureGate.Property
                 Txt_ModuleInfo.Clear();
             }
             _engineType = engineType;
+            if (_aiAlgo != null)
+            {
+                _aiAlgo.EngineType = _engineType;
+
+                // 엔진 타입 바꾸면 기존 모델 확장자가 달라질 수 있으니,
+                // 정책에 따라 ModelPath를 유지할지/초기화할지 선택.
+                // 보통은 초기화가 안전:
+                // _aiAlgo.ModelPath = string.Empty;
+            }
             UpdateAreaFilterUI();
         }
 

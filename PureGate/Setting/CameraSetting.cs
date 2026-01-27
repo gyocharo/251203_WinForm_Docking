@@ -59,72 +59,8 @@ namespace PureGate.Setting
 
         private void btnApply_Click(object sender, EventArgs e)
         {
-            _camType = SettingXml.Inst.CamType;
-            switch(_camType){
-                case CameraType.WebCam:
-                    if (!int.TryParse(tbExposure.Text, out int Webexposure))
-                    {
-                        MessageBox.Show(
-                            "노출 값은 정수로 입력해주세요.\n(-8 ~ -1)",
-                            "입력 오류",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Warning);
-
-                        FocusExposure();
-                        return;
-                    }
-
-                    // 2️⃣ 범위 체크
-                    if (Webexposure < -8 || Webexposure > -1)
-                    {
-                        MessageBox.Show(
-                            "노출 값은 -8 ~ 1 사이만 가능합니다.",
-                            "입력 오류",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Warning);
-
-                        FocusExposure();
-                        return;
-                    }
-
-                    SettingXml.Inst.ExposureTime = Webexposure;
-
-                    Global.Inst.InspStage.ApplyCameraSetting();
-
-                    break;
-
-                case CameraType.HikRobot:
-                    if (!int.TryParse(tbExposure.Text, out int Hikexposure))
-                    {
-                        MessageBox.Show(
-                            "노출 값은 정수로 입력해주세요.\n(-8 ~ -1)",
-                            "입력 오류",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Warning);
-
-                        FocusExposure();
-                        return;
-                    }
-
-                    // 2️⃣ 범위 체크
-                    if (Hikexposure < -8 || Hikexposure > -1)
-                    {
-                        MessageBox.Show(
-                            "노출 값은 -8 ~ 1 사이만 가능합니다.",
-                            "입력 오류",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Warning);
-
-                        FocusExposure();
-                        return;
-                    }
-
-                    SettingXml.Inst.ExposureTime = Hikexposure;
-
-                    Global.Inst.InspStage.ApplyCameraSetting();
-
-                    break;
-            }      
+            SaveSetting();
+            Global.Inst.InspStage.ApplyCameraSetting();
         }
 
         private void FocusExposure()
@@ -151,7 +87,7 @@ namespace PureGate.Setting
             }
             else{
                 lb_Exposure.Text = "";
-                tbExposure.Text = "";
+                tbExposure.Text = "0";
                 tbExposure.Enabled = false;
             }
         }
@@ -164,6 +100,32 @@ namespace PureGate.Setting
 
             // 안전 fallback
             return "WebCam";
+        }
+
+        private void tbExposure_Leave(object sender, EventArgs e)
+        {
+            string camType = GetSelectedCameraType();
+
+            if ((!int.TryParse(tbExposure.Text, out int Webexposure) || Webexposure < -8 || Webexposure > 1) && camType == "WebCam")
+            {
+                MessageBox.Show(
+                    "-8 ~ 1 사이의 정수만 가능합니다.",
+                    "입력 오류",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+
+                FocusExposure();
+            }
+            else if ((!long.TryParse(tbExposure.Text, out long Hikexposure) || Hikexposure < 0 || Hikexposure > 1000000) && camType == "HikRobot")
+            {
+                MessageBox.Show(
+                    "0 ~ 1000000 사이의 정수만 가능합니다.",
+                    "입력 오류",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+
+                FocusExposure();
+            }
         }
     }
 }
