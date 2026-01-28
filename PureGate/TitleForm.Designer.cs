@@ -105,7 +105,8 @@
             // 
             this.lblToday.Anchor = System.Windows.Forms.AnchorStyles.None;
             this.lblToday.AutoSize = true;
-            this.lblToday.Location = new System.Drawing.Point(14, 10);
+            this.lblToday.BackColor = System.Drawing.SystemColors.Control;
+            this.lblToday.Location = new System.Drawing.Point(15, 10);
             this.lblToday.Name = "lblToday";
             this.lblToday.Size = new System.Drawing.Size(59, 18);
             this.lblToday.TabIndex = 6;
@@ -117,7 +118,8 @@
             // 
             this.lbl1Week.Anchor = System.Windows.Forms.AnchorStyles.None;
             this.lbl1Week.AutoSize = true;
-            this.lbl1Week.Location = new System.Drawing.Point(98, 10);
+            this.lbl1Week.BackColor = System.Drawing.SystemColors.Control;
+            this.lbl1Week.Location = new System.Drawing.Point(97, 10);
             this.lbl1Week.Name = "lbl1Week";
             this.lbl1Week.Size = new System.Drawing.Size(68, 18);
             this.lbl1Week.TabIndex = 7;
@@ -129,7 +131,8 @@
             // 
             this.lbl1Month.Anchor = System.Windows.Forms.AnchorStyles.None;
             this.lbl1Month.AutoSize = true;
-            this.lbl1Month.Location = new System.Drawing.Point(6, 49);
+            this.lbl1Month.BackColor = System.Drawing.SystemColors.Control;
+            this.lbl1Month.Location = new System.Drawing.Point(7, 48);
             this.lbl1Month.Name = "lbl1Month";
             this.lbl1Month.Size = new System.Drawing.Size(75, 18);
             this.lbl1Month.TabIndex = 8;
@@ -141,7 +144,8 @@
             // 
             this.lbl1Year.Anchor = System.Windows.Forms.AnchorStyles.None;
             this.lbl1Year.AutoSize = true;
-            this.lbl1Year.Location = new System.Drawing.Point(101, 49);
+            this.lbl1Year.BackColor = System.Drawing.SystemColors.Control;
+            this.lbl1Year.Location = new System.Drawing.Point(101, 48);
             this.lbl1Year.Name = "lbl1Year";
             this.lbl1Year.Size = new System.Drawing.Size(61, 18);
             this.lbl1Year.TabIndex = 9;
@@ -151,19 +155,25 @@
             // 
             // tlpLinklabels
             // 
-            this.tlpLinklabels.ColumnCount = 2;
+            this.tlpLinklabels.BackColor = System.Drawing.Color.LightGray;
+            this.tlpLinklabels.ColumnCount = 4;
+            this.tlpLinklabels.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 1F));
             this.tlpLinklabels.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
             this.tlpLinklabels.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
-            this.tlpLinklabels.Controls.Add(this.lbl1Week, 1, 0);
-            this.tlpLinklabels.Controls.Add(this.lbl1Month, 0, 1);
-            this.tlpLinklabels.Controls.Add(this.lbl1Year, 1, 1);
-            this.tlpLinklabels.Controls.Add(this.lblToday, 0, 0);
+            this.tlpLinklabels.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 1F));
+            this.tlpLinklabels.Controls.Add(this.lbl1Week, 2, 1);
+            this.tlpLinklabels.Controls.Add(this.lblToday, 1, 1);
+            this.tlpLinklabels.Controls.Add(this.lbl1Year, 2, 3);
+            this.tlpLinklabels.Controls.Add(this.lbl1Month, 1, 3);
             this.tlpLinklabels.Dock = System.Windows.Forms.DockStyle.Right;
             this.tlpLinklabels.Location = new System.Drawing.Point(930, 0);
             this.tlpLinklabels.Name = "tlpLinklabels";
-            this.tlpLinklabels.RowCount = 2;
+            this.tlpLinklabels.RowCount = 5;
+            this.tlpLinklabels.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 1F));
             this.tlpLinklabels.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
+            this.tlpLinklabels.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 1F));
             this.tlpLinklabels.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
+            this.tlpLinklabels.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 1F));
             this.tlpLinklabels.Size = new System.Drawing.Size(176, 78);
             this.tlpLinklabels.TabIndex = 10;
             // 

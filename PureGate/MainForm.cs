@@ -22,6 +22,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using WeifenLuo.WinFormsUI.Docking;
+using PureGate.UIControl;
 
 namespace PureGate
 {
@@ -48,6 +49,16 @@ namespace PureGate
 
         public static MainForm Instance { get; private set; }
 
+        //닫기 창 불타입 선언
+        private bool _isClosing = false;
+
+        //로고 필드 선언
+        private SvgLikeLogo _logo;
+        private const int LOGO_H_EXPANDED = 130; // 펼쳤을 때 로고 영역 높이 (기존 96 -> 130)
+        private const int LOGO_H_COLLAPSED = 70; // 접었을 때 로고 영역 높이 (기존 48 -> 70)
+
+        private bool _modelUiAppliedOnce = false;
+
         public MainForm()
         {
             InitializeComponent();
@@ -55,14 +66,18 @@ namespace PureGate
             InitializeEvents();
             InitializeDocking();
             _dockPanel.Theme = new NoToolWindowCaptionTheme();
-            Global.Inst.Initialize();
             LoadDockingWindows();
             LoadSetting();
             Instance = this;
 
             this.Shown += (s, e) =>
             {
-                bool loaded = Global.Inst.InspStage.LastestModelOpen(); 
+                if (_modelUiAppliedOnce) return;
+                _modelUiAppliedOnce = true;
+
+                var m = Global.Inst?.InspStage?.CurModel;
+                if (m != null && !string.IsNullOrWhiteSpace(m.ModelPath))
+                    ApplyModelToUI();
             };
         }
 
@@ -95,7 +110,7 @@ namespace PureGate
             this.Load += Form1_Load;
             _panelMain.Resize += (s, e) => AdjustDockPanel();
             checkBoxHide.CheckedChanged += checkBoxHide_CheckedChanged;
-            this.FormClosing += MainForm_FormClosing;
+            //this.FormClosing += MainForm_FormClosing;
         }
 
         private void InitializeDocking()
@@ -165,6 +180,14 @@ namespace PureGate
 
             SideMenu.Width = _posSliding;
 
+            if (_logo != null)
+            {
+                _logo.Height = (SideMenu.Width <= MIN_SLIDING_WIDTH + 1)
+                    ? LOGO_H_COLLAPSED          // ✅ 접힘 높이
+                    : LOGO_H_EXPANDED;          // ✅ 펼침 높이
+            }
+
+
             _dockPanel.SuspendLayout();
             AdjustDockPanel();
             _dockPanel.ResumeLayout();
@@ -176,31 +199,53 @@ namespace PureGate
         // 메인 이미지로고 배경 흰색을 투명 처리하기 위한 기능
         private void Form1_Load(object sender, EventArgs e)
         {
-            // 리소스 이미지 불러오기
-            Bitmap bmp = new Bitmap(Properties.Resources.이미지);
+            var parent = pictureBox1.Parent; // SideMenu
 
-            // 흰색을 투명 처리
-            for (int y = 0; y < bmp.Height; y++)
+            _logo = new SvgLikeLogo
             {
-                for (int x = 0; x < bmp.Width; x++)
-                {
-                    Color c = bmp.GetPixel(x, y);
-                    if (c.R > 180 && c.G > 180 && c.B > 180) // 거의 흰색
-                    {
-                        bmp.SetPixel(x, y, Color.Transparent);
-                    }
-                }
-            }
+                Dock = DockStyle.Top,
+                Height = LOGO_H_EXPANDED,
+                BackColor = Color.Transparent
+            };
 
-            // PictureBox에 적용
-            pictureBox1.Image = bmp;
-            // PictureBox 배경색을 SideMenu와 동일하게
-            pictureBox1.BackColor = SideMenu.BackColor;
+            parent.Controls.Remove(pictureBox1);
+            pictureBox1.Dispose();
+
+            parent.Controls.Add(_logo);
+            parent.Controls.SetChildIndex(_logo, parent.Controls.Count - 1);
         }
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            Global.Inst.Dispose();
+            if (_isClosing) return;
+
+            DialogResult result = MsgBox.Show(
+                "프로그램을 종료하시겠습니까?",
+                "종료 확인",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (result != DialogResult.Yes)
+            {
+                // 종료 취소
+                e.Cancel = true;
+                return;
+            }
+
+            // 여기부터는 "종료 확정" 상태로 만들고,
+            // 이후 재진입(FormClosing 재호출) 시에는 메시지박스가 절대 안 뜨게 함
+            _isClosing = true;
+
+            // Dispose 과정에서 Close/Exit 등이 다시 걸려도 메시지박스 재등장 방지
+            try
+            {
+                Global.Inst.Dispose();
+            }
+            catch
+            {
+                // 필요하면 로그만 남기고 종료는 계속 진행
+                // e.Cancel = true;  // <- 이건 넣지 않는 게 보통 안전
+            }
         }
         #endregion
 
@@ -273,7 +318,7 @@ namespace PureGate
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"로드 세팅 실패: {ex.Message}");
+                MsgBox.Show($"로드 세팅 실패: {ex.Message}");
             }
         }
 
@@ -286,7 +331,7 @@ namespace PureGate
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"레이아웃 초기화 실패: {ex.Message}");
+                MsgBox.Show($"레이아웃 초기화 실패: {ex.Message}");
             }
         }
 
@@ -301,7 +346,7 @@ namespace PureGate
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"사이클모드 실행/취소 실패: {ex.Message}");
+                MsgBox.Show($"사이클모드 실행/취소 실패: {ex.Message}");
             }
         }
 
@@ -315,7 +360,7 @@ namespace PureGate
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"환경설정창 열기 실패: {ex.Message}");
+                MsgBox.Show($"환경설정창 열기 실패: {ex.Message}");
             }
         }
 
@@ -528,24 +573,55 @@ namespace PureGate
 
         private void modelNewMenuItem_Click(object sender, EventArgs e)
         {
-            NewModel newModel = new NewModel();
-            newModel.ShowDialog();
-
-            Model curModel = Global.Inst.InspStage.CurModel;
-            if (curModel != null)
+            try
             {
-                this.Text = GetModelTitle(curModel);
+                // 1️⃣ 모델 디렉터리 존재 보장
+                SettingXml.Inst.EnsureModelDir();
+
+                // 2️⃣ 기존 로직
+                NewModel newModel = new NewModel();
+                newModel.ShowDialog();
+
+                Model curModel = Global.Inst.InspStage.CurModel;
+                if (curModel != null)
+                {
+                    this.Text = GetModelTitle(curModel);
+                }
+            }
+            catch (Exception ex)
+            {
+                MsgBox.Show(
+                    $"모델 디렉터리 준비 실패:\n{ex.Message}",
+                    "오류",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
             }
         }
 
         private void modelOpenMenuItem_Click(object sender, EventArgs e)
         {
+            try
+            {
+                // 모델 디렉터리 존재 보장
+                SettingXml.Inst.EnsureModelDir();
+            }
+            catch (Exception ex)
+            {
+                MsgBox.Show(
+                    $"모델 디렉터리 준비 실패:\n{SettingXml.Inst.ModelDir}\n{ex.Message}",
+                    "오류",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return;
+            }
+
             using (OpenFileDialog openFileDialog = new OpenFileDialog())
             {
                 openFileDialog.Title = "모델 파일 선택";
                 openFileDialog.Filter = "Model Files|*.xml;";
                 openFileDialog.Multiselect = false;
                 openFileDialog.InitialDirectory = SettingXml.Inst.ModelDir;
+
                 if (openFileDialog.ShowDialog() == DialogResult.OK)
                 {
                     string filePath = openFileDialog.FileName;
@@ -559,12 +635,44 @@ namespace PureGate
 
         private void modelSaveMenuItem_Click(object sender, EventArgs e)
         {
-            Global.Inst.InspStage.SaveModel("");
+            if (!EnsureModelLoadedOrWarn())
+                return;
+
+            try
+            {
+                SettingXml.Inst.EnsureModelDir(); // (선택이지만 권장)
+                Global.Inst.InspStage.SaveModel("");
+            }
+            catch (Exception ex)
+            {
+                MsgBox.Show(
+                    $"모델 저장 실패:\n{ex.Message}",
+                    "오류",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
         }
 
         private void modelSaveAsMenuItem_Click(object sender, EventArgs e)
         {
-            //다른이름으로 모델 파일 저장
+            if (!EnsureModelLoadedOrWarn())
+                return;
+
+            try
+            {
+                // 모델 디렉터리 존재 보장
+                SettingXml.Inst.EnsureModelDir();
+            }
+            catch (Exception ex)
+            {
+                MsgBox.Show(
+                    $"모델 디렉터리 준비 실패:\n{SettingXml.Inst.ModelDir}\n{ex.Message}",
+                    "오류",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return;
+            }
+
             using (SaveFileDialog saveFileDialog = new SaveFileDialog())
             {
                 saveFileDialog.InitialDirectory = SettingXml.Inst.ModelDir;
@@ -574,10 +682,44 @@ namespace PureGate
 
                 if (saveFileDialog.ShowDialog() == DialogResult.OK)
                 {
-                    string filePath = saveFileDialog.FileName;
-                    Global.Inst.InspStage.SaveModel(filePath);
+                    try
+                    {
+                        string filePath = saveFileDialog.FileName;
+                        Global.Inst.InspStage.SaveModel(filePath);
+                    }
+                    catch (Exception ex)
+                    {
+                        MsgBox.Show(
+                            $"모델 저장 실패:\n{ex.Message}",
+                            "오류",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error);
+                    }
                 }
             }
+        }
+
+        private bool EnsureModelLoadedOrWarn()
+        {
+            var stage = Global.Inst?.InspStage;
+
+            // 모델 객체 자체가 없거나
+            if (stage?.CurModel == null)
+            {
+                MsgBox.Show("모델을 오픈하거나 새로 만든 다음에 해주세요.", "안내",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return false;
+            }
+
+            // 핵심: ModelPath가 비어있으면 '진짜로 열린 모델'이 아님
+            if (string.IsNullOrWhiteSpace(stage.CurModel.ModelPath))
+            {
+                MsgBox.Show("모델을 오픈하거나 새로 만든 다음에 해주세요.", "안내",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return false;
+            }
+
+            return true; ;
         }
 
         #endregion // 모델 버튼 클릭 시 동적으로 생성되는 4가지의 탭 기능들 

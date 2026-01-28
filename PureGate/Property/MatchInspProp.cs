@@ -79,20 +79,20 @@ namespace PureGate.Property
 
             if (!int.TryParse(txtExtendX.Text, out extendSize.Width))
             {
-                MessageBox.Show("숫자만 입력 가능합니다.");
+                MsgBox.Show("숫자만 입력 가능합니다.");
                 return;
             }
 
             if (!int.TryParse(txtExtendY.Text, out extendSize.Height))
             {
-                MessageBox.Show("숫자만 입력 가능합니다.");
+                MsgBox.Show("숫자만 입력 가능합니다.");
                 return;
             }
 
             int score = _matchAlgo.MatchScore;
             if (!int.TryParse(txtScore.Text, out score))
             {
-                MessageBox.Show("숫자만 입력 가능합니다.");
+                MsgBox.Show("숫자만 입력 가능합니다.");
                 return;
             }
             ;

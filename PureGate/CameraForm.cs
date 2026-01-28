@@ -173,23 +173,45 @@ namespace PureGate
 
         public void SetWorkingState(WorkingState workingState)
         {
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(() => SetWorkingState(workingState)));
+                return;
+            }
+
             string state = "";
             switch (workingState)
             {
-                case WorkingState.INSPECT:
-                    state = "INSPECT";
-                    break;
-
-                case WorkingState.LIVE:
-                    state = "LIVE";
-                    break;
-
-                case WorkingState.ALARM:
-                    state = "ALARM";
-                    break;
+                case WorkingState.INSPECT: state = "INSPECT"; break;
+                case WorkingState.LIVE: state = "LIVE"; break;
+                case WorkingState.ALARM: state = "ALARM"; break;
+                default: state = ""; break; // NONE
             }
 
-            imageViewer.WorkingState = state;
+            // 기존 결과(OK/NG) 유지: "STATE\nRESULT" 형태 지원
+            string ws = imageViewer.WorkingState ?? "";
+            string curState = "";
+            string curResult = "";
+
+            var parts = ws.Split('\n');
+            if (parts.Length >= 2)
+            {
+                curState = parts[0] ?? "";
+                curResult = parts[1] ?? "";
+            }
+            else
+            {
+                if (ws == "OK" || ws == "NG") curResult = ws;
+                else curState = ws;
+            }
+
+            if (string.IsNullOrEmpty(state))
+                imageViewer.WorkingState = curResult;                 // NONE이면 결과만 남김(호환)
+            else if (string.IsNullOrEmpty(curResult))
+                imageViewer.WorkingState = state;                     // 결과 없으면 상태만
+            else
+                imageViewer.WorkingState = state + "\n" + curResult;  // 상태+결과
+
             imageViewer.Invalidate();
         }
 
@@ -262,12 +284,54 @@ namespace PureGate
                 return;
             }
 
-            // WorkingState를 결과 값으로 덮어씁니다.
-            // ImageViewerCtrl에서 이 문자열을 감지해서 화면에 그려줍니다.
-            imageViewer.WorkingState = isOK ? "OK" : "NG";
+            string newResult = isOK ? "OK" : "NG";
 
-            // 즉시 화면을 다시 그리도록 강제합니다.
+            // 기존 상태(INSPECT/LIVE/ALARM) 보존 
+            SplitWorkingState(imageViewer.WorkingState, out string curState, out string curResult);
+
+            imageViewer.WorkingState = ComposeWorkingState(curState, newResult);
             imageViewer.Invalidate();
+        }
+
+        private static void SplitWorkingState(string ws, out string state, out string result)
+        {
+            state = "";
+            result = "";
+
+            if (string.IsNullOrEmpty(ws))
+                return;
+
+            var parts = ws.Split('\n');
+
+            if (parts.Length >= 2)
+            {
+                state = parts[0] ?? "";
+                result = parts[1] ?? "";
+                return;
+            }
+
+            // 기존 호환: "OK" / "NG"만 들어오던 케이스
+            if (ws == "OK" || ws == "NG")
+                result = ws;
+            else
+                state = ws;
+        }
+
+        private static string ComposeWorkingState(string state, string result)
+        {
+            state = state ?? "";
+            result = result ?? "";
+
+            // 결과만 있으면 예전처럼 "OK"/"NG"로 유지 가능(호환성 ↑)
+            if (string.IsNullOrEmpty(state))
+                return result;
+
+            // 상태만 있으면 상태만
+            if (string.IsNullOrEmpty(result))
+                return state;
+
+            // 상태 + 결과 (2줄)
+            return state + "\n" + result;
         }
     }
 }

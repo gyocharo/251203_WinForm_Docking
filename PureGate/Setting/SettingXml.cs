@@ -80,12 +80,25 @@ namespace PureGate.Setting
             return setting;
         }
 
+        public void EnsureModelDir()
+        {
+            if (string.IsNullOrWhiteSpace(ModelDir))
+                throw new InvalidOperationException("ModelDir가 설정되지 않았습니다.");
+
+            if (!Directory.Exists(ModelDir))
+            {
+                Directory.CreateDirectory(ModelDir);
+            }
+        }
+
         public SettingXml() { }
 
         public string MachineName { get; set; } = "VISION02";
 
         public string ModelDir { get; set; } = "";
         public string ImageDir { get; set; } = "";
+
+        public long ExposureTime { get; set; } = 15000; //단위 us
 
         public CameraType CamType { get; set; } = CameraType.WebCam;
 

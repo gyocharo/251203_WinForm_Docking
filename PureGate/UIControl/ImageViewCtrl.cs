@@ -303,35 +303,136 @@ namespace PureGate.UIControl
                     g.Clear(Color.Transparent);
                     g.InterpolationMode = InterpolationMode.NearestNeighbor;
 
-                    // 1. 배경 이미지 그리기 (이게 있어야 이미지가 보입니다)
+                    // 1) 배경 이미지
                     g.DrawImage(_bitmapImage, ImageRect);
 
-                    // 2. ROI 및 하이라이트 그리기
+                    // 2) 기존 그리기들
                     DrawDiagram(g);
                     DrawInspectHighlight(g);
 
-                    // 3. ✅ [추가] OK/NG 결과 그리기 (이미지 위에 덮어쓰기)
-                    if (this.WorkingState == "OK" || this.WorkingState == "NG")
-                    {
-                        // OK는 초록, NG는 빨강
-                        Color textColor = (this.WorkingState == "OK") ? Color.Lime : Color.Red;
+                    // 3) 상태/결과 배지
+                    DrawStateAndResultBadges(g);
 
-                        // 폰트 크기를 100으로 설정하여 매우 크게 만듭니다.
-                        using (Font font = new Font("Arial", 100, FontStyle.Bold))
-                        using (SolidBrush brush = new SolidBrush(textColor))
-                        {
-                            // (50, 50) 위치에 글자를 그립니다.
-                            g.DrawString(this.WorkingState, font, brush, new PointF(50, 50));
-                        }
-                    }
-
-                    // 4. 최종 결과물을 화면에 출력
+                    // 4) 최종 출력
                     e.Graphics.DrawImage(Canvas, 0, 0);
                 }
             }
+            else
+            {
+                // 이미지가 없을 때도 배지는 보이게
+                DrawStateAndResultBadges(e.Graphics);
+            }
+        }
+        private void DrawStateAndResultBadges(Graphics g)
+        {
+            // 항상 상태/결과를 그릴 수 있게 준비
+            string ws = this.WorkingState ?? "";
+            string stateToken = "";
+            string resultToken = "";
+
+            var parts = ws.Split('\n');
+            if (parts.Length >= 2)
+            {
+                stateToken = (parts[0] ?? "").Trim();
+                resultToken = (parts[1] ?? "").Trim();
+            }
+            else
+            {
+                ws = ws.Trim();
+                if (ws == "OK" || ws == "NG") resultToken = ws;
+                else stateToken = ws;
+            }
+
+            string stateText =
+                stateToken == "INSPECT" ? "검사 중" :
+                stateToken == "LIVE" ? "라이브" :
+                stateToken == "ALARM" ? "알람" :
+                                          "대기";
+
+            Color stateFill =
+                stateToken == "ALARM" ? Color.FromArgb(210, 60, 20, 20) :
+                                        Color.FromArgb(210, 35, 35, 38);
+
+            Color stateBorder =
+                stateToken == "INSPECT" ? Color.FromArgb(255, 255, 170, 0) :
+                stateToken == "LIVE" ? Color.FromArgb(255, 0, 170, 255) :
+                stateToken == "ALARM" ? Color.FromArgb(255, 255, 80, 80) :
+                                          Color.FromArgb(255, 140, 140, 140);
+
+            float pad = 10f;
+
+            // 좌상단 상태
+            RectangleF stateRect = new RectangleF(pad, pad, 150f, 36f);
+            DrawPillBadge(g, stateText, stateRect, stateFill, stateBorder, Color.White, radius: 14f, shadow: true);
+
+            // 우상단 OK/NG
+            if (resultToken == "OK" || resultToken == "NG")
+            {
+                bool ok = resultToken == "OK";
+
+                // ✅ 배경색도 상태별로 확 바뀌게
+                Color resFill = ok ? Color.FromArgb(230, 20, 140, 80)   // OK: 진한 그린
+                                     : Color.FromArgb(230, 210, 40, 40);  // NG: 진한 레드
+
+                // ✅ 테두리는 살짝 더 밝게 (입체감)
+                Color resBorder = ok ? Color.FromArgb(255, 120, 255, 190)
+                                     : Color.FromArgb(255, 255, 150, 150);
+
+                // ✅ 글자는 흰색 고정
+                Color resText = Color.White;
+
+                float w = 120f;
+                float h = 48f;
+                RectangleF resRect = new RectangleF(this.Width - w - pad, pad, w, h);
+
+                DrawPillBadge(g, ok ? "OK" : "NG", resRect, resFill, resBorder, resText, radius: 16f, shadow: true);
+            }
+        }
+        private static GraphicsPath CreateRoundRect(RectangleF rect, float radius)
+        {
+            float r = Math.Max(1f, radius);
+            float d = r * 2f;
+
+            GraphicsPath path = new GraphicsPath();
+            path.AddArc(rect.X, rect.Y, d, d, 180, 90);
+            path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+            path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+            path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+            path.CloseFigure();
+            return path;
         }
 
+        private void DrawPillBadge(Graphics g, string text, RectangleF rect, Color fill, Color border, Color textColor,
+                                   float radius = 14f, bool shadow = true)
+        {
+            g.SmoothingMode = SmoothingMode.AntiAlias;
 
+            // Shadow
+            if (shadow)
+            {
+                RectangleF sh = new RectangleF(rect.X + 2, rect.Y + 2, rect.Width, rect.Height);
+                using (var p = CreateRoundRect(sh, radius))
+                using (var sb = new SolidBrush(Color.FromArgb(80, 0, 0, 0)))
+                {
+                    g.FillPath(sb, p);
+                }
+            }
+
+            using (var p = CreateRoundRect(rect, radius))
+            using (var fb = new SolidBrush(fill))
+            using (var pen = new Pen(border, 1f))
+            {
+                g.FillPath(fb, p);
+                g.DrawPath(pen, p);
+            }
+
+            using (var font = new Font("Segoe UI", 18f, FontStyle.Bold, GraphicsUnit.Pixel))
+            using (var tb = new SolidBrush(textColor))
+            {
+                var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+                g.DrawString(text, font, tb, rect, sf);
+            }
+        }
 
         private void DrawDiagram(Graphics g)
         {
@@ -431,15 +532,6 @@ namespace PureGate.UIControl
             lock (_lock)
             {
                 DrawRectInfo(g);
-            }
-
-            //#17_WORKING_STATE#4 작업 상태 화면에 표시
-            if (WorkingState != "")
-            {
-                float fontSize = 20.0f;
-                Color stateColor = Color.FromArgb(255, 128, 0);
-                PointF textPos = new PointF(10, 10);
-                DrawText(g, WorkingState, textPos, fontSize, stateColor);
             }
 
             //#13_INSP_RESULT#5 검사 양불판정 갯수 화면에 표시

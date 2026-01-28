@@ -9,6 +9,7 @@ using System.Windows.Forms;
 using System.Data;
 using System.Xml.Serialization;
 using PureGate.Util;
+using PureGate.UIControl;
 
 namespace PureGate.Algorithm
 {
@@ -262,13 +263,13 @@ namespace PureGate.Algorithm
 
             if (_templateImages.Count <= 0)
             {
-                MessageBox.Show("티칭 이미지는 유효하지 않습니다!");
+                MsgBox.Show("티칭 이미지는 유효하지 않습니다!");
                 return false;
             }
 
             if (_templateImages[0].Type() == MatType.CV_8UC3)
             {
-                MessageBox.Show("티칭 이미지는 컬러를 허용하지 않습니다!");
+                MsgBox.Show("티칭 이미지는 컬러를 허용하지 않습니다!");
                 return false;
             }
 

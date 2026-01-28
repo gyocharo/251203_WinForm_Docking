@@ -125,11 +125,23 @@
     <Compile Include="Inspect\InspResult.cs" />
     <Compile Include="Inspect\InspWorker.cs" />
     <Compile Include="Inspect\SaigeAI.cs" />
+    <Compile Include="LoadingForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="LoadingForm.Designer.cs">
+      <DependentUpon>LoadingForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="LogForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="LogForm.Designer.cs">
       <DependentUpon>LogForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="LoginForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="LoginForm.Designer.cs">
+      <DependentUpon>LoginForm.cs</DependentUpon>
     </Compile>
     <Compile Include="MainForm.cs">
       <SubType>Form</SubType>
@@ -156,6 +168,19 @@
       <DependentUpon>RecentNGimages.cs</DependentUpon>
     </Compile>
     <Compile Include="Inspect\NgClassCount.cs" />
+    <Compile Include="UIControl\CustomMessageBox.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UIControl\DimOverlayForm .cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UIControl\DimOverlayForm .Designer.cs">
+      <DependentUpon>DimOverlayForm .cs</DependentUpon>
+    </Compile>
+    <Compile Include="UIControl\MsgBox.cs" />
+    <Compile Include="UIControl\SvgLikeLogo.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Util\NoToolWindowCaptionTheme.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -294,6 +319,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="LogForm.resx">
       <DependentUpon>LogForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="LoginForm.resx">
+      <DependentUpon>LoginForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="MainForm.resx">
       <DependentUpon>MainForm.cs</DependentUpon>

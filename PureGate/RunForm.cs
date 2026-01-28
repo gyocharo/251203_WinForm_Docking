@@ -36,6 +36,8 @@ namespace PureGate
             string serialID = $"{DateTime.Now:MM-dd HH:mm:ss}";
             Global.Inst.InspStage.InspectReady("LOT_NUMBER", serialID);
 
+            Global.Inst.InspStage.SetWorkingState(WorkingState.INSPECT);
+
             if (SettingXml.Inst.CamType == Grab.CameraType.None)
             {
                 bool cycleMode = SettingXml.Inst.CycleMode;
@@ -53,7 +55,12 @@ namespace PureGate
 
             if (Global.Inst.InspStage.LiveMode)
             {
+                Global.Inst.InspStage.SetWorkingState(WorkingState.LIVE);  // ✅ 추가
                 Global.Inst.InspStage.Grab(0);
+            }
+            else
+            {
+                Global.Inst.InspStage.SetWorkingState(WorkingState.NONE);  // ✅ 추가
             }
         }
 

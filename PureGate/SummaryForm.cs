@@ -38,6 +38,8 @@ namespace PureGate
             _to = to;
 
             InitializeComponent();
+            this.StartPosition = FormStartPosition.CenterParent;
+            this.Size = new Size(500, 500);   // ← 원하는 크기
             InitializeUI();
             LoadSummaryData();
         }
@@ -49,7 +51,7 @@ namespace PureGate
 
             // 기존 컨트롤(디자이너가 넣어둔 ResultChart 포함) 레이아웃 정리
             // ResultChart는 디자이너에서 생성되므로 여기서 Dock/부모만 재배치
-            ResultChart.Dock = DockStyle.Fill;
+            NGResultChart.Dock = DockStyle.Fill;
 
             // ===== Root Layout (4 rows) =====
             root = new TableLayoutPanel
@@ -70,7 +72,7 @@ namespace PureGate
             {
                 Dock = DockStyle.Top,
                 AutoSize = false,
-                Height = 28,
+                Height = 20,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
                 Padding = new Padding(6, 0, 0, 0)
@@ -102,7 +104,7 @@ namespace PureGate
             {
                 Dock = DockStyle.Top,
                 AutoSize = false,
-                Height = 26,
+                Height = 20,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Font = new Font("Segoe UI", 9, FontStyle.Bold),
                 Padding = new Padding(6, 0, 0, 0),
@@ -133,7 +135,7 @@ namespace PureGate
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Horizontal,
                 SplitterWidth = 6,
-                SplitterDistance = 220 // 위쪽(Grid) 높이
+                SplitterDistance = 220, // 위쪽(Grid) 높이
             };
 
             split.Panel1.Padding = new Padding(0, 6, 0, 6);
@@ -141,10 +143,38 @@ namespace PureGate
 
             split.Panel1.Controls.Add(dgvNgByClass);
 
-            // ResultChart는 디자이너에서 생성된 컨트롤을 여기로 옮겨 붙임
-            split.Panel2.Controls.Add(ResultChart);
+            // 차트 2개를 좌/우로 배치할 컨테이너
+            var chartRow = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 1,
+                Padding = new Padding(0),
+            };
+            chartRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f)); // OK/NG
+            chartRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f)); // NG 분포
+
+            // 디자이너 차트 도킹
+            OkNgChart.Dock = DockStyle.Fill;
+            NGResultChart.Dock = DockStyle.Fill;
+
+            // Panel2에 추가
+            chartRow.Controls.Add(OkNgChart, 0, 0);
+            chartRow.Controls.Add(NGResultChart, 1, 0);
+
+            split.Panel2.Controls.Add(chartRow);
 
             root.Controls.Add(split, 0, 3);
+
+            // 레이아웃이 다 끝난 "다음 틱"에 비율 적용 (덮어쓰기 방지)
+            this.Shown += (s, e) =>
+            {
+                BeginInvoke(new Action(() =>
+                {
+                    // 아래(차트)에 더 투자: 위(Grid)를 줄임
+                    split.SplitterDistance = 150;   // 원하는 값(예: 120~180)
+                }));
+            };
         }
 
         private Label CreateSummaryLabel(string text)
@@ -152,8 +182,12 @@ namespace PureGate
             return new Label
             {
                 AutoSize = true,
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                Margin = new Padding(10, 10, 10, 10),
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                Margin = new Padding(6, 2, 12, 2),
+                Padding = new Padding(10, 6, 10, 6),
+                ForeColor = Color.White,              // 기본 글자색
+                BackColor = Color.Gray,               // 기본 배경 (나중에 덮어씀)
+                TextAlign = ContentAlignment.MiddleCenter,
                 Text = text
             };
         }
@@ -184,7 +218,11 @@ namespace PureGate
 
             lblTotal.Text = $"Total: {total}";
             lblOk.Text = $"OK: {ok}";
+            lblOk.BackColor = Color.FromArgb(76, 175, 80);    // 그린
+            lblOk.ForeColor = Color.White;
             lblNg.Text = $"NG: {ng}";
+            lblNg.BackColor = Color.FromArgb(244, 67, 54);    // 레드
+            lblNg.ForeColor = Color.White;
 
             // NG 클래스별 집계 (정규화해서 GroupBy)
             var ngByClass = list
@@ -206,7 +244,8 @@ namespace PureGate
             dgvNgByClass.DataSource = null;
             dgvNgByClass.DataSource = ngByClass;
 
-            UpdateResultChart(ngByClass);
+            UpdateOkNgChart(ok, ng);
+            UpdateNGResultChart(ngByClass);
 
             dgvNgByClass.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dgvNgByClass.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
@@ -215,32 +254,104 @@ namespace PureGate
             dgvNgByClass.Refresh();
         }
 
-        private void UpdateResultChart(List<NgClassCount> ngByClass)
+        private void UpdateNGResultChart(List<NgClassCount> ngByClass)
         {
-            // 기존 데이터 초기화
-            ResultChart.Series.Clear();
+            NGResultChart.Series.Clear();
 
             var series = new Series("NG")
             {
                 ChartType = SeriesChartType.Pie,
                 IsValueShownAsLabel = true,
-                Label = "#VALX : #VAL",
+
+                // 도넛 안에는 퍼센트만
+                Label = "#PERCENT{P1}",
+
+                // 범례(오른쪽)에는 클래스명
                 LegendText = "#VALX"
             };
 
-            // ✅ 도넛 모양 핵심
-            series["DoughnutRadius"] = "60"; // 0~100
+            series["DoughnutRadius"] = "60";
 
             foreach (var item in ngByClass)
             {
                 series.Points.AddXY(item.ClassName, item.Count);
             }
 
-            ResultChart.Series.Add(series);
+            NGResultChart.Series.Add(series);
 
-            // 범례 위치(선택)
-            if (ResultChart.Legends.Count > 0)
-                ResultChart.Legends[0].Docking = Docking.Right;
+            if (NGResultChart.Legends.Count > 0)
+                NGResultChart.Legends[0].Docking = Docking.Right;
+
+            // 아래(차트 밖)에 4개 클래스 개수 전부 표시
+            NGResultChart.Titles.Clear();
+
+            // 4개니까 전부 넣되, 보기 좋게 정렬만
+            var all = ngByClass
+                .OrderByDescending(x => x.Count)
+                .Select(x => $"{x.ClassName}:{x.Count}")
+                .ToList();
+
+            var t = new Title
+            {
+                Text = string.Join("   ", all),   // 예: misplaced:12   cut_lead:10 ...
+                Docking = Docking.Bottom,
+                Alignment = ContentAlignment.BottomRight,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                ForeColor = Color.Black,
+                IsDockedInsideChartArea = false,
+            };
+
+            NGResultChart.Titles.Add(t);
+            NGResultChart.Invalidate();
+        }
+
+        private void UpdateOkNgChart(int ok, int ng)
+        {
+            OkNgChart.Series.Clear();
+            OkNgChart.ChartAreas.Clear();
+            OkNgChart.Legends.Clear();
+
+            OkNgChart.ChartAreas.Add(new ChartArea("Main"));
+            OkNgChart.Legends.Add(new Legend("Legend") { Docking = Docking.Right });
+
+            var s = new Series("OKNG")
+            {
+                ChartType = SeriesChartType.Pie,
+                IsValueShownAsLabel = true,
+                Label = "#PERCENT{P2}",
+                LegendText = "#VALX"
+            };
+
+            s["DoughnutRadius"] = "60";
+
+            int idxOk = s.Points.AddXY("OK", ok);
+            int idxNg = s.Points.AddXY("NG", ng);
+
+            // 색 지정은 인덱스로 접근해서 설정
+            s.Points[idxOk].Color = Color.FromArgb(76, 175, 80);
+            s.Points[idxNg].Color = Color.FromArgb(244, 67, 54);
+
+            OkNgChart.Series.Add(s);
+            // ===== 퍼센트 텍스트 계산 =====
+            double total = ok + ng;
+            double okPct = total > 0 ? ok * 100.0 / total : 0;
+            double ngPct = total > 0 ? ng * 100.0 / total : 0;
+
+            // 오른쪽 아래 텍스트를 Title로 표시 (가장 안정적)
+            OkNgChart.Titles.Clear();
+
+            var t = new Title
+            {
+                Text = $"OK : {ok}   NG : {ng}",
+                Docking = Docking.Bottom,
+                Alignment = ContentAlignment.BottomRight,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                ForeColor = Color.Black,
+                IsDockedInsideChartArea = false, // 차트 바깥(아래)에 붙임 (잘 보임)
+            };
+
+            OkNgChart.Titles.Add(t);
+            OkNgChart.Invalidate();
         }
     }
 }

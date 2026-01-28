@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.XPath;
+using PureGate.UIControl;
 
 namespace PureGate.Grab
 {
@@ -197,7 +198,7 @@ namespace PureGate.Grab
                     {
                         _device.Dispose();
                         SLogger.Write($"Device open fail! [{ret:x8}]", SLogger.LogType.Error);
-                        MessageBox.Show($"Device open fail! {ret:X8}");
+                        MsgBox.Show($"Device open fail! {ret:X8}");
                         return false;
                     }
 

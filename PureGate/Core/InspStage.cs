@@ -20,6 +20,7 @@ using Microsoft.Win32;
 using PureGate.Util;
 using System.Windows.Forms;
 using PureGate.Sequence;
+using PureGate.UIControl;
 
 namespace PureGate.Core
 {
@@ -114,6 +115,55 @@ namespace PureGate.Core
 
         public eImageChannel SelImageChannel { get; set; } = eImageChannel.Gray;
 
+        public event Action<bool> InspectionCompleted;
+        public void SetSaigeModelInfo(string saigeModelPath, AIEngineType engineType)
+        {
+            if (_model == null) return;
+            _model.SaigeModelPath = saigeModelPath ?? string.Empty;
+            _model.SaigeEngineType = engineType;
+        }
+
+        /// <summary>
+        /// 모델(.xml)에 저장된 Saige AI 정보를 기반으로 엔진을 자동 로드합니다.
+        /// (모델 재시작/최근 모델 로딩 시 AI도 함께 복구)
+        /// </summary>
+        private void TryAutoLoadSaigeFromModel()
+        {
+            if (_model == null) return;
+
+            string path = _model.SaigeModelPath;
+            if (string.IsNullOrWhiteSpace(path)) return;
+            if (!File.Exists(path)) return;
+
+            try
+            {
+                AIModule.LoadEngine(path, _model.SaigeEngineType);
+                try
+                {
+                    if (PureGate.Property.AIModuleProp.saigeaiprop != null)
+                        PureGate.Property.AIModuleProp.saigeaiprop.SyncFromCurrentModelAndUpdateUI();
+                }
+                catch { /* UI 갱신 실패는 무시 */ }
+            }
+            catch (Exception ex)
+            {
+                // AI 자동 로드는 실패해도 모델 자체 로드는 계속 진행되어야 함
+                SLogger.Write($"Saige AI 자동 로드 실패: {ex.Message}", SLogger.LogType.Error);
+            }
+        }
+
+
+        private void RaiseInspectionCompleted(bool isOk)
+        {
+            try
+            {
+                InspectionCompleted?.Invoke(isOk);
+            }
+            catch (Exception ex)
+            {
+                SLogger.Write($"[InspectionCompleted] handler error: {ex.Message}", SLogger.LogType.Error);
+            }
+        }
 
         public bool Initialize()
         {
@@ -158,12 +208,6 @@ namespace PureGate.Core
 
             VisionSequence.Inst.InitSequence();
             VisionSequence.Inst.SeqCommand += SeqCommand;
-
-            //#16_LAST_MODELOPEN#5 마지막 모델 열기 여부 확인
-            if (!LastestModelOpen())
-            {
-                MessageBox.Show("모델 열기 실패!");
-            }
 
             return true;
         }
@@ -359,6 +403,40 @@ namespace PureGate.Core
         public void TryInspection(InspWindow inspWindow)
         {
             UpdateDiagramEntity();
+
+            // ✅ ROI가 없거나 선택된 ROI가 없을 때도 검사 + OK/NG 표시
+            if (inspWindow == null)
+            {
+                // 1) 모델에 ROI 자체가 0개면: CLS(전체 이미지) 검사로 처리
+                if (CurModel != null && (CurModel.InspWindowList == null || CurModel.InspWindowList.Count == 0))
+                {
+                    if (AIModule != null && AIModule.IsEngineLoaded)
+                    {
+                        Bitmap bitmap = GetBitmap();
+                        if (bitmap != null)
+                        {
+                            AIModule.InspAIModule(bitmap);
+                            Bitmap resultImage = AIModule.GetResultImage();
+                            UpdateDisplay(resultImage);
+
+                            if (AIModule.TryGetLastClsTop1(out string label, out float score) && !string.IsNullOrWhiteSpace(label))
+                            {
+                                bool ok = string.Equals(label, "Good", StringComparison.OrdinalIgnoreCase);
+                                UpdateResultUI(ok);   // ✅ 여기서 무조건 OK/NG 뜸(검사 실행된 경우)
+                            }
+                        }
+                    }
+                    return; // 여기서 끝 (엔진/이미지 없으면 표시 안 함)
+                }
+
+                // 2) ROI는 있는데 "선택만 안 된 상태"면: ROI 전체 검사로 처리
+                bool isDefect;
+                if (_inspWorker.RunInspect(out isDefect))
+                    UpdateResultUI(!isDefect);
+
+                return;
+            }
+
             InspWorker.TryInspect(inspWindow, InspectType.InspNone);
         }
 
@@ -683,8 +761,11 @@ namespace PureGate.Core
             if (File.Exists(inspImagePath))
             {
                 Global.Inst.InspStage.SetImageBuffer(inspImagePath);
+
+                UpdateDisplay((System.Drawing.Bitmap)null);
             }
 
+            TryAutoLoadSaigeFromModel();
             UpdateDiagramEntity();
 
             //#16_LAST_MODELOPEN#3 마지막 저장 모델 경로를 레지스트리에 저장
@@ -702,23 +783,30 @@ namespace PureGate.Core
                 Global.Inst.InspStage.CurModel.Save();
             else
                 Global.Inst.InspStage.CurModel.SaveAs(filePath);
+
+            // ✅ 저장이 끝난 "최종 경로"로 최근 모델 갱신
+            if (_regKey != null && CurModel != null && !string.IsNullOrWhiteSpace(CurModel.ModelPath))
+                _regKey.SetValue("LastestModelPath", CurModel.ModelPath);
         }
 
-        public bool LastestModelOpen()
+        public bool LastestModelOpen(IWin32Window owner = null)
         {
-            if (_lastestModelOpen)
-                return true;
-
+            if (_lastestModelOpen) return true;
             _lastestModelOpen = true;
 
-            string lastestModel = (string)_regKey.GetValue("LastestModelPath");
-            if (File.Exists(lastestModel) == false)
+            if (_regKey == null) return true;
+
+            string lastestModel = _regKey.GetValue("LastestModelPath") as string;
+            if (string.IsNullOrWhiteSpace(lastestModel) || !File.Exists(lastestModel))
                 return true;
 
-            DialogResult result = MessageBox.Show($"최근 모델을 로딩할까요?\r\n{lastestModel}", "Question", MessageBoxButtons.YesNo);
-            if (result == DialogResult.No)
-                return true;
+			var result = MsgBox.Show(
+                owner,
+                $"최근 모델을 로딩할까요?\r\n{lastestModel}",
+                "Question",
+                MessageBoxButtons.YesNo);
 
+            if (result == DialogResult.No) return true;
             return LoadModel(lastestModel);
         }
 
@@ -736,7 +824,7 @@ namespace PureGate.Core
                 if (!Directory.Exists(inspImageDir))
                     return;
 
-                // ✅ 폴더가 바뀌었으면 무조건 다시 로드
+                // 폴더가 바뀌었으면 무조건 다시 로드
                 if (_loadedImageDir != inspImageDir)
                 {
                     _imageLoader.LoadImages(inspImageDir);
@@ -770,6 +858,8 @@ namespace PureGate.Core
 
             ResetDisplay();
 
+            // ROI(검사 윈도우)가 하나도 없으면: AIModuleProp의 "적용"과 동일 흐름으로 검사
+            //    (검사 버튼 누를 때마다 다음 이미지로 넘어가는 VirtualGrab/Grab 흐름은 그대로 유지됨)
             // 1. ROI가 없을 때 (AI 모듈 직접 실행 케이스)
             if (CurModel != null && (CurModel.InspWindowList == null || CurModel.InspWindowList.Count == 0))
             {
@@ -782,9 +872,10 @@ namespace PureGate.Core
                         Bitmap resultImage = AIModule.GetResultImage();
                         UpdateDisplay(resultImage);
 
-
+                        // Saige CLS 분류 결과에 따라 저장 (실패해도 검사 흐름엔 영향 없게)
                         TrySaveClsResultImage(resultImage);
 
+                        // 통계 저장(1검사=1레코드)
                         try
                         {
                             bool ok = true;
@@ -837,10 +928,13 @@ namespace PureGate.Core
                                 SLogger.Write("[CLS] Top1 FAIL -> Unknown");
                             }
 
-                            // --- History 저장 ---
-                            string modelName = "";
-                            if (CurModel != null && !string.IsNullOrWhiteSpace(CurModel.ModelPath))
-                                modelName = Path.GetFileNameWithoutExtension(CurModel.ModelPath);
+                                UpdateResultUI(ok);
+
+                                RaiseInspectionCompleted(ok);
+
+                               string modelName = "";
+                                if (CurModel != null && !string.IsNullOrWhiteSpace(CurModel.ModelPath))
+                                    modelName = Path.GetFileNameWithoutExtension(CurModel.ModelPath);
 
                             InspHistoryRepo.Append(new InspHistoryRecord
                             {
@@ -1116,6 +1210,8 @@ namespace PureGate.Core
 
         private void RunInspect()
         {
+            SetWorkingState(WorkingState.INSPECT);
+
             // 검사 시작 전 상태 초기화
             ResetDisplay();
 
@@ -1126,11 +1222,13 @@ namespace PureGate.Core
                 SLogger.Write("Failed to inspect", SLogger.LogType.Error);
             }
 
-            // ✅ 핵심: 검사가 끝나자마자 결과 UI 업데이트 호출
+            // 핵심: 검사가 끝나자마자 결과 UI 업데이트 호출
             // 결함이 없으면(false) -> OK(true)를 UI에 보냄
             UpdateResultUI(!isDefect);
 
-            // ✅ ROI 검사도 1검사=1레코드로 저장
+            RaiseInspectionCompleted(!isDefect);
+
+            // ROI 검사도 1검사=1레코드로 저장
             try
             {
                 string modelName = "";
@@ -1161,6 +1259,7 @@ namespace PureGate.Core
 
             // 제어기로 결과 전송
             VisionSequence.Inst.VisionCommand(Vision2Mmi.InspDone, isDefect);
+            SetWorkingState(WorkingState.NONE);
         }
 
 
@@ -1214,7 +1313,7 @@ namespace PureGate.Core
             if (modelPath == "")
             {
                 SLogger.Write("열려진 모델이 없습니다!", SLogger.LogType.Error);
-                MessageBox.Show("열려진 모델이 없습니다!");
+                MsgBox.Show("열려진 모델이 없습니다!");
                 return false;
             }
 
