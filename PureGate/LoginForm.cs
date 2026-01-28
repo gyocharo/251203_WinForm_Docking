@@ -15,25 +15,30 @@ namespace PureGate
 {
     public partial class LoginForm : Form
     {
-        #region Fields
-
         public bool LoginSucceeded { get; private set; }
 
         private bool _dragging;
         private Point _dragStart;
 
-        private TitleBar pnlTitle;
-        private WindowButton btnMin;
-        private WindowButton btnClose;
+        private TitleBar _title;
+        private WindowButton _btnMin;
+        private WindowButton _btnClose;
 
-        private PureGate.UIControl.SvgLikeLogo logo;
+        private SvgLikeLogo _logo;
+        private RoundedTextBox _pwBox;
+        private LinkLabel _lnkForgot;
+        private PillButton _btnLogin;
 
-        private RoundedTextBox pwBox;
-        private LinkLabel lnkForgot;
-        private GradientPillButton btnLogin;
-        #endregion
+        // Theme
+        private readonly Color _border = Color.FromArgb(210, 220, 230);
+        private readonly Color _bgTop = Color.FromArgb(245, 250, 255);
+        private readonly Color _bgBottom = Color.White;
 
-        #region Ctor
+        private readonly Color _titleTop = Color.FromArgb(45, 120, 185);
+        private readonly Color _titleBottom = Color.FromArgb(25, 95, 165);
+
+        // “컨텐츠”는 여기 위에서만 그라데이션을 그림 (폼 자체는 테두리만 담당)
+        private GradientSurface _surface;
 
         public LoginForm()
         {
@@ -41,175 +46,124 @@ namespace PureGate
             BuildUi();
         }
 
-        #endregion
-
-        #region UI Build
-
         private void BuildUi()
         {
-            #region Form Base
-
             Text = "Login";
             StartPosition = FormStartPosition.CenterScreen;
 
-            // 1번 느낌은 상단 파란 타이틀바가 있음(커스텀)
             FormBorderStyle = FormBorderStyle.None;
             DoubleBuffered = true;
 
-            // 1번 비율에 맞춤
+            // ✅ 폼은 테두리만 담당 (배경은 surface가 담당)
+            Padding = new Padding(1);
+            BackColor = _border;
             ClientSize = new Size(520, 260);
 
-            BackColor = Color.White;
-
             KeyPreview = true;
-            KeyDown += (s, e) =>
+            KeyDown += (s, e) => { if (e.KeyCode == Keys.Escape) Close(); };
+
+            // ✅ 이 안에서만 그라데이션 배경을 그림
+            _surface = new GradientSurface(_bgTop, _bgBottom)
             {
-                if (e.KeyCode == Keys.Escape) Close();
+                Dock = DockStyle.Fill
             };
+            Controls.Add(_surface);
 
-            #endregion
-
-            #region TitleBar (Top blue bar + window buttons)
-
-            pnlTitle = new TitleBar
+            // TitleBar
+            _title = new TitleBar(_titleTop, _titleBottom)
             {
                 Dock = DockStyle.Top,
                 Height = 28
             };
-            Controls.Add(pnlTitle);
+            _surface.Controls.Add(_title);
 
-            // 드래그 이동
-            pnlTitle.MouseDown += Title_MouseDown;
-            pnlTitle.MouseMove += Title_MouseMove;
-            pnlTitle.MouseUp += Title_MouseUp;
+            _title.MouseDown += Title_MouseDown;
+            _title.MouseMove += Title_MouseMove;
+            _title.MouseUp += Title_MouseUp;
 
-            // 최소화
-            btnMin = new WindowButton(WindowButtonKind.Minimize)
+            // Window buttons (투명 사용 안 함, 타이틀바와 동일 그라데이션 직접 그림)
+            _btnClose = new WindowButton(WindowButtonKind.Close, _titleTop, _titleBottom)
             {
                 Size = new Size(40, 28),
-                Location = new Point(0, 0), // ✅ 초기값 (SizeChanged에서 재배치)
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
-            btnMin.Click += (s, e) => WindowState = FormWindowState.Minimized;
-            pnlTitle.Controls.Add(btnMin);
+            _btnClose.Click += (s, e) => Close();
+            _title.Controls.Add(_btnClose);
 
-            // 닫기
-            btnClose = new WindowButton(WindowButtonKind.Close)
+            _btnMin = new WindowButton(WindowButtonKind.Minimize, _titleTop, _titleBottom)
             {
                 Size = new Size(40, 28),
-                Location = new Point(0, 0), // ✅ 초기값 (SizeChanged에서 재배치)
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
-            btnClose.Click += (s, e) => Close();
-            pnlTitle.Controls.Add(btnClose);
+            _btnMin.Click += (s, e) => WindowState = FormWindowState.Minimized;
+            _title.Controls.Add(_btnMin);
 
-            // ✅ 타이틀바 폭 기준으로 버튼 위치를 항상 재계산 (겹침/hover 이상 방지)
             Action layoutTitleButtons = () =>
             {
-                // 오른쪽 끝부터 닫기, 그 왼쪽에 최소화
-                btnClose.Location = new Point(pnlTitle.Width - btnClose.Width, 0);
-                btnMin.Location = new Point(pnlTitle.Width - btnClose.Width - btnMin.Width, 0);
+                _btnClose.Location = new Point(_title.Width - _btnClose.Width, 0);
+                _btnMin.Location = new Point(_title.Width - _btnClose.Width - _btnMin.Width, 0);
             };
-
-            // 최초 1회 배치
             layoutTitleButtons();
+            _title.SizeChanged += (s, e) => layoutTitleButtons();
 
-            // 타이틀바 크기 바뀔 때마다 재배치
-            pnlTitle.SizeChanged += (s, e) => layoutTitleButtons();
-
-            #endregion
-
-            #region Logo (SVG-like)
-
-            logo = new SvgLikeLogo
+            // Logo
+            _logo = new SvgLikeLogo
             {
                 Size = new Size(115, 125),
                 Location = new Point(55, 70)
             };
-            Controls.Add(logo);
+            _surface.Controls.Add(_logo);
 
-            #endregion
-
-            #region Password Only Input (match 1st image style)
-
-            // 1번: 입력창은 얇은 테두리 + 라운드, 높이 낮음
-            pwBox = new RoundedTextBox
+            // Password box
+            _pwBox = new RoundedTextBox
             {
-                Size = new Size(250, 28),
-                Location = new Point(200, 110),
-                Radius = 10,
-                BorderColor = Color.FromArgb(70, 120, 170), // 더 진하게
-                BorderWidth = 2f,                           // 🔥 추가
+                Size = new Size(260, 30),
+                Location = new Point(200, 108),
+                Radius = 12,
+                BorderColor = Color.FromArgb(70, 120, 170),
+                BorderWidth = 2f,
                 FillColor = Color.White
             };
-            pwBox.SetPlaceholder("Password", isPassword: true);
-            Controls.Add(pwBox);
+            _pwBox.SetPlaceholder("Password", true);
+            _surface.Controls.Add(_pwBox);
 
-            #endregion
-
-            #region Forgot Password link
-
-            lnkForgot = new LinkLabel
+            // Forgot link (LinkLabel은 투명 지원함)
+            _lnkForgot = new LinkLabel
             {
                 Text = "Forgot Password?",
                 AutoSize = true,
-                Location = new Point(340, 145),
+                Location = new Point(340, 146),
                 Font = new Font("Segoe UI", 8.5f),
                 LinkColor = Color.FromArgb(70, 145, 210),
                 ActiveLinkColor = Color.FromArgb(40, 110, 175),
                 VisitedLinkColor = Color.FromArgb(70, 145, 210),
-                LinkBehavior = LinkBehavior.HoverUnderline
+                LinkBehavior = LinkBehavior.HoverUnderline,
+                TabStop = false,
+                BackColor = Color.Transparent
             };
-            lnkForgot.LinkClicked += (s, e) => MsgBox.Show("비밀번호 찾기 기능 연결하면 됨");
-            Controls.Add(lnkForgot);
+            _lnkForgot.LinkClicked += (s, e) => MsgBox.Show("비밀번호 찾기 기능 연결하면 됨");
+            _surface.Controls.Add(_lnkForgot);
 
-            #endregion
-
-            #region Login Button (pill, smaller, dark navy)
-
-            btnLogin = new GradientPillButton
+            // Login button (✅ Button 상속 안 함: 잔상/클리핑 원천 차단)
+            _btnLogin = new PillButton
             {
                 Text = "LOG IN",
-                Size = new Size(130, 32),
-                Location = new Point(255, 185),
-                Radius = 16,
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold)
+                Size = new Size(150, 34),
+                Location = new Point(245, 182),
+                Radius = 17,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                TabStop = false
             };
-            btnLogin.Click += BtnLogin_Click;
-            Controls.Add(btnLogin);
+            _btnLogin.Click += BtnLogin_Click;
+            _surface.Controls.Add(_btnLogin);
 
-            AcceptButton = btnLogin;
-
-            #endregion
+            // Enter로 로그인
+            AcceptButton = _btnLogin;
         }
-
-        #endregion
-
-        #region Paint (Background)
-
-        protected override void OnPaintBackground(PaintEventArgs e)
-        {
-            // 기본 배경 지우기 막고 우리가 직접 그린다
-            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            var r = this.ClientRectangle;
-
-            using (var br = new LinearGradientBrush(
-                r,
-                Color.FromArgb(245, 250, 255),
-                Color.White,
-                LinearGradientMode.Vertical))
-            {
-                e.Graphics.FillRectangle(br, r);
-            }
-        }
-
-        #endregion
-
-        #region Login Logic
 
         private void BtnLogin_Click(object sender, EventArgs e)
         {
-            string pw = pwBox.GetValueOrEmpty();
+            string pw = _pwBox.GetValueOrEmpty();
 
             if (string.IsNullOrWhiteSpace(pw))
             {
@@ -226,19 +180,14 @@ namespace PureGate
             else
             {
                 MsgBox.Show("비밀번호가 틀렸습니다.");
-                pwBox.ClearAndFocus();
+                _pwBox.ClearAndFocus();
             }
         }
 
         private bool ValidatePassword(string pw)
         {
-            // TODO 실제 검증 연결
             return pw == "1234";
         }
-
-        #endregion
-
-        #region Drag Move
 
         private void Title_MouseDown(object sender, MouseEventArgs e)
         {
@@ -258,10 +207,6 @@ namespace PureGate
         {
             _dragging = false;
         }
-
-        #endregion
-
-        #region Round Utils
 
         private static GraphicsPath CreateRoundPath(Rectangle r, int radius)
         {
@@ -288,14 +233,48 @@ namespace PureGate
             return path;
         }
 
-        #endregion
+        // =========================
+        //  Background Surface
+        // =========================
+        private sealed class GradientSurface : Panel
+        {
+            private readonly Color _top;
+            private readonly Color _bottom;
 
-        #region Custom Controls - TitleBar & Buttons
+            public GradientSurface(Color top, Color bottom)
+            {
+                _top = top;
+                _bottom = bottom;
 
+                SetStyle(ControlStyles.AllPaintingInWmPaint |
+                         ControlStyles.OptimizedDoubleBuffer |
+                         ControlStyles.UserPaint |
+                         ControlStyles.ResizeRedraw, true);
+            }
+
+            protected override void OnPaintBackground(PaintEventArgs e)
+            {
+                var r = ClientRectangle;
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+
+                using (var br = new LinearGradientBrush(r, _top, _bottom, LinearGradientMode.Vertical))
+                    e.Graphics.FillRectangle(br, r);
+            }
+        }
+
+        // =========================
+        //  TitleBar
+        // =========================
         private sealed class TitleBar : Panel
         {
-            public TitleBar()
+            private readonly Color _top;
+            private readonly Color _bottom;
+
+            public TitleBar(Color top, Color bottom)
             {
+                _top = top;
+                _bottom = bottom;
+
                 SetStyle(ControlStyles.AllPaintingInWmPaint |
                          ControlStyles.OptimizedDoubleBuffer |
                          ControlStyles.UserPaint |
@@ -307,21 +286,11 @@ namespace PureGate
                 e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
                 var r = ClientRectangle;
 
-                // 1번의 상단 파란바 느낌: 위쪽이 약간 더 밝음
-                using (var br = new LinearGradientBrush(
-                    r,
-                    Color.FromArgb(45, 120, 185),
-                    Color.FromArgb(25, 95, 165),
-                    LinearGradientMode.Vertical))
-                {
+                using (var br = new LinearGradientBrush(r, _top, _bottom, LinearGradientMode.Vertical))
                     e.Graphics.FillRectangle(br, r);
-                }
 
-                // 아주 약한 하이라이트 라인
                 using (var pen = new Pen(Color.FromArgb(50, 255, 255, 255)))
-                {
                     e.Graphics.DrawLine(pen, 0, 0, r.Width, 0);
-                }
             }
         }
 
@@ -330,49 +299,47 @@ namespace PureGate
         private sealed class WindowButton : Control
         {
             private readonly WindowButtonKind _kind;
+            private readonly Color _top;
+            private readonly Color _bottom;
             private bool _hover;
 
-            public WindowButton(WindowButtonKind kind)
+            public WindowButton(WindowButtonKind kind, Color titleTop, Color titleBottom)
             {
                 _kind = kind;
+                _top = titleTop;
+                _bottom = titleBottom;
 
                 SetStyle(ControlStyles.AllPaintingInWmPaint |
                          ControlStyles.OptimizedDoubleBuffer |
                          ControlStyles.UserPaint |
-                         ControlStyles.ResizeRedraw |
-                         ControlStyles.SupportsTransparentBackColor, true);
+                         ControlStyles.ResizeRedraw, true);
 
                 Cursor = Cursors.Hand;
-
-                BackColor = Color.Transparent;   // Control 상속이라 OK
+                TabStop = false;
             }
 
             protected override void OnMouseEnter(EventArgs e) { _hover = true; Invalidate(); }
             protected override void OnMouseLeave(EventArgs e) { _hover = false; Invalidate(); }
 
-            protected override void OnPaintBackground(PaintEventArgs pevent)
-            {
-                base.OnPaintBackground(pevent);
-            }
-
             protected override void OnPaint(PaintEventArgs e)
             {
                 e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                var r = ClientRectangle;
 
-                // hover 배경
+                // ✅ 타이틀바와 동일한 그라데이션을 버튼에도 직접 그림
+                using (var br = new LinearGradientBrush(r, _top, _bottom, LinearGradientMode.Vertical))
+                    e.Graphics.FillRectangle(br, r);
+
                 if (_hover)
                 {
                     Color hoverColor = (_kind == WindowButtonKind.Close)
                         ? Color.FromArgb(160, 200, 60, 60)
                         : Color.FromArgb(60, 255, 255, 255);
 
-                    using (var br = new SolidBrush(hoverColor))
-                    {
-                        e.Graphics.FillRectangle(br, ClientRectangle);
-                    }
+                    using (var brHover = new SolidBrush(hoverColor))
+                        e.Graphics.FillRectangle(brHover, r);
                 }
 
-                // 아이콘
                 using (var pen = new Pen(Color.White, 2f))
                 {
                     pen.StartCap = LineCap.Round;
@@ -394,10 +361,9 @@ namespace PureGate
             }
         }
 
-        #endregion
-
-        #region Custom Controls - RoundedTextBox
-
+        // =========================
+        //  RoundedTextBox
+        // =========================
         private sealed class RoundedTextBox : Panel
         {
             private readonly TextBox _tb;
@@ -406,10 +372,10 @@ namespace PureGate
             private bool _showingPlaceholder;
             private char _savedPasswordChar;
 
-            public int Radius { get; set; } = 10;
+            public int Radius { get; set; } = 12;
             public Color BorderColor { get; set; } = Color.FromArgb(185, 205, 225);
             public Color FillColor { get; set; } = Color.White;
-            public float BorderWidth { get; set; } = 1f;
+            public float BorderWidth { get; set; } = 2f;
 
             public RoundedTextBox()
             {
@@ -424,10 +390,10 @@ namespace PureGate
                 {
                     BorderStyle = BorderStyle.None,
                     Font = new Font("Segoe UI", 9f),
-                    Location = new Point(10, 6),
-                    Width = 10
+                    Multiline = false,
+                    BackColor = Color.White
                 };
-                _savedPasswordChar = '\0'; // 기본값
+                _savedPasswordChar = '\0';
                 Controls.Add(_tb);
 
                 _tb.GotFocus += (s, e) =>
@@ -437,53 +403,28 @@ namespace PureGate
                         _tb.Text = "";
                         _tb.ForeColor = Color.Black;
                         _showingPlaceholder = false;
-
-                        // ✅ 비밀번호면 PasswordChar로 가림 (핸들 재생성 없음)
                         _tb.PasswordChar = _isPassword ? _savedPasswordChar : '\0';
                     }
                     Invalidate();
                 };
 
-                _tb.LostFocus += (s, e) =>
-                {
-                    ApplyPlaceholderIfNeeded();
-                    Invalidate();
-                };
+                _tb.LostFocus += (s, e) => { ApplyPlaceholderIfNeeded(); Invalidate(); };
 
                 SizeChanged += (s, e) => LayoutTextBox();
             }
 
             private void LayoutTextBox()
             {
-                // 슬림 입력창 느낌
-                _tb.Location = new Point(10, (Height - _tb.PreferredHeight) / 2);
-                _tb.Width = Math.Max(10, Width - 20);
-                ApplyRegionSafe();
-                Invalidate();
-            }
-
-            private void ApplyRegionSafe()
-            {
-                if (Width <= 2 || Height <= 2) return;
-
-                if (Region != null)
-                {
-                    try { Region.Dispose(); } catch { }
-                    Region = null;
-                }
-
-                using (var path = CreateRoundPath(new Rectangle(0, 0, Width - 1, Height - 1), Radius))
-                {
-                    Region = new Region(path);
-                }
+                int padX = 12;
+                _tb.BackColor = FillColor;
+                _tb.Location = new Point(padX, (Height - _tb.PreferredHeight) / 2);
+                _tb.Width = Math.Max(10, Width - padX * 2);
             }
 
             public void SetPlaceholder(string text, bool isPassword)
             {
                 _placeholder = text ?? "";
                 _isPassword = isPassword;
-
-                // ✅ 비밀번호 표시 문자 설정(원하면 '*'로 바꿔도 됨)
                 _savedPasswordChar = _isPassword ? '●' : '\0';
 
                 ApplyPlaceholderIfNeeded();
@@ -496,18 +437,14 @@ namespace PureGate
                 {
                     _showingPlaceholder = true;
                     _tb.ForeColor = Color.Gray;
-
-                    // ✅ placeholder는 가리면 안 되므로 PasswordChar 해제
                     _tb.PasswordChar = '\0';
-
                     _tb.Text = _placeholder;
                 }
             }
 
             public string GetValueOrEmpty()
             {
-                if (_showingPlaceholder) return "";
-                return _tb.Text ?? "";
+                return _showingPlaceholder ? "" : (_tb.Text ?? "");
             }
 
             public void ClearAndFocus()
@@ -515,66 +452,58 @@ namespace PureGate
                 _showingPlaceholder = false;
                 _tb.Text = "";
                 _tb.ForeColor = Color.Black;
-
-                // ✅ 비밀번호면 PasswordChar로 가림
                 _tb.PasswordChar = _isPassword ? _savedPasswordChar : '\0';
-
                 _tb.Focus();
             }
 
             protected override void OnPaint(PaintEventArgs e)
             {
                 e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                var r = new Rectangle(0, 0, Width - 1, Height - 1);
 
-                using (var path = CreateRoundPath(r, Radius))
-                using (var fill = new SolidBrush(FillColor))
-                using (var pen = new Pen(BorderColor, BorderWidth))   // 🔥 두께 적용
+                int bw = (int)Math.Ceiling(BorderWidth);
+                Rectangle r = new Rectangle(bw, bw, Width - bw * 2 - 1, Height - bw * 2 - 1);
+                if (r.Width <= 2 || r.Height <= 2) return;
+
+                using (GraphicsPath path = CreateRoundPath(r, Radius))
                 {
-                    pen.Alignment = PenAlignment.Inset;               // 🔥 안쪽으로 그려서 또렷하게
-                    e.Graphics.FillPath(fill, path);
-                    e.Graphics.DrawPath(pen, path);
+                    using (SolidBrush fill = new SolidBrush(FillColor))
+                        e.Graphics.FillPath(fill, path);
+
+                    using (Pen pen = new Pen(BorderColor, BorderWidth))
+                    {
+                        pen.Alignment = PenAlignment.Inset;
+                        e.Graphics.DrawPath(pen, path);
+                    }
                 }
             }
         }
 
-        #endregion
-
-        #region Custom Controls - Login Button
-
-        private sealed class GradientPillButton : Button
+        // =========================
+        //  Pill Button (NOT Button)
+        //  -> 반짤림/검은잔상 원천 차단
+        // =========================
+        private sealed class PillButton : Control, IButtonControl
         {
-            public int Radius { get; set; } = 16;
+            public int Radius { get; set; } = 17;
             private bool _hover;
             private bool _down;
 
-            public GradientPillButton()
+
+            public PillButton()
             {
                 SetStyle(ControlStyles.AllPaintingInWmPaint |
                          ControlStyles.OptimizedDoubleBuffer |
                          ControlStyles.UserPaint |
                          ControlStyles.ResizeRedraw, true);
 
-                FlatStyle = FlatStyle.Flat;
-                FlatAppearance.BorderSize = 0;
-
-                ForeColor = Color.White;
-                BackColor = Color.Empty;               // Transparent 금지
-                UseVisualStyleBackColor = false;
-
                 Cursor = Cursors.Hand;
-
-                MouseEnter += (s, e) => { _hover = true; Invalidate(); };
-                MouseLeave += (s, e) => { _hover = false; _down = false; Invalidate(); };
-                MouseDown += (s, e) => { if (e.Button == MouseButtons.Left) { _down = true; Invalidate(); } };
-                MouseUp += (s, e) => { _down = false; Invalidate(); };
-
-                SizeChanged += (s, e) => ApplyRegionSafe();
+                ForeColor = Color.White;
+                SizeChanged += (s, e) => UpdateRegion();
+                UpdateRegion();
             }
-
-            private void ApplyRegionSafe()
+            private void UpdateRegion()
             {
-                if (Width <= 2 || Height <= 2) return;
+                if (Width < 2 || Height < 2) return;
 
                 if (Region != null)
                 {
@@ -582,49 +511,105 @@ namespace PureGate
                     Region = null;
                 }
 
-                using (var path = CreateRoundPath(new Rectangle(0, 0, Width - 1, Height - 1), Radius))
+                // ✅ 영역을 라운드로 잘라서 "사각형 잔상" 자체 제거
+                using (var path = CreateRoundPath(new Rectangle(0, 0, Width, Height), Radius))
                 {
                     Region = new Region(path);
                 }
+
+                Invalidate();
+            }
+            public DialogResult DialogResult { get; set; }
+
+            public void NotifyDefault(bool value) { /* no-op */ }
+
+            public void PerformClick()
+            {
+                OnClick(EventArgs.Empty);
             }
 
-            protected override void OnPaintBackground(PaintEventArgs pevent)
+            protected override void OnMouseEnter(EventArgs e) { _hover = true; Invalidate(); }
+            protected override void OnMouseLeave(EventArgs e) { _hover = false; _down = false; Invalidate(); }
+
+            protected override void OnMouseDown(MouseEventArgs e)
             {
-                // 배경 기본 칠 없음(우리가 직접 그림)
+                if (e.Button == MouseButtons.Left)
+                {
+                    _down = true;
+                    Invalidate();
+                }
+                base.OnMouseDown(e);
+            }
+
+            protected override void OnMouseUp(MouseEventArgs e)
+            {
+                if (_down && e.Button == MouseButtons.Left)
+                {
+                    _down = false;
+                    Invalidate();
+                    OnClick(EventArgs.Empty);
+                }
+                base.OnMouseUp(e);
+            }
+
+            protected override void OnPaintBackground(PaintEventArgs e)
+            {
+                // ✅ 부모 배경(그라데이션)만 "내 영역"에 다시 그림
+                if (Parent == null) return;
+
+                var st = e.Graphics.Save();
+                try
+                {
+                    e.Graphics.TranslateTransform(-Left, -Top);
+                    var pea = new PaintEventArgs(e.Graphics, Parent.ClientRectangle);
+                    InvokePaintBackground(Parent, pea);
+                }
+                finally
+                {
+                    e.Graphics.Restore(st);
+                }
             }
 
             protected override void OnPaint(PaintEventArgs e)
             {
                 e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                var r = new Rectangle(0, 0, Width - 1, Height - 1);
 
-                using (var path = CreateRoundPath(r, Radius))
+                Rectangle r = new Rectangle(0, 0, Width - 1, Height - 1);
+                if (r.Width <= 2 || r.Height <= 2) return;
+
+                using (GraphicsPath path = CreateRoundPath(r, Radius))
                 {
-                    // 1번처럼 진한 남색 pill (hover/down은 아주 미세)
                     Color top = Color.FromArgb(35, 95, 160);
                     Color bottom = Color.FromArgb(20, 75, 140);
 
                     if (_hover) { top = Color.FromArgb(45, 110, 175); bottom = Color.FromArgb(25, 85, 155); }
                     if (_down) { top = Color.FromArgb(25, 80, 145); bottom = Color.FromArgb(15, 65, 125); }
 
-                    using (var br = new LinearGradientBrush(r, top, bottom, LinearGradientMode.Vertical))
-                    {
+                    using (LinearGradientBrush br = new LinearGradientBrush(r, top, bottom, LinearGradientMode.Vertical))
                         e.Graphics.FillPath(br, path);
-                    }
 
-                    // 은은한 상단 하이라이트
-                    var topHalf = new Rectangle(0, 0, Width - 1, Height / 2);
-                    using (var br2 = new LinearGradientBrush(topHalf,
-                        Color.FromArgb(60, 255, 255, 255),
+                    Rectangle topHalf = new Rectangle(r.X, r.Y, r.Width, r.Height / 2);
+                    using (LinearGradientBrush br2 = new LinearGradientBrush(
+                        topHalf,
+                        Color.FromArgb(55, 255, 255, 255),
                         Color.FromArgb(0, 255, 255, 255),
                         LinearGradientMode.Vertical))
                     {
-                        e.Graphics.FillPath(br2, path);
+                        var st = e.Graphics.Save();
+                        try
+                        {
+                            e.Graphics.SetClip(path);
+                            e.Graphics.FillRectangle(br2, topHalf);
+                        }
+                        finally
+                        {
+                            e.Graphics.Restore(st);
+                        }
                     }
 
-                    // 테두리 아주 약하게
-                    using (var pen = new Pen(Color.FromArgb(30, 0, 0, 0)))
+                    using (Pen pen = new Pen(Color.FromArgb(25, 0, 0, 0), 1f))
                     {
+                        pen.Alignment = PenAlignment.Inset;
                         e.Graphics.DrawPath(pen, path);
                     }
 
@@ -638,7 +623,5 @@ namespace PureGate
                 }
             }
         }
-
-        #endregion
     }
 }
