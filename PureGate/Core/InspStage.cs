@@ -787,34 +787,30 @@ namespace PureGate.Core
 
                         try
                         {
-                            bool ok = true;                 // 기본 OK 처리(최소한 카운트는 증가)
+                            bool ok = true;
                             string label = "";
                             float score = 0;
 
                             var modelInfo = AIModule.GetModelInfo();
 
-                            // 1) 원래 방식: Top1 가져오기
                             if (AIModule.TryGetLastClsTop1(out label, out score) && !string.IsNullOrWhiteSpace(label))
                             {
-                                // ✅ (중요) label 정규화: 공백/개행 제거 + "(점수)" 같은 꼬리 제거
                                 string rawLabel = label;
                                 label = label.Trim();
 
-                                int cutIdx = label.IndexOf('(');           // "cut_lead (85.0)" 케이스
+                                int cutIdx = label.IndexOf('(');
                                 if (cutIdx >= 0) label = label.Substring(0, cutIdx).Trim();
 
-                                cutIdx = label.IndexOf(' ');               // "cut_lead 85.0" 같이 공백으로 붙는 케이스
+                                cutIdx = label.IndexOf(' ');
                                 if (cutIdx >= 0) label = label.Substring(0, cutIdx).Trim();
 
                                 bool isNg = false;
 
                                 if (modelInfo != null && modelInfo.ClassInfos != null && modelInfo.ClassIsNG != null)
                                 {
-                                    // 1차: 완전일치
                                     int idx = Array.FindIndex(modelInfo.ClassInfos,
                                         c => string.Equals(c.Name?.Trim(), label, StringComparison.OrdinalIgnoreCase));
 
-                                    // 2차: 혹시라도 label이 좀 더 길게 들어오면 StartsWith로 한번 더
                                     if (idx < 0)
                                     {
                                         idx = Array.FindIndex(modelInfo.ClassInfos,
@@ -824,32 +820,24 @@ namespace PureGate.Core
                                     if (idx >= 0 && idx < modelInfo.ClassIsNG.Length)
                                         isNg = modelInfo.ClassIsNG[idx];
 
-                                    // 🔎 디버그 로그 (이거 꼭 남겨)
                                     SLogger.Write($"[CLS] raw='{rawLabel}' -> norm='{label}', idx={idx}, isNg={isNg}, score={score:0.0}");
                                 }
                                 else
                                 {
-                                    // modelInfo가 없으면 fallback
                                     isNg = !string.Equals(label, "Good", StringComparison.OrdinalIgnoreCase);
                                     SLogger.Write($"[CLS] modelInfo null -> label='{label}', isNg={isNg}, score={score:0.0}");
                                 }
-                        // ✅ ROI가 없을 때(AIModule 단독 검사)도 ResultForm에 결과가 누적되도록 추가
-                        TryUpdateResultFormForAIModuleOnly();
-
-                        return true;
-                    }
-                }
 
                                 ok = !isNg;
                             }
                             else
                             {
                                 label = "Unknown";
-                                ok = true; // Unknown을 NG로 잡고 싶으면 false로 바꿔
+                                ok = true;
                                 SLogger.Write("[CLS] Top1 FAIL -> Unknown");
                             }
 
-                            // --- 기존 History 저장 로직 ---
+                            // --- History 저장 ---
                             string modelName = "";
                             if (CurModel != null && !string.IsNullOrWhiteSpace(CurModel.ModelPath))
                                 modelName = Path.GetFileNameWithoutExtension(CurModel.ModelPath);
@@ -867,13 +855,17 @@ namespace PureGate.Core
                                 Score = score
                             });
 
-                            // ✅ 통계 UI 갱신 (무조건 호출)
+                            // --- StatisticForm / Donut 갱신 ---
                             var details = new List<NgClassCount>();
                             if (!ok && !string.IsNullOrWhiteSpace(label) && label != "Unknown")
                                 details.Add(new NgClassCount { ClassName = label, Count = 1 });
 
                             MainForm.Instance?.UpdateStatisticsUI(ok ? 1 : 0, ok ? 0 : 1, details);
-                            PushDonutStatsAndUpdateUI(ok, ok ? "" : label); //ROI 없이 CLS만 돌 때도 도넛이 OK + 클래스별로 쌓여요.
+                            PushDonutStatsAndUpdateUI(ok, ok ? "" : label);
+
+                            // ✅ 여기로 옮겨야 함 (ROI 없는 AIModule 검사 결과를 ResultForm에 누적)
+                            TryUpdateResultFormForAIModuleOnly();
+
                             var cForm = MainForm.GetDockForm<CameraForm>();
                             if (cForm != null) cForm.ShowResultOnScreen(ok);
                         }

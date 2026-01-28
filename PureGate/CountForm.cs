@@ -1,15 +1,6 @@
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using WeifenLuo.WinFormsUI.Docking;
-using PureGate.Util;
 using PureGate.UIControl;
 
 namespace PureGate
@@ -21,18 +12,28 @@ namespace PureGate
         public CountForm()
         {
             InitializeComponent();
-            InitializeUI();
+            this.Load += CountForm_Load;
+            this.HideOnClose = true;
         }
 
-        private void InitializeUI()
+        private void CountForm_Load(object sender, EventArgs e)
         {
-            // RecentNGimages UserControl 생성 및 추가
+            if (recentNGimages != null) return;
+
             recentNGimages = new RecentNGimages
             {
                 Dock = DockStyle.Fill
             };
 
             this.Controls.Add(recentNGimages);
+            recentNGimages.BringToFront();
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            recentNGimages?.Dispose();
+            recentNGimages = null;
+            base.OnFormClosed(e);
         }
     }
 }
