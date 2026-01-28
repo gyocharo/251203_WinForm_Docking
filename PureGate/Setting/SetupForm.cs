@@ -27,6 +27,19 @@ namespace PureGate.Setting
         private void InitTabControl()
         {
             CameraSetting cameraSetting = new CameraSetting();
+
+            // ✅ CameraSetting에서 Apply 누르면 RunForm 버튼 상태 갱신
+            cameraSetting.CameraSettingChanged += () =>
+            {
+                foreach (Form f in Application.OpenForms)
+                {
+                    if (f is PureGate.RunForm runForm)
+                    {
+                        runForm.RefreshCameraButtons();
+                    }
+                }
+            };
+
             AddTabControl(cameraSetting, "Camera");
 
             PathSetting pathSetting = new PathSetting();

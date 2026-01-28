@@ -17,6 +17,8 @@ namespace PureGate.Setting
     {
 
         private CameraType _camType = CameraType.WebCam;
+        public event Action CameraSettingChanged;
+
         public CameraSetting()
         {
             InitializeComponent();
@@ -61,6 +63,8 @@ namespace PureGate.Setting
         {
             SaveSetting();
             Global.Inst.InspStage.ApplyCameraSetting();
+
+            CameraSettingChanged?.Invoke();
         }
 
         private void FocusExposure()
