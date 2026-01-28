@@ -278,7 +278,7 @@ namespace PureGate
             // CountForm 
             // ==========================
             CountForm countForm = new CountForm();
-            countForm.Show(cameraForm.Pane, DockAlignment.Top, 0.1);
+            countForm.Show(cameraForm.Pane, DockAlignment.Top, 0.17);
 
             // ==========================
             // 하단 3분할

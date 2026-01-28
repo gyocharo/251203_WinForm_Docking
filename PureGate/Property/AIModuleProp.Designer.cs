@@ -40,6 +40,7 @@ namespace PureGate.Property
             this.txtAIModelPath = new System.Windows.Forms.TextBox();
             this.btnLoadModel = new System.Windows.Forms.Button();
             this.btnSelAIModel = new System.Windows.Forms.Button();
+            this.btnInspAI = new System.Windows.Forms.Button();
             this.Txt_ModuleInfo = new System.Windows.Forms.TextBox();
             this.lv_ClassInfos = new System.Windows.Forms.ListView();
             this.lbx_ModelInformation = new System.Windows.Forms.ListBox();
@@ -321,6 +322,7 @@ namespace PureGate.Property
         #endregion
         private System.Windows.Forms.TextBox txtAIModelPath;
         private System.Windows.Forms.Button btnLoadModel;
+        private System.Windows.Forms.Button btnInspAI;
         private System.Windows.Forms.Button btnSelAIModel;
         private System.Windows.Forms.TextBox Txt_ModuleInfo;
         private System.Windows.Forms.Label Lbl_ModuleInfo;
