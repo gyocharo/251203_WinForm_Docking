@@ -12,6 +12,7 @@ using System.Drawing;
 using System.Linq;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
+using System.Xml.Serialization;
 
 namespace PureGate.Algorithm
 {
@@ -21,7 +22,10 @@ namespace PureGate.Algorithm
         public AIEngineType EngineType { get; set; }
 
         // CLS 결과 저장용 (Status에 NG 클래스 표기용)
+        [XmlIgnore]  // ✅ 추가
         public string LastClsLabel { get; private set; } = "";
+
+        [XmlIgnore]  // ✅ 추가
         public float LastClsScore { get; private set; } = 0f;
 
         private SaigeAI _saigeAI;
