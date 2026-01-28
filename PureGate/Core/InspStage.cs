@@ -780,12 +780,18 @@ namespace PureGate.Core
                 Global.Inst.InspStage.CurModel.Save();
             else
                 Global.Inst.InspStage.CurModel.SaveAs(filePath);
+
+            // ✅ 저장이 끝난 "최종 경로"로 최근 모델 갱신
+            if (_regKey != null && CurModel != null && !string.IsNullOrWhiteSpace(CurModel.ModelPath))
+                _regKey.SetValue("LastestModelPath", CurModel.ModelPath);
         }
 
         public bool LastestModelOpen(IWin32Window owner = null)
         {
             if (_lastestModelOpen) return true;
             _lastestModelOpen = true;
+
+            if (_regKey == null) return true;
 
             string lastestModel = _regKey.GetValue("LastestModelPath") as string;
             if (string.IsNullOrWhiteSpace(lastestModel) || !File.Exists(lastestModel))
