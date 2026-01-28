@@ -104,12 +104,12 @@ namespace PureGate
                 series.Points[idx].LegendText = $"OK ({okCount})";
             }
 
-            System.Diagnostics.Debug.WriteLine("[NG_RAW] " + string.Join(", ", ngClassDetails.Select(x => x.ClassName)));
+            System.Diagnostics.Debug.WriteLine("[NG_RAW] " + string.Join(", ", (ngClassDetails ?? new List<NgClassCount>()).Select(x => x?.ClassName)));
             // 3. ⭐ NG 데이터 분할 (가장 중요한 부분)
-            if (ngClassDetails != null && ngClassDetails.Any(d => d.Count > 0))
+            if (ngClassDetails != null && ngClassDetails.Any(d => d != null && d.Count > 0))
             {
-                // ✅ OK 계열 키 제거 + 공백 제거 + 대소문자 무시 그룹핑
-                var stats = ngClassDetails
+                // ✅ Unknown 포함해서 들어오더라도 차트에서는 제거
+                var statsList = ngClassDetails
                     .Where(d => d != null && d.Count > 0)
                     .Select(d => new { Name = (d.ClassName ?? "").Trim(), d.Count })
                     .Where(x =>
@@ -117,20 +117,33 @@ namespace PureGate
                         !x.Name.Equals("OK", StringComparison.OrdinalIgnoreCase) &&
                         !x.Name.Equals("GOOD", StringComparison.OrdinalIgnoreCase) &&
                         !x.Name.Equals("NG", StringComparison.OrdinalIgnoreCase) &&
-                        !x.Name.Equals("NoData", StringComparison.OrdinalIgnoreCase)
+                        !x.Name.Equals("NoData", StringComparison.OrdinalIgnoreCase) &&
+                        !x.Name.Equals("Unknown", StringComparison.OrdinalIgnoreCase)   // ✅ Unknown 제거
                     )
                     .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
-                    .Select(g => new { Name = g.Key, Total = g.Sum(v => v.Count) });
+                    .Select(g => new { Name = g.Key, Total = g.Sum(v => v.Count) })
+                    .ToList();
 
-                Color[] palette = { Color.Red, Color.Orange, Color.Magenta, Color.Brown, Color.Gold };
-                int i = 0;
-
-                foreach (var item in stats)
+                // ✅ statsList가 비어있다는 건 "NG는 있는데 전부 Unknown뿐" 같은 케이스
+                // 그럼 차트에는 NG 합계 1조각으로 표시해줌(Unknown은 안보이게)
+                if (statsList.Count > 0)
                 {
-                    int idx = series.Points.AddXY(item.Name, item.Total);
-                    series.Points[idx].Color = palette[i % palette.Length];
-                    series.Points[idx].LegendText = $"{item.Name} ({item.Total})";
-                    i++;
+                    Color[] palette = { Color.Red, Color.Orange, Color.Magenta, Color.Brown, Color.Gold };
+                    int i = 0;
+
+                    foreach (var item in statsList)
+                    {
+                        int idx = series.Points.AddXY(item.Name, item.Total);
+                        series.Points[idx].Color = palette[i % palette.Length];
+                        series.Points[idx].LegendText = $"{item.Name} ({item.Total})";
+                        i++;
+                    }
+                }
+                else if (ngCount > 0)
+                {
+                    int idx = series.Points.AddXY("NG", ngCount);
+                    series.Points[idx].Color = Color.Red;
+                    series.Points[idx].LegendText = $"NG ({ngCount})";
                 }
             }
             else if (ngCount > 0)

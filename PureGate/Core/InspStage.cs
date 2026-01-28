@@ -954,7 +954,7 @@ namespace PureGate.Core
                             if (!ok && !string.IsNullOrWhiteSpace(label) && label != "Unknown")
                                 details.Add(new NgClassCount { ClassName = label, Count = 1 });
 
-                            MainForm.Instance?.UpdateStatisticsUI(ok ? 1 : 0, ok ? 0 : 1, details);
+                            //MainForm.Instance?.UpdateStatisticsUI(ok ? 1 : 0, ok ? 0 : 1, details);
                             PushDonutStatsAndUpdateUI(ok, ok ? "" : label);
 
                             // ✅ 여기로 옮겨야 함 (ROI 없는 AIModule 검사 결과를 ResultForm에 누적)
@@ -1426,7 +1426,7 @@ namespace PureGate.Core
             }
 
             // (선택) 메인폼에서도 갱신하고 싶으면
-            MainForm.Instance?.UpdateStatisticsUI(_okCount, _ngCount, donutList);
+            //MainForm.Instance?.UpdateStatisticsUI(_okCount, _ngCount, donutList);
             System.Diagnostics.Debug.WriteLine("[DONUT_KEYS] " + string.Join(" | ", _donutStats.Keys.Select(k => $"'{k}'")));
         }
 
