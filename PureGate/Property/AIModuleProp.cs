@@ -660,8 +660,6 @@ namespace PureGate.Property
         {
             if (string.IsNullOrWhiteSpace(displayName)) return displayName;
             return _displayToRaw.TryGetValue(displayName, out var raw) ? raw : displayName;
-                item.SubItems[2].Text = hasNG ? "True" : "False";
-            }
         }
 
         public void SyncFromCurrentModelAndUpdateUI()
