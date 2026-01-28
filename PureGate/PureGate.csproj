@@ -162,6 +162,11 @@
       <DependentUpon>NewModel.cs</DependentUpon>
     </Compile>
     <Compile Include="Inspect\NgClassCount.cs" />
+    <Compile Include="UIControl\CustomMessageBox.cs" />
+    <Compile Include="UIControl\DimOverlayForm .cs" />
+    <Compile Include="UIControl\DimOverlayForm .Designer.cs">
+      <DependentUpon>DimOverlayForm .cs</DependentUpon>
+    </Compile>
     <Compile Include="UIControl\SvgLikeLogo.cs">
       <SubType>Component</SubType>
     </Compile>
