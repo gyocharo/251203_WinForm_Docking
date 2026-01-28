@@ -32,6 +32,7 @@ namespace PureGate
         {
             //#15_INSP_WORKER#10 카메라 타입에 따라 자동 검사 모드 설정
 
+            //진짜 제품 시리얼”이 없으니까 시간을 시리얼처럼 임시로 쓰는 것.
             string serialID = $"{DateTime.Now:MM-dd HH:mm:ss}";
             Global.Inst.InspStage.InspectReady("LOT_NUMBER", serialID);
 

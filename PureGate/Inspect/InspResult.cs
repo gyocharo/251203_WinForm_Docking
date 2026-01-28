@@ -1,12 +1,13 @@
-﻿using System;
+﻿using PureGate.Algorithm;
+using PureGate.Core;
+using PureGate.Teach;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
-using PureGate.Algorithm;
-using PureGate.Core;
-using PureGate.Teach;
 
 namespace PureGate.Inspect
 {
@@ -33,6 +34,29 @@ namespace PureGate.Inspect
         [XmlIgnore]
         public List<DrawInspectInfo> ResultRectList { get; set; } = null;
 
+        // 이미지 파일명 정보 (LOT-<lot>_PART-<part>_SN-<serial>_CAM-<cam>_LINE-<line>_ST-<station>.png)
+        [XmlIgnore]
+        public string ImageFileName { get; set; }
+        // 파싱된 정보
+        [XmlIgnore]
+        public string LotNumber { get; private set; }
+
+        [XmlIgnore]
+        public string PartID { get; private set; }
+
+        [XmlIgnore]
+        public string SerialNumber { get; private set; }
+
+        [XmlIgnore]
+        public string CameraNumber { get; private set; }
+
+        [XmlIgnore]
+        public string LineNumber { get; private set; }
+
+        [XmlIgnore]
+        public string StationNumber { get; private set; }
+
+
         public InspResult()
         {
             InspObject = new InspWindow();
@@ -43,8 +67,8 @@ namespace PureGate.Inspect
             IsDefect = false;
             ResultValue = "";
             ResultInfos = string.Empty;
+            ImageFileName = string.Empty;
         }
-
         public InspResult(InspWindow window, string baseIID, string objectID, InspWindowType objectType)
         {
             InspObject = window;
@@ -52,9 +76,105 @@ namespace PureGate.Inspect
             ObjectID = objectID;
             ObjectType = objectType;
             ErrorCode = 0;
-            IsDefect= false;
+            IsDefect = false;
             ResultValue = "";
             ResultInfos = string.Empty;
+            ImageFileName = string.Empty;
+        }
+        // 이미지 파일명에서 정보 파싱
+        // 형식: LOT-<lot>_PART-<part>_SN-<serial>_CAM-<cam>_LINE-<line>_ST-<station>.png
+        public void ParseImageFileName(string fileName)
+        {
+            if (string.IsNullOrEmpty(fileName))
+                return;
+
+            ImageFileName = fileName;
+
+            try
+            {
+                // 정규식 패턴: LOT-<lot>_PART-<part>_SN-<serial>_CAM-<cam>_LINE-<line>_ST-<station>
+                string pattern = @"LOT-(?<lot>[^_]+)_PART-(?<part>[^_]+)_SN-(?<serial>[^_]+)_CAM-(?<cam>[^_]+)_LINE-(?<line>[^_]+)_ST-(?<station>[^.]+)";
+
+                Match match = Regex.Match(fileName, pattern, RegexOptions.IgnoreCase);
+
+                if (match.Success)
+                {
+                    LotNumber = match.Groups["lot"].Value;
+                    PartID = match.Groups["part"].Value;
+                    SerialNumber = match.Groups["serial"].Value;
+                    CameraNumber = match.Groups["cam"].Value;
+                    LineNumber = match.Groups["line"].Value;
+                    StationNumber = match.Groups["station"].Value;
+                }
+                else
+                {
+                    // 파싱 실패 시 기본값 설정
+                    LotNumber = string.Empty;
+                    PartID = string.Empty;
+                    SerialNumber = string.Empty;
+                    CameraNumber = string.Empty;
+                    LineNumber = string.Empty;
+                    StationNumber = string.Empty;
+                }
+            }
+            catch (Exception)
+            {
+                // 예외 발생 시 기본값 유지
+                LotNumber = string.Empty;
+                PartID = string.Empty;
+                SerialNumber = string.Empty;
+                CameraNumber = string.Empty;
+                LineNumber = string.Empty;
+                StationNumber = string.Empty;
+            }
+        }
+        // 제품/Part ID, 바코드/시리얼 정보 반환
+        public string GetProductInfo()
+        {
+            if (!string.IsNullOrEmpty(PartID) && !string.IsNullOrEmpty(SerialNumber))
+                return $"{PartID} / {SerialNumber}";
+            else if (!string.IsNullOrEmpty(PartID))
+                return PartID;
+            else if (!string.IsNullOrEmpty(SerialNumber))
+                return SerialNumber;
+
+            return string.Empty;
+        }
+
+        
+        /// 카메라/라인/스테이션 정보 반환        
+        public string GetLocationInfo()
+        {
+            List<string> parts = new List<string>();
+
+            if (!string.IsNullOrEmpty(CameraNumber))
+                parts.Add($"CAM-{CameraNumber}");
+
+            if (!string.IsNullOrEmpty(LineNumber))
+                parts.Add($"LINE-{LineNumber}");
+
+            if (!string.IsNullOrEmpty(StationNumber))
+                parts.Add($"ST-{StationNumber}");
+
+            return string.Join(" / ", parts);
+        }
+
+        
+        /// 검사 결과 상태 문자열 반환 (NG 시 InspType 포함)        
+        public string GetStatusString()
+        {
+            if (!IsDefect)
+                return "OK";
+
+            // ✅ AIModule(CLS) 같은 경우 ResultValue에 NG 클래스(라벨)를 넣어두면
+            //    Status 컬럼에서 "NG (라벨)" 형태로 표시할 수 있음
+            if (InspType == InspectType.InspAIModule && !string.IsNullOrWhiteSpace(ResultValue))
+            {
+                return IsDefect ? $"NG ({ResultValue})" : $"OK ({ResultValue})";
+            }
+
+            // 기본: 검사 타입 표시
+            return IsDefect ? "NG" : "OK";
         }
     }
 }

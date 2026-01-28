@@ -1,12 +1,13 @@
-﻿using PureGate.Algorithm;
+﻿using OpenCvSharp;
+using PureGate.Algorithm;
 using PureGate.Core;
 using PureGate.Teach;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using OpenCvSharp;
 
 namespace PureGate.Inspect
 {
@@ -30,6 +31,10 @@ namespace PureGate.Inspect
         private bool InspectWindow(InspWindow window)
         {
             window.ResetInspResult();
+
+            // 현재 검사 이미지 파일명 가져오기
+            string imageFileName = GetCurrentImageFileName();
+
             foreach (InspAlgorithm algo in window.AlgorithmList)
             {
                 if (algo.IsUse == false)
@@ -48,6 +53,10 @@ namespace PureGate.Inspect
                     ResultInfos = resultInfo
                 };
 
+                // 이미지 파일명 정보 파싱
+                inspResult.ParseImageFileName(imageFileName);
+
+
                 switch (algo.InspectType)
                 {
                     case InspectType.InspMatch:
@@ -62,8 +71,17 @@ namespace PureGate.Inspect
                         inspResult.ResultValue = $"{blobAlgo.OutBlobCount}/{min}~{max}";
                         break;
                     case InspectType.InspAIModule:
-                        AIModuleAlgorithm AIModuleAlgo = algo as AIModuleAlgorithm;
-                        break;
+                        {
+                            AIModuleAlgorithm AIModuleAlgo = algo as AIModuleAlgorithm;
+
+                            // ✅ CLS는 NG 클래스(라벨)를 Status에 표시하기 위해 ResultValue에 저장
+                            if (AIModuleAlgo != null && AIModuleAlgo.EngineType == AIEngineType.CLS && AIModuleAlgo.IsDefect)
+                            {
+                                if (!string.IsNullOrWhiteSpace(AIModuleAlgo.LastClsLabel))
+                                    inspResult.ResultValue = AIModuleAlgo.LastClsLabel;
+                            }
+                            break;
+                        }
                 }
 
                 List<DrawInspectInfo> resultArea = new List<DrawInspectInfo>();
@@ -109,6 +127,25 @@ namespace PureGate.Inspect
             }
 
             return true;
+        }
+
+        // 현재 검사 중인 이미지 파일명 가져오기
+        private string GetCurrentImageFileName()
+        {
+            try
+            {
+                var curModel = Global.Inst?.InspStage?.CurModel;
+                if (curModel != null && !string.IsNullOrEmpty(curModel.InspectImagePath))
+                {
+                    return Path.GetFileName(curModel.InspectImagePath);
+                }
+            }
+            catch (Exception)
+            {
+                // 예외 발생 시 빈 문자열 반환
+            }
+
+            return string.Empty;
         }
     }
 }

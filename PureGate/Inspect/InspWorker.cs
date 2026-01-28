@@ -52,6 +52,8 @@ namespace PureGate.Inspect
             Model curMode = Global.Inst.InspStage.CurModel;
             List<InspWindow> inspWindowList = curMode.InspWindowList;
 
+            SLogger.Write($"[InspWorker] RunInspect started - Model: {curMode?.ModelName}, Windows: {inspWindowList?.Count}");
+
             try
             {
                 foreach (var inspWindow in inspWindowList)
@@ -76,6 +78,40 @@ namespace PureGate.Inspect
                 var ngStats = new Dictionary<string, int>();
 
                 foreach (var inspWindow in inspWindowList)
+                // 3. ✅ [핵심] 상단에서 에러가 나도 이곳은 '무조건' 실행됩니다.
+                //     - isDefect 전역 결과 체크
+                //     - ResultForm & CameraForm 업데이트
+
+                // isDefect 계산
+                foreach (var window in inspWindowList)
+                {
+                    if (window.InspResultList.Count > 0)
+                    {
+                        bool anyDefect = window.InspResultList.Any(r => r.IsDefect);
+                        if (anyDefect) isDefect = true;
+                    }
+                }
+
+                // 로그 출력
+                if (isDefect)
+                {
+                    SLogger.Write($"UI_CHECK: isDefect=true 이므로 무조건 NG가 떠야 합니다.", SLogger.LogType.Info);
+                }
+                else
+                {
+                    SLogger.Write($"UI_CHECK: isDefect=false 이므로 무조건 OK가 떠야 합니다.", SLogger.LogType.Info);
+                }
+
+                // 4. ✅ ResultForm 업데이트
+                SLogger.Write($"[InspWorker] Attempting to update ResultForm...");
+                ResultForm resultForm = MainForm.GetDockForm<ResultForm>();
+                if (resultForm != null)
+                {
+                    SLogger.Write($"[InspWorker] ResultForm found! Calling AddModelResult...");
+                    resultForm.AddModelResult(curMode);
+                    SLogger.Write($"[InspWorker] AddModelResult completed");
+                }
+                else
                 {
                     if (inspWindow == null) continue;
                     totalCnt++;
@@ -156,9 +192,14 @@ namespace PureGate.Inspect
                 if (cameraForm != null)
                 {
                     cameraForm.SetInspResultCount(totalCnt, okCnt, ngCnt);
+                    string finalResult = isDefect ? "NG" : "OK";
+                    SLogger.Write($"UI_CHECK: Result is {finalResult}", SLogger.LogType.Info);
+
                     cameraForm.ShowResultOnScreen(!isDefect);
                 }
             }
+
+            SLogger.Write($"[InspWorker] RunInspect completed");
             return true;
         }
 

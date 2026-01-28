@@ -1,4 +1,4 @@
-﻿namespace PureGate
+namespace PureGate
 {
     partial class CountForm
     {
@@ -28,7 +28,6 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.dockPanel1 = new WeifenLuo.WinFormsUI.Docking.DockPanel();
             this.SuspendLayout();
             // 
             // dockPanel1
@@ -47,6 +46,7 @@
             this.ClientSize = new System.Drawing.Size(640, 375);
             this.Controls.Add(this.dockPanel1);
             this.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.ClientSize = new System.Drawing.Size(800, 450);
             this.Name = "CountForm";
             this.Text = "CountForm";
             this.ResumeLayout(false);
@@ -54,7 +54,5 @@
         }
 
         #endregion
-
-        private WeifenLuo.WinFormsUI.Docking.DockPanel dockPanel1;
     }
 }

@@ -149,6 +149,12 @@
     <Compile Include="NewModel.Designer.cs">
       <DependentUpon>NewModel.cs</DependentUpon>
     </Compile>
+    <Compile Include="UIControl\RecentNGimages.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UIControl\RecentNGimages.Designer.cs">
+      <DependentUpon>RecentNGimages.cs</DependentUpon>
+    </Compile>
     <Compile Include="Inspect\NgClassCount.cs" />
     <Compile Include="Util\NoToolWindowCaptionTheme.cs">
       <SubType>Component</SubType>
@@ -317,6 +323,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Property\MatchInspProp.resx">
       <DependentUpon>MatchInspProp.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ResultForm.resx">
+      <DependentUpon>ResultForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="RunForm.resx">
       <DependentUpon>RunForm.cs</DependentUpon>
