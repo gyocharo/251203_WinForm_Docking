@@ -200,12 +200,6 @@ namespace PureGate.Core
             VisionSequence.Inst.InitSequence();
             VisionSequence.Inst.SeqCommand += SeqCommand;
 
-            //#16_LAST_MODELOPEN#5 마지막 모델 열기 여부 확인
-            if (!LastestModelOpen())
-            {
-                MessageBox.Show("모델 열기 실패!");
-            }
-
             return true;
         }
 

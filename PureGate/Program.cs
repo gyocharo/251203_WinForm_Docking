@@ -43,13 +43,16 @@ namespace PureGate
             // 4) Core 초기화
             loading.SetActiveStep(0);
             loading.SetStatus("Initializing Core Services...");
+            loading.Refresh();
             Application.DoEvents();
             Global.Inst.Initialize();
 
-            // 5) 최근 모델 로드
+            // 5) 최근 모델 로드 (✅ 여기서만!)
             loading.SetActiveStep(1);
             loading.SetStatus("Loading Inspection Model...");
+            loading.Refresh();              // ✅ 단계 표시 먼저 강제 갱신
             Application.DoEvents();
+
             Global.Inst.InspStage.LastestModelOpen(loading);
 
             // 6) 마무리
