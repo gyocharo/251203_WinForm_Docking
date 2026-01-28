@@ -212,7 +212,7 @@ namespace PureGate
             if (_isClosing)
                 return;
 
-            DialogResult result = MessageBox.Show(
+            DialogResult result = MsgBox.Show(
                 "프로그램을 종료하시겠습니까?",
                 "종료 확인",
                 MessageBoxButtons.YesNo,
@@ -299,7 +299,7 @@ namespace PureGate
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"로드 세팅 실패: {ex.Message}");
+                MsgBox.Show($"로드 세팅 실패: {ex.Message}");
             }
         }
 
@@ -312,7 +312,7 @@ namespace PureGate
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"레이아웃 초기화 실패: {ex.Message}");
+                MsgBox.Show($"레이아웃 초기화 실패: {ex.Message}");
             }
         }
 
@@ -327,7 +327,7 @@ namespace PureGate
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"사이클모드 실행/취소 실패: {ex.Message}");
+                MsgBox.Show($"사이클모드 실행/취소 실패: {ex.Message}");
             }
         }
 
@@ -341,7 +341,7 @@ namespace PureGate
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"환경설정창 열기 실패: {ex.Message}");
+                MsgBox.Show($"환경설정창 열기 실패: {ex.Message}");
             }
         }
 
@@ -569,7 +569,7 @@ namespace PureGate
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
+                MsgBox.Show(
                     $"모델 디렉터리 준비 실패:\n{ex.Message}",
                     "오류",
                     MessageBoxButtons.OK,
@@ -586,7 +586,7 @@ namespace PureGate
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
+                MsgBox.Show(
                     $"모델 디렉터리 준비 실패:\n{SettingXml.Inst.ModelDir}\n{ex.Message}",
                     "오류",
                     MessageBoxButtons.OK,
@@ -624,7 +624,7 @@ namespace PureGate
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
+                MsgBox.Show(
                     $"모델 저장 실패:\n{ex.Message}",
                     "오류",
                     MessageBoxButtons.OK,
@@ -644,7 +644,7 @@ namespace PureGate
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
+                MsgBox.Show(
                     $"모델 디렉터리 준비 실패:\n{SettingXml.Inst.ModelDir}\n{ex.Message}",
                     "오류",
                     MessageBoxButtons.OK,
@@ -668,7 +668,7 @@ namespace PureGate
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show(
+                        MsgBox.Show(
                             $"모델 저장 실패:\n{ex.Message}",
                             "오류",
                             MessageBoxButtons.OK,
@@ -685,7 +685,7 @@ namespace PureGate
             // 모델 객체 자체가 없거나
             if (stage?.CurModel == null)
             {
-                MessageBox.Show("모델을 오픈하거나 새로 만든 다음에 해주세요.", "안내",
+                MsgBox.Show("모델을 오픈하거나 새로 만든 다음에 해주세요.", "안내",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return false;
             }
@@ -693,7 +693,7 @@ namespace PureGate
             // 핵심: ModelPath가 비어있으면 '진짜로 열린 모델'이 아님
             if (string.IsNullOrWhiteSpace(stage.CurModel.ModelPath))
             {
-                MessageBox.Show("모델을 오픈하거나 새로 만든 다음에 해주세요.", "안내",
+                MsgBox.Show("모델을 오픈하거나 새로 만든 다음에 해주세요.", "안내",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return false;
             }

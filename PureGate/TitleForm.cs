@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using WeifenLuo.WinFormsUI.Docking;
+using PureGate.UIControl;
 
 namespace PureGate
 {
@@ -55,7 +56,7 @@ namespace PureGate
             // 2. 날짜 범위 유효성 체크 (끝날짜가 시작날짜보다 빠르면 경고)
             if (end < start)
             {
-                MessageBox.Show("끝 날짜는 시작 날짜보다 빠를 수 없습니다.", "날짜 범위 오류", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MsgBox.Show("끝 날짜는 시작 날짜보다 빠를 수 없습니다.", "날짜 범위 오류", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 

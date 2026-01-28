@@ -15,6 +15,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using PureGate.UIControl;
 
 namespace PureGate.Property
 {
@@ -192,7 +193,7 @@ namespace PureGate.Property
 
             if (string.IsNullOrEmpty(_modelPath))
             {
-                MessageBox.Show("모델 파일을 선택해주세요.", "오류", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MsgBox.Show("모델 파일을 선택해주세요.", "오류", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
@@ -203,7 +204,7 @@ namespace PureGate.Property
 
                 if (modelInfo == null)
                 {
-                    MessageBox.Show("모델 정보가 null입니다.", "오류", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MsgBox.Show("모델 정보가 null입니다.", "오류", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
                 ResetStats();
@@ -215,7 +216,7 @@ namespace PureGate.Property
                 if (ex.InnerException != null)
                     msg += "\nInner: " + ex.InnerException.Message;
 
-                MessageBox.Show(msg, "모델 로딩 실패");
+                MsgBox.Show(msg, "모델 로딩 실패");
             }
         }
 

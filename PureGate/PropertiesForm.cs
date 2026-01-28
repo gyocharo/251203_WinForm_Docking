@@ -106,7 +106,7 @@ namespace PureGate
                     curProp = aiModuleProp;
                     break;
                 default:
-                    MessageBox.Show("유효하지 않은 옵션입니다.");
+                    MsgBox.Show("유효하지 않은 옵션입니다.");
                     return null;
             }
             return curProp;

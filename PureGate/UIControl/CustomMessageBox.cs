@@ -66,9 +66,30 @@ namespace PureGate.UIControl
             string finalYes = (buttons == MsgButtons.Ok) ? okText : yesText;
             string finalNo = (buttons == MsgButtons.Ok) ? null : noText;
 
-            using (var dlg = new CustomMessageBox(owner, title, message, detail, buttons, finalYes, finalNo, leftIcon))
+            DimOverlayForm dim = null;
+
+            try
             {
-                return owner != null ? dlg.ShowDialog(owner) : dlg.ShowDialog();
+                var ownerForm = owner as Form;
+                if (ownerForm != null && !ownerForm.IsDisposed && ownerForm.Visible)
+                {
+                    dim = new DimOverlayForm(ownerForm);
+                    dim.Show(ownerForm);      // owner 기준으로 딤 띄움
+                    dim.BringToFront();       // 딤을 최상단으로
+                }
+
+                using (var dlg = new CustomMessageBox(owner, title, message, detail, buttons, finalYes, finalNo, leftIcon))
+                {
+                    return owner != null ? dlg.ShowDialog(owner) : dlg.ShowDialog();
+                }
+            }
+            finally
+            {
+                if (dim != null)
+                {
+                    dim.Close();
+                    dim.Dispose();
+                }
             }
         }
 

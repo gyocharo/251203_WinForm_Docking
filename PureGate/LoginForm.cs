@@ -160,7 +160,7 @@ namespace PureGate
                 VisitedLinkColor = Color.FromArgb(70, 145, 210),
                 LinkBehavior = LinkBehavior.HoverUnderline
             };
-            lnkForgot.LinkClicked += (s, e) => MessageBox.Show("비밀번호 찾기 기능 연결하면 됨");
+            lnkForgot.LinkClicked += (s, e) => MsgBox.Show("비밀번호 찾기 기능 연결하면 됨");
             Controls.Add(lnkForgot);
 
             #endregion
@@ -213,7 +213,7 @@ namespace PureGate
 
             if (string.IsNullOrWhiteSpace(pw))
             {
-                MessageBox.Show("비밀번호를 입력하세요.");
+                MsgBox.Show("비밀번호를 입력하세요.");
                 return;
             }
 
@@ -225,7 +225,7 @@ namespace PureGate
             }
             else
             {
-                MessageBox.Show("비밀번호가 틀렸습니다.");
+                MsgBox.Show("비밀번호가 틀렸습니다.");
                 pwBox.ClearAndFocus();
             }
         }

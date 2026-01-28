@@ -20,6 +20,7 @@ using Microsoft.Win32;
 using PureGate.Util;
 using System.Windows.Forms;
 using PureGate.Sequence;
+using PureGate.UIControl;
 
 namespace PureGate.Core
 {
@@ -745,7 +746,7 @@ namespace PureGate.Core
             if (string.IsNullOrWhiteSpace(lastestModel) || !File.Exists(lastestModel))
                 return true;
 
-            var result = MessageBox.Show(
+			var result = MsgBox.Show(
                 owner,
                 $"최근 모델을 로딩할까요?\r\n{lastestModel}",
                 "Question",
@@ -1113,7 +1114,7 @@ namespace PureGate.Core
             if (modelPath == "")
             {
                 SLogger.Write("열려진 모델이 없습니다!", SLogger.LogType.Error);
-                MessageBox.Show("열려진 모델이 없습니다!");
+                MsgBox.Show("열려진 모델이 없습니다!");
                 return false;
             }
 
