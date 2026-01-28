@@ -25,6 +25,13 @@ namespace PureGate.UIControl
         public RecentNGimages()
         {
             InitializeComponent();
+            // ✅ Double Buffering 활성화 - 깜빡임 방지
+            this.DoubleBuffered = true;
+            this.SetStyle(ControlStyles.OptimizedDoubleBuffer |
+                          ControlStyles.AllPaintingInWmPaint |
+                          ControlStyles.UserPaint, true);
+            this.UpdateStyles();
+
             InitializeNGThumbnailUI();
 
             // ✅ InspStage의 NG 이미지 저장 이벤트 구독
@@ -55,6 +62,11 @@ namespace PureGate.UIControl
                 Padding = new Padding(4),
                 WrapContents = true
             };
+
+            // ✅ FlowLayoutPanel에도 Double Buffering 적용
+            flowThumbnails.GetType()
+                .GetProperty("DoubleBuffered", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                ?.SetValue(flowThumbnails, true);
 
             // 컨트롤 추가
             this.Controls.Add(flowThumbnails);
@@ -89,12 +101,20 @@ namespace PureGate.UIControl
 
             try
             {
+                // ✅ UI 업데이트 일시 중단 - 깜빡임 방지
+                flowThumbnails.SuspendLayout();
                 // 기존 썸네일 제거
                 foreach (Control ctrl in flowThumbnails.Controls)
                 {
-                    if (ctrl is PictureBox pb && pb.Image != null)
+                    if (ctrl is Panel panel)
                     {
-                        pb.Image.Dispose();
+                        foreach (Control child in panel.Controls)
+                        {
+                            if (child is PictureBox pb && pb.Image != null)
+                            {
+                                pb.Image.Dispose();
+                            }
+                        }
                     }
                     ctrl.Dispose();
                 }
@@ -137,6 +157,12 @@ namespace PureGate.UIControl
             catch (Exception ex)
             {
                 SLogger.Write($"[RecentNGimages] NG 이미지 로드 실패: {ex.Message}", SLogger.LogType.Error);
+            }
+            finally
+            {
+                // ✅ UI 업데이트 재개
+                flowThumbnails.ResumeLayout();
+                flowThumbnails.PerformLayout();
             }
         }
 
@@ -291,16 +317,22 @@ namespace PureGate.UIControl
         private void CleanupResources()
         {
             // ✅ 이벤트 구독 해제
-            InspStage.NGImageSaved -= OnNGImageSaved;            
+            InspStage.NGImageSaved -= OnNGImageSaved;
 
             // 모든 썸네일 이미지 해제
             if (flowThumbnails != null)
             {
                 foreach (Control ctrl in flowThumbnails.Controls)
                 {
-                    if (ctrl is PictureBox pb && pb.Image != null)
+                    if (ctrl is Panel panel)
                     {
-                        pb.Image.Dispose();
+                        foreach (Control child in panel.Controls)
+                        {
+                            if (child is PictureBox pb && pb.Image != null)
+                            {
+                                pb.Image.Dispose();
+                            }
+                        }
                     }
                 }
             }
