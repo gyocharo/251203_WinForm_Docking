@@ -1,3 +1,5 @@
+using PureGate.Core;
+using PureGate.Util;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -8,7 +10,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using PureGate.Util;
 
 namespace PureGate.UIControl
 {
@@ -19,13 +20,15 @@ namespace PureGate.UIControl
         private System.Windows.Forms.Timer timerRefresh;
         private const int MAX_THUMBNAILS = 10;
         private const int THUMBNAIL_SIZE = 80;
-        private const string NG_ROOT_PATH = @"D:\NG";
+        
 
         public RecentNGimages()
         {
             InitializeComponent();
             InitializeNGThumbnailUI();
-            StartAutoRefresh();
+
+            // ✅ InspStage의 NG 이미지 저장 이벤트 구독
+            InspStage.NGImageSaved += OnNGImageSaved;
         }
 
         private void InitializeNGThumbnailUI()
@@ -60,18 +63,22 @@ namespace PureGate.UIControl
             // 초기 로드
             LoadRecentNGImages();
         }
-
-        private void StartAutoRefresh()
+        // ✅ NG 이미지가 저장될 때 호출되는 이벤트 핸들러
+        private void OnNGImageSaved(string imagePath)
         {
-            // 5초마다 자동 갱신
-            timerRefresh = new System.Windows.Forms.Timer
+            // UI 스레드에서 실행되도록 보장
+            if (this.InvokeRequired)
             {
-                Interval = 5000
-            };
-            timerRefresh.Tick += (s, e) => LoadRecentNGImages();
-            timerRefresh.Start();
-        }
+                this.BeginInvoke(new Action<string>(OnNGImageSaved), imagePath);
+                return;
+            }
 
+            // 썸네일 목록 갱신
+            LoadRecentNGImages();
+
+            SLogger.Write($"[RecentNGimages] NG 이미지 갱신: {Path.GetFileName(imagePath)}", SLogger.LogType.Info);
+        }
+        
         private void LoadRecentNGImages()
         {
             if (this.InvokeRequired)
@@ -93,15 +100,23 @@ namespace PureGate.UIControl
                 }
                 flowThumbnails.Controls.Clear();
 
+                // ✅ 프로젝트 루트 경로 계산
+                string baseDir = AppContext.BaseDirectory;
+                var di = new DirectoryInfo(baseDir);
+                for (int i = 0; i < 4 && di.Parent != null; i++)
+                    di = di.Parent;
+                string projectRoot = di.FullName;
+                string ngRootPath = Path.Combine(projectRoot, "NG");
+
                 // NG 폴더가 없으면 종료
-                if (!Directory.Exists(NG_ROOT_PATH))
+                if (!Directory.Exists(ngRootPath))
                 {
                     AddNoImageLabel();
                     return;
                 }
 
                 // 모든 NG 이미지 파일 수집 (최신순)
-                var imageFiles = Directory.GetFiles(NG_ROOT_PATH, "*.jpg", SearchOption.AllDirectories)
+                var imageFiles = Directory.GetFiles(ngRootPath, "*.jpg", SearchOption.AllDirectories)
                     .Select(f => new FileInfo(f))
                     .OrderByDescending(fi => fi.LastWriteTime)
                     .Take(MAX_THUMBNAILS)
@@ -275,12 +290,8 @@ namespace PureGate.UIControl
 
         private void CleanupResources()
         {
-            if (timerRefresh != null)
-            {
-                timerRefresh.Stop();
-                timerRefresh.Dispose();
-                timerRefresh = null;
-            }
+            // ✅ 이벤트 구독 해제
+            InspStage.NGImageSaved -= OnNGImageSaved;            
 
             // 모든 썸네일 이미지 해제
             if (flowThumbnails != null)

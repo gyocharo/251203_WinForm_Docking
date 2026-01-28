@@ -66,6 +66,9 @@ namespace PureGate.Core
 
         private string _loadedImageDir = "";
 
+        //NG 이미지가 저장되면, 저장된 파일 경로(string)를 알려주는 이벤트
+        public static event Action<string> NGImageSaved;
+
         public InspStage() { }
 
         public ImageSpace ImageSpace
@@ -884,14 +887,22 @@ namespace PureGate.Core
                 string root;
                 string targetDir;
 
+                // ✅ exe 폴더 기준 상위 4단계(=프로젝트 루트쪽) 경로 구하기
+                string baseDir = AppContext.BaseDirectory; // exe 있는 폴더
+                var di = new DirectoryInfo(baseDir);
+                for (int i = 0; i < 4 && di.Parent != null; i++)
+                    di = di.Parent;
+
+                string projectRoot = di.FullName;
+
                 if (string.Equals(label, "Good", StringComparison.OrdinalIgnoreCase))
                 {
-                    root = @"D:\Good";
+                    root = Path.Combine(projectRoot, "Good");
                     targetDir = Path.Combine(root, dateFolder);
                 }
                 else
                 {
-                    root = @"D:\NG";
+                    root = Path.Combine(projectRoot, "NG");
                     targetDir = Path.Combine(root, safeLabel, dateFolder);
                 }
 
@@ -910,6 +921,13 @@ namespace PureGate.Core
                 }
 
                 SLogger.Write($"[AI-CLS Save] {label}({score:0.000}) -> {fullPath}", SLogger.LogType.Info);
+
+                // ✅ NG 이미지인 경우에만 이벤트 발생
+                if (!string.Equals(label, "Good", StringComparison.OrdinalIgnoreCase))
+                {
+                    NGImageSaved?.Invoke(fullPath);
+                }
+
             }
             catch (Exception ex)
             {
