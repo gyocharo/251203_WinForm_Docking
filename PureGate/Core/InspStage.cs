@@ -165,50 +165,58 @@ namespace PureGate.Core
             }
         }
 
-        public bool Initialize()
+        public bool Initialize(Action<double, string> progress = null)
         {
+            void Report(double p, string s = null)
+            {
+                progress?.Invoke(p, s);
+            }
+
+            Report(3, "Loading settings...");
             LoadSetting();
 
-            SLogger.Write("InspStage 초기화!");
+            Report(8, "Initializing image buffers...");
             _imageSpace = new ImageSpace();
 
+            Report(13, "Preparing preview...");
             _previewImage = new PreviewImage();
 
-            //#15_INSP_WORKER#7 InspWorker 인스턴스 생성
+            Report(18, "Starting inspection worker...");
             _inspWorker = new InspWorker();
             _imageLoader = new ImageLoader();
 
-            //#16_LAST_MODELOPEN#2 REGISTRY 키 생성
+            Report(24, "Loading registry...");
             _regKey = Registry.CurrentUser.CreateSubKey("Software\\WinDocking");
 
+            Report(30, "Creating model instance...");
             _model = new Model();
 
+            Report(33, "Loading settings...");
             LoadSetting();
 
+            Report(38, "Initializing camera...");
             switch (_camType)
             {
                 case CameraType.WebCam:
-                    {
-                        _grabManager = new WebCam();
-                        break;
-                    }
+                    _grabManager = new WebCam();
+                    break;
                 case CameraType.HikRobot:
-                    {
-                        _grabManager = new HikRobotCam();
-                        break;
-                    }
+                    _grabManager = new HikRobotCam();
+                    break;
             }
 
-            if (_grabManager != null &&_grabManager.InitGrab() == true)
+            Report(45, "Allocating grab buffers...");
+            if (_grabManager != null && _grabManager.InitGrab() == true)
             {
                 _grabManager.TransferCompleted += _multiGrab_TransferCompleted;
-
                 InitModelGrab(MAX_GRAB_BUF);
             }
 
+            Report(52, "Initializing sequence...");
             VisionSequence.Inst.InitSequence();
             VisionSequence.Inst.SeqCommand += SeqCommand;
 
+            Report(55, "Core services ready");
             return true;
         }
 
@@ -1428,6 +1436,53 @@ namespace PureGate.Core
             // (선택) 메인폼에서도 갱신하고 싶으면
             //MainForm.Instance?.UpdateStatisticsUI(_okCount, _ngCount, donutList);
             System.Diagnostics.Debug.WriteLine("[DONUT_KEYS] " + string.Join(" | ", _donutStats.Keys.Select(k => $"'{k}'")));
+        }
+
+        public bool LastestModelOpenWithProgress(LoadingForm loading, double startPercent, double endPercent)
+        {
+            if (_lastestModelOpen) return true;
+            _lastestModelOpen = true;
+
+            if (_regKey == null) return true;
+
+            string lastestModel = _regKey.GetValue("LastestModelPath") as string;
+            if (string.IsNullOrWhiteSpace(lastestModel) || !File.Exists(lastestModel))
+            {
+                loading?.SetProgress(endPercent);
+                return true;
+            }
+
+            loading?.SetProgress(startPercent + (endPercent - startPercent) * 0.15);
+            loading?.SetStatus("Checking latest model...");
+            loading?.Refresh();
+            Application.DoEvents();
+
+            var result = MsgBox.Show(
+                loading,
+                $"최근 모델을 로딩할까요?\r\n{lastestModel}",
+                "Question",
+                MessageBoxButtons.YesNo);
+
+            if (result == DialogResult.No)
+            {
+                loading?.SetProgress(endPercent);
+                return true;
+            }
+
+            loading?.SetProgress(startPercent + (endPercent - startPercent) * 0.35);
+            loading?.SetStatus("Reading model file...");
+            loading?.Refresh();
+            Application.DoEvents();
+
+            bool ok = LoadModel(lastestModel);
+
+            loading?.SetProgress(startPercent + (endPercent - startPercent) * 0.75);
+            loading?.SetStatus("Applying model & AI...");
+            loading?.Refresh();
+            Application.DoEvents();
+
+            loading?.SetProgress(endPercent);
+            return ok;
         }
 
         #region Disposable

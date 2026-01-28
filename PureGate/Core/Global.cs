@@ -34,10 +34,10 @@ namespace PureGate.Core
         {
         }
 
-        public void Initialize()
+        public void Initialize(Action<double, string> progress = null)
         {
-            LoginUserId = LoginUserId ?? "";  
-            _stage.Initialize();
+            LoginUserId = LoginUserId ?? "";
+            _stage.Initialize(progress);
         }
 
         public void Dispose()
