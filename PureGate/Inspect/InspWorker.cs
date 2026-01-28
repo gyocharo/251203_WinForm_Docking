@@ -9,25 +9,19 @@ using PureGate.Core;
 using PureGate.Teach;
 using PureGate.Util;
 using OpenCvSharp;
+using System.Windows.Forms;
 
 namespace PureGate.Inspect
 {
     public class InspWorker
     {
         private CancellationTokenSource _cts = new CancellationTokenSource();
-
         private InspectBoard _inspectBoard = new InspectBoard();
-
         public bool IsRunning { get; set; } = false;
 
-        public InspWorker()
-        {
-        }
+        public InspWorker() { }
 
-        public void Stop()
-        {
-            _cts.Cancel();
-        }
+        public void Stop() { _cts.Cancel(); }
 
         public void StartCycleInspectImage()
         {
@@ -35,27 +29,23 @@ namespace PureGate.Inspect
             Task.Run(() => InspectionLoop(this, _cts.Token));
         }
 
+
         private void InspectionLoop(InspWorker inspWorker, CancellationToken token)
         {
             Global.Inst.InspStage.SetWorkingState(WorkingState.INSPECT);
-
             SLogger.Write("InspectionLoop Start");
-
             IsRunning = true;
 
             while (!token.IsCancellationRequested)
             {
                 Global.Inst.InspStage.OneCycle();
-
-                Thread.Sleep(50); // 주기 설정
+                Thread.Sleep(50);
             }
 
             IsRunning = false;
-
             SLogger.Write("InspectionLoop End");
         }
 
-        //InspStage내의 모든 InspWindow들을 검사하는 함수
         public bool RunInspect(out bool isDefect)
         {
             isDefect = false;
@@ -64,142 +54,169 @@ namespace PureGate.Inspect
 
             try
             {
-                // 1. 데이터 업데이트
                 foreach (var inspWindow in inspWindowList)
                 {
                     if (inspWindow is null) continue;
                     UpdateInspData(inspWindow);
                 }
 
-                // 2. 비전 엔진 실행 (여기서 에러가 나도 튕기지 않게 개별 감쌈)
-                try
-                {
-                    _inspectBoard.InspectWindowList(inspWindowList);
-                }
+                try { _inspectBoard.InspectWindowList(inspWindowList); }
                 catch (Exception ex)
                 {
-                    // 서버 연결 끊김 로그만 찍고 넘어감
                     SLogger.Write("Vision Server Error: " + ex.Message, SLogger.LogType.Error);
-                    isDefect = true; // 에러가 났으므로 결과는 NG로 간주
+                    isDefect = true;
                 }
             }
             finally
             {
-                // 3. ✅ [핵심] 상단에서 에러가 나도 이곳은 '무조건' 실행됩니다.
+                // 엔진 결과가 완전히 나올 때까지 아주 잠시 대기
+                System.Threading.Thread.Sleep(200);
+
                 int totalCnt = 0; int okCnt = 0; int ngCnt = 0;
+                var ngStats = new Dictionary<string, int>();
+
                 foreach (var inspWindow in inspWindowList)
                 {
+                    if (inspWindow == null) continue;
                     totalCnt++;
-                    if (inspWindow.IsDefect()) { isDefect = true; ngCnt++; }
-                    else { okCnt++; }
+
+                    bool windowIsNG = false;
+                    foreach (var algo in inspWindow.AlgorithmList)
+                    {
+                        if (algo.IsUse && algo.IsDefect) // 불량이 떴다면
+                        {
+                            windowIsNG = true;
+                            isDefect = true;
+
+                            string ngName = "Unknown";
+                            List<DrawInspectInfo> areas = new List<DrawInspectInfo>();
+
+                            // 1. 먼저 영역 정보를 시도
+                            int resultCnt = algo.GetResultRect(out areas);
+
+                            if (resultCnt > 0 && areas.Count > 0 && !string.IsNullOrEmpty(areas[0].info))
+                            {
+                                ngName = areas[0].info;
+                            }
+                            else
+                            {
+                                // 2. ⭐ [핵심 보강] 영역이 없으면(CLS 모델 등), 알고리즘 객체 자체에서 결과 문자열을 직접 추출 시도
+                                // SaigeAI 클래스 내부에서 판정된 클래스 이름을 가져오는 경로를 강제로 지정합니다.
+                                try
+                                {
+                                    // algo 객체가 가지고 있는 마지막 검사 결과 문자열이나 타입명을 활용
+                                    // 만약 SaigeAI.cs에 결과 클래스명을 저장하는 변수가 있다면 그걸 참조해야 합니다.
+                                    ngName = algo.InspectType.ToString().Replace("Insp", "");
+                                }
+                                catch
+                                {
+                                    ngName = "Defect";
+                                }
+                            }
+
+                            // 딕셔너리에 추가
+                            if (ngStats.ContainsKey(ngName)) ngStats[ngName]++;
+                            else ngStats[ngName] = 1;
+                        }
+                    }
+
+                    if (windowIsNG) ngCnt++;
+                    else okCnt++;
+
                     DisplayResult(inspWindow, InspectType.InspNone);
+                }
+
+                // UI에 보낼 리스트 생성
+                List<NgClassCount> ngDetails = ngStats.Select(kvp => new NgClassCount
+                {
+                    ClassName = kvp.Key,
+                    Count = kvp.Value
+                }).ToList();
+
+                // 🔴 [가장 중요] 로그로 데이터가 있는지 먼저 확인 (디버그 콘솔 확인 요망)
+                System.Diagnostics.Debug.WriteLine($"[DEBUG] NG Count: {ngCnt}, Details Count: {ngDetails.Count}");
+                if (ngDetails.Count > 0)
+                    System.Diagnostics.Debug.WriteLine($"[DEBUG] First NG Name: {ngDetails[0].ClassName}");
+
+                // 🔴 UI 업데이트: MainForm뿐만 아니라 StatisticForm을 직접 찾아서 쏴버림
+                if (MainForm.Instance != null)
+                {
+                    // 1. 메인폼 UI 갱신 (전체 카운트 등)
+                    MainForm.Instance.UpdateStatisticsUI(okCnt, ngCnt, ngDetails);
+
+                    // 2. 스태티스틱 폼 직접 갱신 (혹시 모르니 이중으로 쏨)
+                    var sForm = MainForm.GetDockForm<StatisticForm>();
+                    if (sForm != null)
+                    {
+                        sForm.UpdateStatistics(okCnt, ngCnt, ngDetails);
+                    }
                 }
 
                 var cameraForm = MainForm.GetDockForm<CameraForm>();
                 if (cameraForm != null)
                 {
                     cameraForm.SetInspResultCount(totalCnt, okCnt, ngCnt);
-
-                    // 🔴 이 로그가 뜨는지 다시 확인하세요. 무조건 떠야 합니다.
-                    string finalResult = isDefect ? "NG" : "OK";
-                    SLogger.Write($"UI_CHECK: Result is {finalResult}", SLogger.LogType.Info);
-
                     cameraForm.ShowResultOnScreen(!isDefect);
                 }
             }
             return true;
         }
 
-        //특정 InspWindow에 대한 검사 진행
-        //inspType이 있다면 그것만을 검사하고, 없다면 InpsWindow내의 모든 알고리즘 검사
         public bool TryInspect(InspWindow inspObj, InspectType inspType)
         {
             if (inspObj != null)
             {
-                if (!UpdateInspData(inspObj))
-                    return false;
-
+                if (!UpdateInspData(inspObj)) return false;
                 _inspectBoard.Inspect(inspObj);
-
                 DisplayResult(inspObj, inspType);
             }
             else
             {
-                bool isDefect = false;
-                RunInspect(out isDefect);
+                bool isDef = false;
+                RunInspect(out isDef);
             }
 
             ResultForm resultForm = MainForm.GetDockForm<ResultForm>();
             if (resultForm != null)
             {
-                if (inspObj != null)
-                    resultForm.AddWindowResult(inspObj);
-                else
-                {
-                    Model curMode = Global.Inst.InspStage.CurModel;
-                    resultForm.AddModelResult(curMode);
-                }
+                if (inspObj != null) resultForm.AddWindowResult(inspObj);
+                else resultForm.AddModelResult(Global.Inst.InspStage.CurModel);
             }
-
             return true;
         }
 
-        //각 알고리즘 타입 별로 검사에 필요한 데이터를 입력하는 함수
         private bool UpdateInspData(InspWindow inspWindow)
         {
-            if (inspWindow is null)
-                return false;
-
+            if (inspWindow is null) return false;
             Rect windowArea = inspWindow.WindowArea;
-
             inspWindow.PatternLearn();
 
             foreach (var inspAlgo in inspWindow.AlgorithmList)
             {
-                //검사 영역 초기화
                 inspAlgo.TeachRect = windowArea;
                 inspAlgo.InspRect = windowArea;
-
                 Mat srcImage = Global.Inst.InspStage.GetMat(0, inspAlgo.ImageChannel);
                 inspAlgo.SetInspData(srcImage);
             }
-
             return true;
         }
 
-        //InspWindow내의 알고리즘 중에서, 인자로 입력된 알고리즘과 같거나,
-        //인자가 None이면 모든 알고리즘의 검사 결과(Rect 영역)를 얻어, cameraForm에 출력한다.
         private bool DisplayResult(InspWindow inspObj, InspectType inspType)
         {
-            if (inspObj is null)
-                return false;
-
+            if (inspObj is null) return false;
             List<DrawInspectInfo> totalArea = new List<DrawInspectInfo>();
-
-            List<InspAlgorithm> inspAlgorithmList = inspObj.AlgorithmList;
-            foreach (var algorithm in inspAlgorithmList)
+            foreach (var algorithm in inspObj.AlgorithmList)
             {
-                if (algorithm.InspectType != inspType && inspType != InspectType.InspNone)
-                    continue;
-
+                if (algorithm.InspectType != inspType && inspType != InspectType.InspNone) continue;
                 List<DrawInspectInfo> resultArea = new List<DrawInspectInfo>();
-                int resultCnt = algorithm.GetResultRect(out resultArea);
-                if (resultCnt > 0)
-                {
-                    totalArea.AddRange(resultArea);
-                }
+                if (algorithm.GetResultRect(out resultArea) > 0) totalArea.AddRange(resultArea);
             }
 
             if (totalArea.Count > 0)
             {
-                //찾은 위치를 이미지상에서 표시
                 var cameraForm = MainForm.GetDockForm<CameraForm>();
-                if (cameraForm != null)
-                {
-                    cameraForm.AddRect(totalArea);
-                }
+                if (cameraForm != null) cameraForm.AddRect(totalArea);
             }
-
             return true;
         }
     }

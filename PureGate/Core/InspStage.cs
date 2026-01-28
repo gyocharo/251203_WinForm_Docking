@@ -69,6 +69,8 @@ namespace PureGate.Core
         private int _okCount = 0;
         private int _ngCount = 0;
 
+        private List<NgClassCount> _ngClassList = new List<NgClassCount>();
+
         public InspStage() { }
 
         public ImageSpace ImageSpace
@@ -76,6 +78,7 @@ namespace PureGate.Core
             get => _imageSpace;
         }
 
+        private readonly Dictionary<string, int> _donutStats = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         public SaigeAI AIModule
         {
             get
@@ -776,35 +779,94 @@ namespace PureGate.Core
                         Bitmap resultImage = AIModule.GetResultImage();
                         UpdateDisplay(resultImage);
 
+
                         TrySaveClsResultImage(resultImage);
 
                         try
                         {
-                            if (AIModule.TryGetLastClsTop1(out string label, out float score) && !string.IsNullOrWhiteSpace(label))
+                            bool ok = true;                 // 기본 OK 처리(최소한 카운트는 증가)
+                            string label = "";
+                            float score = 0;
+
+                            var modelInfo = AIModule.GetModelInfo();
+
+                            // 1) 원래 방식: Top1 가져오기
+                            if (AIModule.TryGetLastClsTop1(out label, out score) && !string.IsNullOrWhiteSpace(label))
                             {
-                                bool ok = string.Equals(label, "Good", StringComparison.OrdinalIgnoreCase);
+                                // ✅ (중요) label 정규화: 공백/개행 제거 + "(점수)" 같은 꼬리 제거
+                                string rawLabel = label;
+                                label = label.Trim();
 
-                                // --- 기존 History 저장 로직 ---
-                                string modelName = "";
-                                if (CurModel != null && !string.IsNullOrWhiteSpace(CurModel.ModelPath))
-                                    modelName = Path.GetFileNameWithoutExtension(CurModel.ModelPath);
+                                int cutIdx = label.IndexOf('(');           // "cut_lead (85.0)" 케이스
+                                if (cutIdx >= 0) label = label.Substring(0, cutIdx).Trim();
 
-                                InspHistoryRepo.Append(new InspHistoryRecord
+                                cutIdx = label.IndexOf(' ');               // "cut_lead 85.0" 같이 공백으로 붙는 케이스
+                                if (cutIdx >= 0) label = label.Substring(0, cutIdx).Trim();
+
+                                bool isNg = false;
+
+                                if (modelInfo != null && modelInfo.ClassInfos != null && modelInfo.ClassIsNG != null)
                                 {
-                                    Time = DateTime.Now,
-                                    ModelName = modelName,
-                                    LotNumber = _lotNumber ?? "",
-                                    SerialID = _serialID ?? "",
-                                    Total = 1,
-                                    Ok = ok ? 1 : 0,
-                                    Ng = ok ? 0 : 1,
-                                    NgClass = ok ? "" : label,
-                                    Score = score
-                                });
+                                    // 1차: 완전일치
+                                    int idx = Array.FindIndex(modelInfo.ClassInfos,
+                                        c => string.Equals(c.Name?.Trim(), label, StringComparison.OrdinalIgnoreCase));
 
-                                // ✅ 추가된 코드: UI에 결과 전송 (메시지 박스 포함된 함수)
-                                UpdateResultUI(ok);
+                                    // 2차: 혹시라도 label이 좀 더 길게 들어오면 StartsWith로 한번 더
+                                    if (idx < 0)
+                                    {
+                                        idx = Array.FindIndex(modelInfo.ClassInfos,
+                                            c => (label ?? "").StartsWith(c.Name?.Trim() ?? "", StringComparison.OrdinalIgnoreCase));
+                                    }
+
+                                    if (idx >= 0 && idx < modelInfo.ClassIsNG.Length)
+                                        isNg = modelInfo.ClassIsNG[idx];
+
+                                    // 🔎 디버그 로그 (이거 꼭 남겨)
+                                    SLogger.Write($"[CLS] raw='{rawLabel}' -> norm='{label}', idx={idx}, isNg={isNg}, score={score:0.0}");
+                                }
+                                else
+                                {
+                                    // modelInfo가 없으면 fallback
+                                    isNg = !string.Equals(label, "Good", StringComparison.OrdinalIgnoreCase);
+                                    SLogger.Write($"[CLS] modelInfo null -> label='{label}', isNg={isNg}, score={score:0.0}");
+                                }
+
+                                ok = !isNg;
                             }
+                            else
+                            {
+                                label = "Unknown";
+                                ok = true; // Unknown을 NG로 잡고 싶으면 false로 바꿔
+                                SLogger.Write("[CLS] Top1 FAIL -> Unknown");
+                            }
+
+                            // --- 기존 History 저장 로직 ---
+                            string modelName = "";
+                            if (CurModel != null && !string.IsNullOrWhiteSpace(CurModel.ModelPath))
+                                modelName = Path.GetFileNameWithoutExtension(CurModel.ModelPath);
+
+                            InspHistoryRepo.Append(new InspHistoryRecord
+                            {
+                                Time = DateTime.Now,
+                                ModelName = modelName,
+                                LotNumber = _lotNumber ?? "",
+                                SerialID = _serialID ?? "",
+                                Total = 1,
+                                Ok = ok ? 1 : 0,
+                                Ng = ok ? 0 : 1,
+                                NgClass = ok ? "" : label,
+                                Score = score
+                            });
+
+                            // ✅ 통계 UI 갱신 (무조건 호출)
+                            var details = new List<NgClassCount>();
+                            if (!ok && !string.IsNullOrWhiteSpace(label) && label != "Unknown")
+                                details.Add(new NgClassCount { ClassName = label, Count = 1 });
+
+                            MainForm.Instance?.UpdateStatisticsUI(ok ? 1 : 0, ok ? 0 : 1, details);
+                            PushDonutStatsAndUpdateUI(ok, ok ? "" : label); //ROI 없이 CLS만 돌 때도 도넛이 OK + 클래스별로 쌓여요.
+                            var cForm = MainForm.GetDockForm<CameraForm>();
+                            if (cForm != null) cForm.ShowResultOnScreen(ok);
                         }
                         catch (Exception ex)
                         {
@@ -1102,24 +1164,86 @@ namespace PureGate.Core
 
         private void UpdateResultUI(bool isOK)
         {
-            // 카운트 변수는 반드시 클래스 상단에 'private int _okCount = 0;' 처럼 선언되어 있어야 합니다.
             if (isOK) _okCount++;
             else _ngCount++;
 
-            // 차트 갱신
-            var sForm = MainForm.GetDockForm<StatisticForm>();
-            if (sForm != null) sForm.UpdateStatistics(_okCount, _ngCount);
+            // ✅ NG일 때 대표 클래스명 1개 추출 (CLS면 label, ROI면 areas/info)
+            string ngName = "";
 
-            // 카메라 화면 알림
+            if (!isOK)
+            {
+                // ROI 검사 케이스: 모든 윈도우/알고리즘에서 IsDefect인 것들 클래스명 수집
+                foreach (var window in _model.InspWindowList)
+                {
+                    foreach (var algo in window.AlgorithmList)
+                    {
+                        if (algo.IsUse && algo.IsDefect)
+                        {
+                            List<DrawInspectInfo> areas;
+                            if (algo.GetResultRect(out areas) > 0 && areas != null && areas.Count > 0 && !string.IsNullOrWhiteSpace(areas[0].info))
+                            {
+                                ngName = areas[0].info; // ✅ 가장 우선
+                                break;
+                            }
+
+                            // fallback
+                            if (algo.ResultString != null && algo.ResultString.Count > 0)
+                            {
+                                ngName = algo.ResultString[0];
+                                break;
+                            }
+
+                            ngName = algo.InspectType.ToString().Replace("Insp", "");
+                            break;
+                        }
+                    }
+                    if (!string.IsNullOrWhiteSpace(ngName)) break;
+                }
+            }
+
+            // ✅ 도넛 통계 누적 + 폼 갱신 (OK도 도넛 데이터에 포함됨)
+            PushDonutStatsAndUpdateUI(isOK, ngName);
+
+            // 카메라 화면 알림(이건 아래 2번에서 “지울거면” 여기 호출을 꺼도 됨)
             var cForm = MainForm.GetDockForm<CameraForm>();
             if (cForm != null) cForm.ShowResultOnScreen(isOK);
-
-            // 이전에 넣었던 메시지 박스도 이제 뜰 겁니다!
-            // MessageBox.Show($"결과 반영됨: {isOK}"); 
         }
 
+        private void PushDonutStatsAndUpdateUI(bool isOk, string ngClassName)
+        {
+            // 1) 누적 카운트 업데이트
+            if (isOk)
+            {
+                if (_donutStats.ContainsKey("OK")) _donutStats["OK"]++;
+                else _donutStats["OK"] = 1;
+            }
+            else
+            {
+                // NG인데 클래스명이 비었으면 Unknown으로
+                string key = string.IsNullOrWhiteSpace(ngClassName) ? "Unknown" : ngClassName;
 
+                if (_donutStats.ContainsKey(key)) _donutStats[key]++;
+                else _donutStats[key] = 1;
+            }
 
+            // 2) StatisticForm에 보낼 리스트 구성 (OK 포함!)
+            List<NgClassCount> donutList = _donutStats
+                .Select(kvp => new NgClassCount { ClassName = kvp.Key, Count = kvp.Value })
+                .ToList();
+
+            // 3) 폼 갱신
+            var sForm = MainForm.GetDockForm<StatisticForm>();
+            if (sForm != null)
+            {
+                // ok/ng는 기존대로 전체 카운트(라벨표시용)로 보내고,
+                // donutList는 도넛 분할 데이터(OK + NG 클래스별)로 사용
+                sForm.UpdateStatistics(_okCount, _ngCount, donutList);
+            }
+
+            // (선택) 메인폼에서도 갱신하고 싶으면
+            MainForm.Instance?.UpdateStatisticsUI(_okCount, _ngCount, donutList);
+            System.Diagnostics.Debug.WriteLine("[DONUT_KEYS] " + string.Join(" | ", _donutStats.Keys.Select(k => $"'{k}'")));
+        }
 
         #region Disposable
 

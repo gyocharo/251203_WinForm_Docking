@@ -50,7 +50,6 @@
             this.cbAIModelType = new System.Windows.Forms.ComboBox();
             this.panel2 = new System.Windows.Forms.Panel();
             this.panel3 = new System.Windows.Forms.Panel();
-            this.btnClearCount = new System.Windows.Forms.Button();
             this.tableLayoutPanel3.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.panel1.SuspendLayout();
@@ -296,20 +295,10 @@
             this.panel3.Size = new System.Drawing.Size(541, 277);
             this.panel3.TabIndex = 22;
             // 
-            // btnClearCount
-            // 
-            this.btnClearCount.Location = new System.Drawing.Point(18, 299);
-            this.btnClearCount.Name = "btnClearCount";
-            this.btnClearCount.Size = new System.Drawing.Size(140, 89);
-            this.btnClearCount.TabIndex = 23;
-            this.btnClearCount.Text = "초기화";
-            this.btnClearCount.UseVisualStyleBackColor = true;
-            // 
             // AIModuleProp
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.Controls.Add(this.btnClearCount);
             this.Controls.Add(this.panel3);
             this.Controls.Add(this.panel2);
             this.Name = "AIModuleProp";
@@ -349,6 +338,5 @@
         private System.Windows.Forms.Panel panel3;
         private System.Windows.Forms.Panel panel1;
         private System.Windows.Forms.Label lblAreaFilter;
-        private System.Windows.Forms.Button btnClearCount;
     }
 }

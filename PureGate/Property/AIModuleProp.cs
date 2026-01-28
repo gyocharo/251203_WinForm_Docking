@@ -128,6 +128,7 @@ namespace PureGate.Property
                 MessageBox.Show("현재 이미지가 없습니다.", "오류", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
+           
 
             _saigeAI.InspAIModule(bitmap);
             Bitmap resultImage = _saigeAI.GetResultImage();
@@ -305,6 +306,5 @@ namespace PureGate.Property
                 item.SubItems[2].Text = hasNG ? "True" : "False";
             }
         }
-
     }
 }

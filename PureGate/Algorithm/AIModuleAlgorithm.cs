@@ -107,14 +107,11 @@ namespace PureGate.Algorithm
                     (int)obj.BoundingBox.Height
                 );
 
-                _resultAreas.Add(
-                    new DrawInspectInfo(
-                        rect,
-                        obj.ClassInfo.Name,
-                        InspectType.InspAIModule,
-                        DecisionType.Defect
-                    )
-                );
+                _resultAreas.Add(new DrawInspectInfo(rect, obj.ClassInfo.Name, InspectType.InspAIModule, DecisionType.Defect));
+
+                // ⭐ 추가: 불량 명칭을 ResultString에 직접 추가합니다.
+                ResultString.Add(obj.ClassInfo.Name);
+
             }
             ResultString.Add($"Detection Count : {det.DetectedObjects.Length}");
         }
@@ -137,14 +134,10 @@ namespace PureGate.Algorithm
                     (int)box.Height
                 );
 
-                _resultAreas.Add(
-                    new DrawInspectInfo(
-                        rect,
-                        obj.ClassInfo.Name,
-                        InspectType.InspAIModule,
-                        DecisionType.Defect
-                    )
-                );
+                _resultAreas.Add(new DrawInspectInfo(rect, obj.ClassInfo.Name, InspectType.InspAIModule, DecisionType.Defect));
+
+                // ⭐ 추가: 불량 명칭을 ResultString에 직접 추가합니다.
+                ResultString.Add(obj.ClassInfo.Name);
             }
             ResultString.Add($"Segment Count : {seg.SegmentedObjects.Length}");
         }

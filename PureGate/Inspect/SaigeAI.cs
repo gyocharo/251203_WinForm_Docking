@@ -18,6 +18,9 @@ using SaigeVision.Net.V2.IAD;
 using SaigeVision.Net.V2.IEN;
 using SaigeVision.Net.V2.OCR;
 using SaigeVision.Net.V2.Segmentation;
+using PureGate.Algorithm;
+using PureGate.Core;
+using OpenCvSharp;
 
 namespace PureGate
 {
@@ -50,7 +53,8 @@ namespace PureGate
         private string _lastClsLabel = null;
         private float _lastClsScore = 0f;
 
-
+        public List<string> ResultString { get; private set; } = new List<string>();
+        public bool IsDefect { get; private set; }
         public SaigeAI()
         {
 
@@ -192,6 +196,9 @@ namespace PureGate
             _inspImage = bmpImage;
             SrImage srImage = new SrImage(bmpImage);
 
+            this.IsDefect = false; // 초기화
+            ResultString.Clear();
+
             switch (_engineType)
             {
                 case AIEngineType.IAD:
@@ -209,13 +216,68 @@ namespace PureGate
                     _detResult = _detEngine.Inspection(srImage);
                     _lastResult = _detResult;
                     break;
+
+                // 1. 실제 검사 수행 (srImage는 위에서 생성됨)
                 case AIEngineType.CLS:
                     if (_clsEngine == null) return false;
+
+                    // ✅ 매 검사마다 last 값 초기화
+                    _lastClsLabel = null;
+                    _lastClsScore = 0f;
+
                     _clsResult = _clsEngine.Inspection(srImage);
                     _lastResult = _clsResult;
-                    TryGetClassificationTop1(_clsResult, out _lastClsLabel, out _lastClsScore);
+
+                    if (_clsResult != null)
+                    {
+                        var best = _clsResult.BestScoreClassInfo;
+
+                        if (best != null && best.ClassInfo != null)
+                        {
+                            // ✅ (핵심) InspStage가 가져갈 Top1 값을 반드시 저장
+                            _lastClsLabel = best.ClassInfo.Name;
+                            _lastClsScore = best.Score;
+
+                            // label 정리(혹시 공백/개행 있을 수 있어서)
+                            if (!string.IsNullOrWhiteSpace(_lastClsLabel))
+                                _lastClsLabel = _lastClsLabel.Trim();
+
+                            // ✅ NG 판정은 "Good이 아니면 NG" 같은 하드코딩 말고
+                            // 모델에 정의된 ClassIsNG로 판정 (정확)
+                            bool isNg = false;
+                            try
+                            {
+                                var mi = _clsEngine.GetModelInfo();
+                                if (mi != null && mi.ClassInfos != null && mi.ClassIsNG != null)
+                                {
+                                    int idx = Array.FindIndex(mi.ClassInfos,
+                                        c => string.Equals(c?.Name?.Trim(), _lastClsLabel, StringComparison.OrdinalIgnoreCase));
+
+                                    if (idx >= 0 && idx < mi.ClassIsNG.Length)
+                                        isNg = mi.ClassIsNG[idx];
+                                }
+                                else
+                                {
+                                    // fallback
+                                    isNg = !string.Equals(_lastClsLabel, "Good", StringComparison.OrdinalIgnoreCase);
+                                }
+                            }
+                            catch
+                            {
+                                isNg = !string.Equals(_lastClsLabel, "Good", StringComparison.OrdinalIgnoreCase);
+                            }
+
+                            this.IsDefect = isNg;
+
+                            // ✅ ResultString에도 라벨 넣어둠(디버그/표시용)
+                            this.ResultString.Add(_lastClsLabel);
+
+                            Console.WriteLine($"[CLS] label='{_lastClsLabel}', score={_lastClsScore:0.0}, IsDefect={this.IsDefect}");
+                        }
+                    }
                     break;
             }
+            Console.WriteLine($"[AI Debug] Type: {_engineType}, IsDefect: {this.IsDefect}");
             return true;
         }
 
