@@ -42,6 +42,12 @@ namespace PureGate.Property
             txtMinArea.TextChanged += (s, e) => { UpdateClassInfoResultUI(); };
 
             this.AutoScroll = true;
+
+            this.Load += (s, e) => SyncFromCurrentModelAndUpdateUI();
+            this.VisibleChanged += (s, e) =>
+            {
+                if (this.Visible) SyncFromCurrentModelAndUpdateUI();
+            };
         }
 
         private void btnSelAIModel_Click(object sender, EventArgs e)
@@ -245,6 +251,8 @@ namespace PureGate.Property
 
         private void UpdateModelInfoUI()
         {
+            if (_saigeAI == null) _saigeAI = Global.Inst.InspStage.AIModule;
+            if (_saigeAI == null) return;
             lbx_ModelInformation.Items.Clear();
             lv_ClassInfos.Items.Clear();
             Txt_ModuleInfo.Clear();
@@ -326,6 +334,50 @@ namespace PureGate.Property
 
                 item.SubItems[2].Text = hasNG ? "True" : "False";
             }
+        }
+
+        public void SyncFromCurrentModelAndUpdateUI()
+        {
+            // UI 스레드 보장
+            if (this.IsHandleCreated && this.InvokeRequired)
+            {
+                this.BeginInvoke(new Action(SyncFromCurrentModelAndUpdateUI));
+                return;
+            }
+
+            if (Global.Inst?.InspStage == null) return;
+
+            // Stage에 있는 SaigeAI 인스턴스 사용
+            _saigeAI = Global.Inst.InspStage.AIModule;
+            if (_saigeAI == null) return;
+
+            // 현재 모델(.xml)에 저장된 Saige 정보 가져오기
+            var model = Global.Inst.InspStage.CurModel;
+            if (model == null) return;
+
+            // 저장된 값이 없으면 굳이 UI를 채우지 않아도 됨
+            if (string.IsNullOrWhiteSpace(model.SaigeModelPath))
+                return;
+
+            _isUpdatingUI = true;
+            try
+            {
+                _modelPath = model.SaigeModelPath ?? string.Empty;
+                _engineType = model.SaigeEngineType;
+
+                // UI 반영
+                txtAIModelPath.Text = _modelPath;
+
+                // DataSource가 Enum 목록이므로 SelectedItem으로 맞추는 게 안전
+                cbAIModelType.SelectedItem = _engineType;
+            }
+            finally
+            {
+                _isUpdatingUI = false;
+            }
+
+            // 엔진이 이미 로드된 상태이므로 모델 정보/클래스 리스트 갱신
+            UpdateModelInfoUI();
         }
     }
 }

@@ -127,6 +127,12 @@ namespace PureGate.Core
             try
             {
                 AIModule.LoadEngine(path, _model.SaigeEngineType);
+                try
+                {
+                    if (PureGate.Property.AIModuleProp.saigeaiprop != null)
+                        PureGate.Property.AIModuleProp.saigeaiprop.SyncFromCurrentModelAndUpdateUI();
+                }
+                catch { /* UI 갱신 실패는 무시 */ }
             }
             catch (Exception ex)
             {
@@ -704,6 +710,8 @@ namespace PureGate.Core
             if (File.Exists(inspImagePath))
             {
                 Global.Inst.InspStage.SetImageBuffer(inspImagePath);
+
+                UpdateDisplay((System.Drawing.Bitmap)null);
             }
 
             TryAutoLoadSaigeFromModel();

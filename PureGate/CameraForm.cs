@@ -268,5 +268,7 @@ namespace PureGate
             // 즉시 화면을 다시 그리도록 강제합니다.
             imageViewer.Invalidate();
         }
+
+
     }
 }
