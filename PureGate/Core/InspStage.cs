@@ -1059,6 +1059,8 @@ namespace PureGate.Core
 
         private void RunInspect()
         {
+            SetWorkingState(WorkingState.INSPECT);
+
             // 검사 시작 전 상태 초기화
             ResetDisplay();
 
@@ -1106,6 +1108,7 @@ namespace PureGate.Core
 
             // 제어기로 결과 전송
             VisionSequence.Inst.VisionCommand(Vision2Mmi.InspDone, isDefect);
+            SetWorkingState(WorkingState.NONE);
         }
 
 
