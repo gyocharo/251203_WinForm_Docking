@@ -82,6 +82,12 @@ namespace PureGate.Property
 
             // 초기 요약 줄 업데이트
             UpdateSummaryRow();
+
+            this.Load += (s, e) => SyncFromCurrentModelAndUpdateUI();
+            this.VisibleChanged += (s, e) =>
+            {
+                if (this.Visible) SyncFromCurrentModelAndUpdateUI();
+            };
         }
 
         private void InspStage_InspectionCompleted(bool isOk)
@@ -180,6 +186,12 @@ namespace PureGate.Property
                 {
                     _modelPath = openFileDialog.FileName;
                     txtAIModelPath.Text = _modelPath;
+
+                    if (_aiAlgo != null)
+                    {
+                        _aiAlgo.ModelPath = _modelPath;
+                        _aiAlgo.EngineType = _engineType;
+                    }
                 }
             }
         }
@@ -207,6 +219,14 @@ namespace PureGate.Property
                     MsgBox.Show("모델 정보가 null입니다.", "오류", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
+
+                if (_aiAlgo != null)
+                {
+                    _aiAlgo.ModelPath = _modelPath;
+                    _aiAlgo.EngineType = _engineType;
+                }
+                Global.Inst.InspStage.SetSaigeModelInfo(_modelPath, _engineType);
+
                 ResetStats();
                 UpdateModelInfoUI();
             }
@@ -242,6 +262,15 @@ namespace PureGate.Property
                 ResetStats();
             }
             _engineType = engineType;
+            if (_aiAlgo != null)
+            {
+                _aiAlgo.EngineType = _engineType;
+
+                // 엔진 타입 바꾸면 기존 모델 확장자가 달라질 수 있으니,
+                // 정책에 따라 ModelPath를 유지할지/초기화할지 선택.
+                // 보통은 초기화가 안전:
+                // _aiAlgo.ModelPath = string.Empty;
+            }
             UpdateAreaFilterUI();
         }
 
@@ -348,6 +377,8 @@ namespace PureGate.Property
 
         private void UpdateModelInfoUI()
         {
+            if (_saigeAI == null) _saigeAI = Global.Inst.InspStage.AIModule;
+            if (_saigeAI == null) return;
             lbx_ModelInformation.Items.Clear();
             lv_ClassInfos.Items.Clear();
             Txt_ModuleInfo.Clear();
@@ -629,6 +660,52 @@ namespace PureGate.Property
         {
             if (string.IsNullOrWhiteSpace(displayName)) return displayName;
             return _displayToRaw.TryGetValue(displayName, out var raw) ? raw : displayName;
+                item.SubItems[2].Text = hasNG ? "True" : "False";
+            }
+        }
+
+        public void SyncFromCurrentModelAndUpdateUI()
+        {
+            // UI 스레드 보장
+            if (this.IsHandleCreated && this.InvokeRequired)
+            {
+                this.BeginInvoke(new Action(SyncFromCurrentModelAndUpdateUI));
+                return;
+            }
+
+            if (Global.Inst?.InspStage == null) return;
+
+            // Stage에 있는 SaigeAI 인스턴스 사용
+            _saigeAI = Global.Inst.InspStage.AIModule;
+            if (_saigeAI == null) return;
+
+            // 현재 모델(.xml)에 저장된 Saige 정보 가져오기
+            var model = Global.Inst.InspStage.CurModel;
+            if (model == null) return;
+
+            // 저장된 값이 없으면 굳이 UI를 채우지 않아도 됨
+            if (string.IsNullOrWhiteSpace(model.SaigeModelPath))
+                return;
+
+            _isUpdatingUI = true;
+            try
+            {
+                _modelPath = model.SaigeModelPath ?? string.Empty;
+                _engineType = model.SaigeEngineType;
+
+                // UI 반영
+                txtAIModelPath.Text = _modelPath;
+
+                // DataSource가 Enum 목록이므로 SelectedItem으로 맞추는 게 안전
+                cbAIModelType.SelectedItem = _engineType;
+            }
+            finally
+            {
+                _isUpdatingUI = false;
+            }
+
+            // 엔진이 이미 로드된 상태이므로 모델 정보/클래스 리스트 갱신
+            UpdateModelInfoUI();
         }
     }
 }
