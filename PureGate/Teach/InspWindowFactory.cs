@@ -55,37 +55,35 @@ namespace PureGate.Teach
         {
             switch (inspWindow.InspWindowType)
             {
-                case InspWindowType.Base:
+                case InspWindowType.Sub:
                     {
+                        // SUB = 미스매칭 담당
                         inspWindow.AddInspAlgorithm(InspectType.InspMatch);
 
+                        // (원하면) SUB 위치불량도 여기서 같이
                         inspWindow.AddInspAlgorithm(InspectType.InspTransistorRule);
-                        var rule = inspWindow.FindInspAlgorithm(InspectType.InspTransistorRule) as TransistorRuleAlgorithm;
-                        if (rule != null) rule.TargetRole = TransistorRoiRole.Base;
+                        var tr = inspWindow.FindInspAlgorithm(InspectType.InspTransistorRule) as TransistorRuleAlgorithm;
+                        if (tr != null) tr.TargetRole = TransistorRoiRole.Sub;
+                        break;
+                    }
 
+                case InspWindowType.Base:
+                    {
+                        // BASE = 케이스파손
+                        inspWindow.AddInspAlgorithm(InspectType.InspTransistorRule);
+                        var tr = inspWindow.FindInspAlgorithm(InspectType.InspTransistorRule) as TransistorRuleAlgorithm;
+                        if (tr != null) tr.TargetRole = TransistorRoiRole.Base;
                         break;
                     }
 
                 case InspWindowType.Body:
                     {
+                        // BODY = 다리빠짐/잘림
                         inspWindow.AddInspAlgorithm(InspectType.InspTransistorRule);
-                        var rule = inspWindow.FindInspAlgorithm(InspectType.InspTransistorRule) as TransistorRuleAlgorithm;
-                        if (rule != null) rule.TargetRole = TransistorRoiRole.Body;
-
+                        var tr = inspWindow.FindInspAlgorithm(InspectType.InspTransistorRule) as TransistorRuleAlgorithm;
+                        if (tr != null) tr.TargetRole = TransistorRoiRole.Body;
                         break;
                     }
-
-                case InspWindowType.Sub:
-                    {
-                        inspWindow.AddInspAlgorithm(InspectType.InspTransistorRule);
-                        var rule = inspWindow.FindInspAlgorithm(InspectType.InspTransistorRule) as TransistorRuleAlgorithm;
-                        if (rule != null) rule.TargetRole = TransistorRoiRole.Sub;
-
-                        break;
-                    }
-
-                case InspWindowType.ID:
-                    break;
             }
             return true;
         }

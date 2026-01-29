@@ -120,14 +120,31 @@ namespace PureGate.Inspect
             try
             {
                 // Match가 동작하려면 Base 알고리즘에 InspData가 먼저 들어가야 함
-                UpdateInspData(baseWin);
+                if (subWin == null)
+                {
+                    SLogger.Write("[InspWorker] Sub window not found. Inspect aborted.", SLogger.LogType.Error);
+                    return false;
+                }
 
-                var match = baseWin.FindInspAlgorithm(InspectType.InspMatch) as MatchAlgorithm;
+                // Match가 동작하려면 Sub 알고리즘에 InspData가 먼저 들어가야 함
+                UpdateInspData(subWin);
+
+                var match = subWin.FindInspAlgorithm(InspectType.InspMatch) as MatchAlgorithm;
                 if (match != null && match.IsUse)
                 {
                     // Match만 먼저 실행 (InspectBoard 전체 실행 전에)
                     // DoInspect()가 public이 아니면 이 줄이 컴파일이 안 될 수 있음 -> 그 경우 알려줘, 다른 방식으로 바꿔줄게.
                     match.DoInspect();
+
+                    double score = TryGetMatchScore(match);
+                    SLogger.Write($"[MatchScore(Sub)] score={score}");
+
+                    double minScore = 0.80; // 일단 임시값(튜닝 필요)
+                    if (!double.IsNaN(score) && score < minScore)
+                    {
+                        match.IsDefect = true;   // 강제 NG
+                    }
+                    if (match.IsDefect) isDefect = true;
 
                     offset = TryGetMatchOffset(match);
                     SLogger.Write($"[MatchOffset] dx={offset.X}, dy={offset.Y}");
@@ -164,6 +181,9 @@ namespace PureGate.Inspect
                 try
                 {
                     _inspectBoard.InspectWindowList(windows);
+                    ForceRunLocalAlgorithms(baseWin, ref isDefect);
+                    if (hasBody) ForceRunLocalAlgorithms(bodyWin, ref isDefect);
+                    if (hasSub) ForceRunLocalAlgorithms(subWin, ref isDefect);
                 }
                 catch (Exception ex)
                 {
@@ -224,6 +244,8 @@ namespace PureGate.Inspect
             // 모든 윈도우 결과를 한 번에 그리기(덮어쓰기 방지)
             var allAreas = new List<DrawInspectInfo>();
 
+
+            // (B) 각 알고리즘 결과 Rect 추가 - 불량만
             foreach (var w in inspWindowList)
             {
                 if (w == null) continue;
@@ -233,8 +255,10 @@ namespace PureGate.Inspect
                     if (algorithm == null) continue;
 
                     List<DrawInspectInfo> areas;
-                    if (algorithm.GetResultRect(out areas) > 0 && areas != null && areas.Count > 0)
-                        allAreas.AddRange(areas);
+                    if (algorithm.GetResultRect(out areas) > 0 && areas != null)
+                    {
+                        allAreas.AddRange(areas.Where(a => a.decision == DecisionType.Defect));
+                    }
                 }
             }
 
@@ -283,6 +307,36 @@ namespace PureGate.Inspect
 
             SLogger.Write("[InspWorker] RunInspect completed");
             return true;
+        }
+
+        private void ForceRunLocalAlgorithms(InspWindow w, ref bool isDefect)
+        {
+            if (w == null || w.AlgorithmList == null) return;
+
+            foreach (var a in w.AlgorithmList)
+            {
+                if (a == null) continue;
+                if (!a.IsUse) continue;
+
+                // 로컬(OpenCV)로 만든 알고리즘만 강제 실행
+                if (a is TransistorRuleAlgorithm || a is MatchAlgorithm)
+                {
+                    try
+                    {
+                        a.DoInspect();
+
+                        SLogger.Write(
+                            $"[LocalRun] {w.InspWindowType} {a.GetType().Name} Type={a.InspectType} Defect={a.IsDefect} Result={string.Join(",", a.ResultString)}");
+
+                        if (a.IsDefect) isDefect = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        SLogger.Write($"[LocalRun] {w.InspWindowType} {a.GetType().Name} crashed: {ex.Message}", SLogger.LogType.Error);
+                        isDefect = true;
+                    }
+                }
+            }
         }
 
         // ✅ 윈도우에서 대표 NG 이름 뽑기: area.info 우선, 그 다음 ResultString, 그 다음 InspectType
@@ -336,8 +390,8 @@ namespace PureGate.Inspect
             if (inspWindow == null) return false;
 
             Rect windowArea = inspWindow.WindowArea;
-            inspWindow.PatternLearn();
 
+            // 1) 먼저 Rect + 이미지 세팅
             foreach (var inspAlgo in inspWindow.AlgorithmList)
             {
                 inspAlgo.TeachRect = windowArea;
@@ -346,6 +400,10 @@ namespace PureGate.Inspect
                 Mat srcImage = Global.Inst.InspStage.GetMat(0, inspAlgo.ImageChannel);
                 inspAlgo.SetInspData(srcImage);
             }
+
+            // 2) 그 다음 패턴 학습(윈도우/알고리즘이 올바른 ROI를 보고 만들게)
+            inspWindow.PatternLearn();
+
             return true;
         }
 
@@ -464,6 +522,43 @@ namespace PureGate.Inspect
 
             // 못 찾으면 0,0
             return new OpenCvSharp.Point(0, 0);
+        }
+
+
+        private double TryGetMatchScore(MatchAlgorithm matchAlgo)
+        {
+            if (matchAlgo == null) return double.NaN;
+
+            // 프로젝트마다 이름 다를 수 있으니 후보로 탐색
+            string[] candidates = new[]
+            {
+        "Score", "MatchScore", "ResultScore", "Similarity", "MatchRate",
+        "BestScore", "MaxScore"
+    };
+
+            var t = matchAlgo.GetType();
+
+            // 프로퍼티
+            foreach (var name in candidates)
+            {
+                var pi = t.GetProperty(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                if (pi != null)
+                {
+                    try { return Convert.ToDouble(pi.GetValue(matchAlgo)); } catch { }
+                }
+            }
+
+            // 필드
+            foreach (var name in candidates)
+            {
+                var fi = t.GetField(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                if (fi != null)
+                {
+                    try { return Convert.ToDouble(fi.GetValue(matchAlgo)); } catch { }
+                }
+            }
+
+            return double.NaN;
         }
     }
 }
