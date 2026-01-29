@@ -541,16 +541,16 @@ namespace PureGate.UIControl
                 DrawRectInfo(g);
             }
 
-            //#13_INSP_RESULT#5 검사 양불판정 갯수 화면에 표시
-            if (_inspectResultCount.Total > 0)
-            {
-                string resultText = $"Total: {_inspectResultCount.Total}\r\nOK: {_inspectResultCount.OK}\r\nNG: {_inspectResultCount.NG}";
+            ////#13_INSP_RESULT#5 검사 양불판정 갯수 화면에 표시
+            //if (_inspectResultCount.Total > 0)
+            //{
+            //    string resultText = $"Total: {_inspectResultCount.Total}\r\nOK: {_inspectResultCount.OK}\r\nNG: {_inspectResultCount.NG}";
 
-                float fontSize = 12.0f;
-                Color resultColor = Color.FromArgb(255, 255, 255);
-                PointF textPos = new PointF(Width - 80, 10);
-                DrawText(g, resultText, textPos, fontSize, resultColor);
-            }
+            //    float fontSize = 12.0f;
+            //    Color resultColor = Color.FromArgb(255, 255, 255);
+            //    PointF textPos = new PointF(Width - 80, 10);
+            //    DrawText(g, resultText, textPos, fontSize, resultColor);
+            //}
 
         }
 
