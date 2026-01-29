@@ -32,7 +32,8 @@ namespace PureGate.UIControl
         private ToolStripDropDownButton _dropDownButton;
         private ToolStripButton _showROIButton;
         private ToolStripDropDownButton _setROIButton;  // ✅ ToolStripButton → ToolStripDropDownButton 변경
-
+        private ToolStripButton _modeAIButton;
+        private ToolStripButton _modeMatchButton;
         #region Events
 
         public event EventHandler<ToolbarEventArgs> ButtonChanged;
@@ -60,6 +61,7 @@ namespace PureGate.UIControl
                 Width = 32,
                 Padding = new Padding(2),
                 ImageList = imageListToolbar
+
             };
 
             // ───────────────── Helper ─────────────────
@@ -111,6 +113,29 @@ namespace PureGate.UIControl
                 _setROIButton.DropDownItems.Add(menuItem);
             }
 
+            // ───────── Detect Mode Buttons ─────────
+            _modeAIButton = new ToolStripButton
+            {
+                DisplayStyle = ToolStripItemDisplayStyle.Image,
+                ImageKey = "AI",          // imageListToolbar에 있는 키
+                ImageScaling = ToolStripItemImageScaling.None,
+                ToolTipText = "AI Mode",
+                CheckOnClick = true
+            };
+
+            _modeMatchButton = new ToolStripButton
+            {
+                DisplayStyle = ToolStripItemDisplayStyle.Image,
+                ImageKey = "Match",       // imageListToolbar에 있는 키
+                ImageScaling = ToolStripItemImageScaling.None,
+                ToolTipText = "Match Mode",
+                CheckOnClick = true
+            };
+
+            // 기본값: AI
+            _modeAIButton.Checked = true;
+            _modeMatchButton.Checked = false;
+
             // ───────────────── Channel DropDown ─────────────────
             _dropDownButton = new ToolStripDropDownButton
             {
@@ -153,12 +178,38 @@ namespace PureGate.UIControl
             bar.Items.AddRange(new ToolStripItem[]
             {
                 _showROIButton,
-                _setROIButton,
-                new ToolStripSeparator(),
-                _dropDownButton
+                  _setROIButton,
+
+                  new ToolStripSeparator(),
+
+                    _modeAIButton,
+                  _modeMatchButton,
+
+                  new ToolStripSeparator(),
+
+                  _dropDownButton
             });
 
             Controls.Add(bar);
+            _modeAIButton.Click += (s, e) =>
+            {
+                _modeAIButton.Checked = true;
+                _modeMatchButton.Checked = false;
+
+                // 👉 InspStage에 전달
+                Global.Inst.InspStage.SetDetectMode(DetectMode.AI);
+
+                SLogger.Write("[Toolbar] DetectMode = AI");
+            };
+
+            _modeMatchButton.Click += (s, e) =>
+            {
+                _modeAIButton.Checked = false;
+                _modeMatchButton.Checked = true;
+
+                Global.Inst.InspStage.SetDetectMode(DetectMode.MATCH);
+            };
+
         }
 
         #region Event Handlers

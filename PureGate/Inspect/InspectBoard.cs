@@ -90,6 +90,12 @@ namespace PureGate.Inspect
 
                 window.AddInspResult(inspResult);
             }
+            if (Global.Inst.InspStage.CurrentDetectMode == DetectMode.MATCH)
+            {
+                bool ng = JudgeByMatch(window);
+                if (ng)
+                    window.InspResultList.Last().IsDefect = true;
+            }
 
             return true;
         }
@@ -126,6 +132,21 @@ namespace PureGate.Inspect
                     return false;
             }
 
+            if (Global.Inst.InspStage.CurrentDetectMode == DetectMode.MATCH)
+            {
+                bool legNg = JudgeLegGroup(windowList);
+                if (legNg)
+                {
+                    // 다리 하나라도 NG면 전체 NG
+                    foreach (var w in windowList.Where(w => w.InspWindowType == InspWindowType.Sub))
+                    {
+                        var last = w.InspResultList.LastOrDefault();
+                        if (last != null)
+                            last.IsDefect = true;
+                    }
+                }
+            }
+
             return true;
         }
 
@@ -146,6 +167,78 @@ namespace PureGate.Inspect
             }
 
             return string.Empty;
+        }
+
+        bool JudgeByMatch(InspWindow window)
+        {
+            switch (window.InspWindowType)
+            {
+                case InspWindowType.Body:
+                    return JudgeBodyDefect(window);
+
+                case InspWindowType.Base:
+                    return JudgeBaseExist(window);
+
+                // ❌ Sub는 여기서 판단하지 않음
+                default:
+                    return false;
+            }
+        }
+
+        bool JudgeLegGroup(List<InspWindow> windows)
+        {
+            var legs = windows
+                .Where(w => w.InspWindowType == InspWindowType.Sub)
+                .ToList();
+
+            if (legs.Count < 3)
+                return true; // 다리 부족 = NG
+
+            foreach (var leg in legs)
+            {
+                // Match 결과 가져오기
+                var match = leg.FindInspAlgorithm(InspectType.InspMatch) as MatchAlgorithm;
+                if (match == null || !match.IsInspected)
+                    return true;
+
+                // 1️⃣ 매칭 점수 부족
+                if (match.OutScore < match.MatchScore)
+                    return true;
+
+                // 2️⃣ Binary 결과 NG
+                var binary = leg.FindInspAlgorithm(InspectType.InspBinary);
+                if (binary != null && binary.IsDefect)
+                    return true;
+            }
+
+            return false; // 3개 모두 OK
+        }
+
+        bool JudgeBodyDefect(InspWindow window)
+        {
+            var match = window.FindInspAlgorithm(InspectType.InspMatch) as MatchAlgorithm;
+            if (match == null || !match.IsInspected)
+                return true;
+
+            // 1️⃣ 위치/존재 NG
+            if (match.OutScore < match.MatchScore)
+                return true;
+
+            // 2️⃣ Binary로 깨짐/스크래치
+            var binary = window.FindInspAlgorithm(InspectType.InspBinary);
+            if (binary != null && binary.IsDefect)
+                return true;
+
+            return false;
+        }
+
+        bool JudgeBaseExist(InspWindow window)
+        {
+            var match = window.FindInspAlgorithm(InspectType.InspMatch) as MatchAlgorithm;
+            if (match == null || !match.IsInspected)
+                return true;
+
+            return match.OutScore < match.MatchScore;
         }
     }
 }

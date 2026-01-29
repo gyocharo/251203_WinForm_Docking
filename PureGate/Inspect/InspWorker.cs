@@ -52,6 +52,8 @@ namespace PureGate.Inspect
         {
             isDefect = false;
 
+            ApplyDetectMode();
+
             Model curModel = Global.Inst.InspStage.CurModel;
             List<InspWindow> inspWindowList = curModel?.InspWindowList;
 
@@ -263,6 +265,29 @@ namespace PureGate.Inspect
             }
 
             return true;
+        }
+
+        private void ApplyDetectMode()
+        {
+            var mode = Global.Inst.InspStage.CurrentDetectMode;
+            var model = Global.Inst.InspStage.CurModel;
+            if (model?.InspWindowList == null) return;
+
+            foreach (var w in model.InspWindowList)
+            {
+                foreach (var algo in w.AlgorithmList)
+                {
+                    if (algo.InspectType == InspectType.InspAIModule)
+                        algo.IsUse = (mode == DetectMode.AI);
+
+                    else if (algo.InspectType == InspectType.InspMatch)
+                        algo.IsUse = (mode == DetectMode.MATCH);
+
+                    // Binary는 지금은 Sub 다리 판정용으로 MATCH 모드에서만 쓰고 싶으면:
+                    else if (algo.InspectType == InspectType.InspBinary)
+                        algo.IsUse = (mode == DetectMode.MATCH);
+                }
+            }
         }
     }
 }

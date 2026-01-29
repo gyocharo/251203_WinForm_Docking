@@ -75,7 +75,11 @@ namespace PureGate.Core
 
         private List<NgClassCount> _ngClassList = new List<NgClassCount>();
 
+
+
         public InspStage() { }
+
+        public DetectMode CurrentDetectMode { get; private set; } = DetectMode.AI;
 
         public ImageSpace ImageSpace
         {
@@ -115,12 +119,19 @@ namespace PureGate.Core
 
         public eImageChannel SelImageChannel { get; set; } = eImageChannel.Gray;
 
+
         public event Action<bool> InspectionCompleted;
         public void SetSaigeModelInfo(string saigeModelPath, AIEngineType engineType)
         {
             if (_model == null) return;
             _model.SaigeModelPath = saigeModelPath ?? string.Empty;
             _model.SaigeEngineType = engineType;
+        }
+
+        public void SetDetectMode(DetectMode mode)
+        {
+            CurrentDetectMode = mode;
+            SLogger.Write($"[DetectMode] Changed to {mode}");
         }
 
         /// <summary>
@@ -842,6 +853,7 @@ namespace PureGate.Core
                 else
                 {
                     // 같은 폴더지만 아직 로드 안 된 경우
+
                     if (!_imageLoader.IsLoadedImages())
                         _imageLoader.LoadImages(inspImageDir);
                 }
@@ -855,6 +867,7 @@ namespace PureGate.Core
 
         public bool OneCycle()
         {
+            SLogger.Write("🔥 OneCycle START");
             if (UseCamera)
             {
                 if (!Grab(0)) return false;
@@ -1152,6 +1165,7 @@ namespace PureGate.Core
 
         public bool VirtualGrab()
         {
+            SLogger.Write("🔥 VirtualGrab CALLED");
             if (_imageLoader is null)
                 return false;
 
@@ -1484,6 +1498,7 @@ namespace PureGate.Core
             loading?.SetProgress(endPercent);
             return ok;
         }
+
 
         #region Disposable
 

@@ -47,14 +47,15 @@
             this.imageListToolbar.Images.SetKeyName(7, "Red");
             this.imageListToolbar.Images.SetKeyName(8, "Green");
             this.imageListToolbar.Images.SetKeyName(9, "Blue");
+            this.imageListToolbar.Images.SetKeyName(10, "AI");
+            this.imageListToolbar.Images.SetKeyName(11, "Match");
             // 
             // MainViewToolbar
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 18F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.Name = "MainViewToolbar";
-            this.Size = new System.Drawing.Size(155, 553);
+            this.Size = new System.Drawing.Size(108, 369);
             this.ResumeLayout(false);
 
         }

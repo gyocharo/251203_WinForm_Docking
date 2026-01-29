@@ -106,6 +106,7 @@
       <DependentUpon>CameraForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Core\Define.cs" />
+    <Compile Include="Core\DetectMode.cs" />
     <Compile Include="Core\Global.cs" />
     <Compile Include="Core\ImageSpace.cs" />
     <Compile Include="Core\InspStage.cs" />
@@ -161,6 +162,7 @@
     <Compile Include="NewModel.Designer.cs">
       <DependentUpon>NewModel.cs</DependentUpon>
     </Compile>
+    <Compile Include="UIControl\DetectModeChangedEventArgs.cs" />
     <Compile Include="UIControl\RecentNGimages.cs">
       <SubType>UserControl</SubType>
     </Compile>

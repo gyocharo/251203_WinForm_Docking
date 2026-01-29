@@ -457,11 +457,12 @@ namespace PureGate
             dropDown.Show(location);
         }
 
-       
 
-        // Overview 버튼을 위한 초기화 메서드
-        #region
-        private void ResetDockLayout()
+
+
+    // Overview 버튼을 위한 초기화 메서드
+    #region
+    private void ResetDockLayout()
         {
             _dockPanel.SuspendLayout();
 
