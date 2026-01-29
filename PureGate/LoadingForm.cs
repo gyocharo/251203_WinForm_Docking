@@ -290,6 +290,9 @@ namespace PureGate
 
             protected override void OnPaint(PaintEventArgs e)
             {
+                if (ClientSize.Width <= 0 || ClientSize.Height <= 0)
+                    return;
+
                 base.OnPaint(e);
 
                 var g = e.Graphics;
@@ -388,10 +391,20 @@ namespace PureGate
 
             private static void DrawProgressBar(Graphics g, Rectangle r, double? percent, int tick, Color track, Color accent)
             {
+                // 그릴 공간이 없으면 종료
+                if (r.Width <= 0 || r.Height <= 0)
+                    return;
+
+                // percent 방어 + 0~100 클램프 (double로 처리)
+                double p = percent ?? 0.0;
+                if (double.IsNaN(p) || double.IsInfinity(p)) p = 0.0;
+                if (p < 0.0) p = 0.0;
+                if (p > 100.0) p = 100.0;
+
                 using (var path = CreateRoundPath(r, radius: r.Height))
-                using (var br = new SolidBrush(track))
+                using (var brTrack = new SolidBrush(track))
                 {
-                    g.FillPath(br, path);
+                    g.FillPath(brTrack, path);
                 }
 
                 using (var clipPath = CreateRoundPath(r, radius: r.Height))
@@ -401,21 +414,27 @@ namespace PureGate
 
                     if (percent.HasValue)
                     {
-                        int w = (int)Math.Round(r.Width * (percent.Value / 100.0));
+                        int w = (int)Math.Round(r.Width * (p / 100.0));
                         if (w < 0) w = 0;
                         if (w > r.Width) w = r.Width;
 
-                        var fillRect = new Rectangle(r.X, r.Y, w, r.Height);
-                        using (var br = new SolidBrush(Color.FromArgb(220, accent)))
-                            g.FillRectangle(br, fillRect);
-
-                        var hi = new Rectangle(r.X, r.Y, w, Math.Max(1, r.Height / 2));
-                        using (var br2 = new LinearGradientBrush(hi,
-                            Color.FromArgb(70, Color.White),
-                            Color.FromArgb(0, Color.White),
-                            LinearGradientMode.Vertical))
+                        // 폭이 0이면 fill 관련 브러시/그라데이션을 만들지 않음 (핵심)
+                        if (w > 0)
                         {
-                            g.FillRectangle(br2, hi);
+                            var fillRect2 = new Rectangle(r.X, r.Y, w, r.Height); // 이름 변경
+                            using (var brFill = new SolidBrush(Color.FromArgb(220, accent)))
+                                g.FillRectangle(brFill, fillRect2);
+
+                            var hi = new Rectangle(r.X, r.Y, w, Math.Max(1, r.Height / 2));
+                            // hi는 height를 1 이상 보장, w도 >0 보장이라 예외 안 남
+                            using (var br2 = new LinearGradientBrush(
+                                hi,
+                                Color.FromArgb(70, Color.White),
+                                Color.FromArgb(0, Color.White),
+                                LinearGradientMode.Vertical))
+                            {
+                                g.FillRectangle(br2, hi);
+                            }
                         }
                     }
                     else
