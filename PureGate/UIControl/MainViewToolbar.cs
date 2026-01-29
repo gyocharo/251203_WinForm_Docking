@@ -24,14 +24,18 @@ namespace PureGate.UIControl
         ChannelGray,
         ChannelRed,
         ChannelBlue,
-        ChannelGreen
-    }
+        ChannelGreen,
+        SetGolden,   // ✅ 추가
+
+    }    
 
     public partial class MainViewToolbar : UserControl
     {
         private ToolStripDropDownButton _dropDownButton;
         private ToolStripButton _showROIButton;
         private ToolStripDropDownButton _setROIButton;  // ✅ ToolStripButton → ToolStripDropDownButton 변경
+
+        private ToolStripButton _setGoldenButton;
 
         #region Events
 
@@ -111,6 +115,8 @@ namespace PureGate.UIControl
                 _setROIButton.DropDownItems.Add(menuItem);
             }
 
+            _setGoldenButton = IconButton("ImageSave", "골든이미지 Set", (s, e) => OnSetGolden(), toggle: false);
+
             // ───────────────── Channel DropDown ─────────────────
             _dropDownButton = new ToolStripDropDownButton
             {
@@ -154,6 +160,7 @@ namespace PureGate.UIControl
             {
                 _showROIButton,
                 _setROIButton,
+                _setGoldenButton,   // ✅ 추가
                 new ToolStripSeparator(),
                 _dropDownButton
             });
@@ -185,9 +192,12 @@ namespace PureGate.UIControl
         {
             ButtonChanged?.Invoke(this, new ToolbarEventArgs(buttonType, false));
         }
-        
-        #endregion
 
+        #endregion
+        private void OnSetGolden()
+        {
+            ButtonChanged?.Invoke(this, new ToolbarEventArgs(ToolbarButton.SetGolden, false));
+        }
         public void SetSelectButton(eImageChannel channel)
         {
             string name = channel.ToString();

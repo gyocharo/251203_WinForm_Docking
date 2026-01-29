@@ -388,6 +388,51 @@ namespace PureGate.Core
             }
         }
 
+        public bool SaveGoldenImages(bool selectedOnly = true)
+        {
+            if (CurModel == null)
+            {
+                SLogger.Write("[Golden] 모델이 없습니다.");
+                return false;
+            }
+
+            CameraForm cameraForm = MainForm.GetDockForm<CameraForm>();
+            if (cameraForm == null)
+            {
+                SLogger.Write("[Golden] CameraForm을 찾을 수 없습니다.");
+                return false;
+            }
+
+            Mat curImage = cameraForm.GetDisplayImage();
+            if (curImage == null || curImage.Empty())
+            {
+                SLogger.Write("[Golden] 현재 이미지가 없습니다.");
+                return false;
+            }
+
+            // 저장 대상 ROI 목록 구성
+            var targets = new List<InspWindow>();
+
+            if (selectedOnly && _selectedInspWindow != null)
+            {
+                targets.Add(_selectedInspWindow);
+            }
+            else
+            {
+                if (CurModel.InspWindowList != null)
+                    targets.AddRange(CurModel.InspWindowList.Where(w => w != null));
+            }
+
+            if (targets.Count == 0)
+            {
+                SLogger.Write("[Golden] 저장할 ROI가 없습니다.");
+                return false;
+            }
+
+            // SaveGoldenImagesFromSelected 재사용
+            return SaveGoldenImagesFromSelected(targets);
+        }
+
         public void SetBuffer(int bufferCount)
         {
             _imageSpace.InitImageSpace(bufferCount);
@@ -1483,6 +1528,138 @@ namespace PureGate.Core
 
             loading?.SetProgress(endPercent);
             return ok;
+        }
+        // 선택된 InspWindow 목록에 대해 Golden 이미지를 저장하고 RuleBasedAlgorithm에 주입
+        public bool SaveGoldenImagesFromSelected(List<InspWindow> selectedWindows)
+        {
+            if (selectedWindows == null || selectedWindows.Count == 0)
+            {
+                SLogger.Write("[Golden] 선택된 ROI가 없습니다.");
+                return false;
+            }
+
+            CameraForm cameraForm = MainForm.GetDockForm<CameraForm>();
+            if (cameraForm == null)
+            {
+                SLogger.Write("[Golden] CameraForm을 찾을 수 없습니다.");
+                return false;
+            }
+
+            Mat curImage = cameraForm.GetDisplayImage();
+            if (curImage == null || curImage.Empty())
+            {
+                SLogger.Write("[Golden] 현재 이미지가 없습니다.");
+                return false;
+            }
+
+            // 모델 경로 기준 저장 폴더
+            string baseDir = AppContext.BaseDirectory;
+            try
+            {
+                if (CurModel != null && !string.IsNullOrWhiteSpace(CurModel.ModelPath))
+                {
+                    string dir = Path.GetDirectoryName(CurModel.ModelPath);
+                    if (!string.IsNullOrWhiteSpace(dir))
+                        baseDir = dir;
+                }
+            }
+            catch { }
+
+            string goldenDir = Path.Combine(baseDir, "GoldenImages");
+            Directory.CreateDirectory(goldenDir);
+
+            int savedCount = 0;
+
+            foreach (var window in selectedWindows)
+            {
+                if (window == null) continue;
+
+                // ROI 유효성 체크
+                if (window.WindowArea.Right >= curImage.Width ||
+                    window.WindowArea.Bottom >= curImage.Height)
+                {
+                    SLogger.Write($"[Golden] ROI 범위 오류: {window.UID}");
+                    continue;
+                }
+
+                try
+                {
+                    // ROI 영역 추출
+                    using (Mat roiImage = curImage[window.WindowArea])
+                    {
+                        // 파일명 생성 (UID + WindowType)
+                        string uid = string.IsNullOrWhiteSpace(window.UID)
+                            ? window.InspWindowType.ToString()
+                            : window.UID;
+                        uid = SanitizePathSegment(uid);
+
+                        string filename = $"{uid}_{window.InspWindowType}.png";
+                        string savePath = Path.Combine(goldenDir, filename);
+
+                        // 이미지 파일로 저장
+                        roiImage.SaveImage(savePath);
+
+                        // RuleBasedAlgorithm 찾아서 Golden 이미지 주입
+                        var ruleAlgo = window.FindInspAlgorithm(InspectType.InspRuleBased) as RuleBasedAlgorithm;
+                        if (ruleAlgo != null)
+                        {
+                            ruleAlgo.WindowType = window.InspWindowType;
+                            ruleAlgo.IsUse = true; // RuleBased 활성화
+
+                            if (ruleAlgo.SetGoldenImage(roiImage))
+                            {
+                                SLogger.Write($"[Golden] Saved & Injected: {savePath}");
+                                savedCount++;
+                            }
+                            else
+                            {
+                                SLogger.Write($"[Golden] 파일 저장 성공했으나 알고리즘 주입 실패: {savePath}");
+                            }
+                        }
+                        else
+                        {
+                            // RuleBasedAlgorithm이 없으면 새로 생성해서 추가
+                            ruleAlgo = new RuleBasedAlgorithm
+                            {
+                                WindowType = window.InspWindowType,
+                                IsUse = true
+                            };
+
+                            if (ruleAlgo.SetGoldenImage(roiImage))
+                            {
+                                window.AlgorithmList.Add(ruleAlgo);
+                                SLogger.Write($"[Golden] Saved & New Algorithm Created: {savePath}");
+                                savedCount++;
+                            }
+                            else
+                            {
+                                SLogger.Write($"[Golden] 새 알고리즘 생성 실패: {savePath}");
+                            }
+                        }
+
+                        // 다른 알고리즘들은 비활성화
+                        foreach (var algo in window.AlgorithmList)
+                        {
+                            if (algo.InspectType != InspectType.InspRuleBased)
+                            {
+                                algo.IsUse = false;
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    SLogger.Write($"[Golden] 저장 중 오류 ({window.UID}): {ex.Message}");
+                }
+            }
+
+            if (savedCount > 0)
+            {
+                SLogger.Write($"[Golden] 완료: {savedCount}개 저장 및 주입 -> {goldenDir}");
+                return true;
+            }
+
+            return false;
         }
 
         #region Disposable

@@ -39,6 +39,10 @@ namespace PureGate
             imageViewer.NewRoiCanceled += (s, e) => { mainViewToolbar.SetSetRoiChecked(false); };
 
         }
+        public List<InspWindow> GetSelectedWindows()
+        {
+            return imageViewer?.GetSelectedWindows() ?? new List<InspWindow>();
+        }
 
         private void ImageViewer_DiagramEntityEvent(object sender, DiagramEntityEventArgs e)
         {
@@ -226,40 +230,52 @@ namespace PureGate
             switch (e.Button)
             {
                 case ToolbarButton.ShowROI:
-                    if (e.IsChecked)
-                        UpdateDiagramEntity();
-                    else
-                        imageViewer.ResetEntity();
-                    break;
-
-                case ToolbarButton.SetROI:
-                    // ✅ 수정: 드롭다운 메뉴 선택 시 자동으로 ROI 그리기 모드 진입
-                    // Toolbar_RoiTypeSelected에서 처리하므로 여기서는 취소만 처리
-                    if (!e.IsChecked)
                     {
-                        imageViewer.CancelNewRoi();
+                        bool show = e.IsChecked;
+                        imageViewer.ShowROI = show;
+                        imageViewer.Invalidate();
                     }
                     break;
+                case ToolbarButton.SetROI:
+                    {
+                        bool isDrawMode = e.IsChecked;
 
+                        if (isDrawMode)
+                        {
+                            // ROI 그리기 모드 활성화
+                            imageViewer.NewRoi(_selectedRoiType);
+                        }
+                        else
+                        {
+                            // ROI 그리기 모드 비활성화
+                            imageViewer.CancelNewRoi();
+                        }
+                    }
+                    break;
+                case ToolbarButton.SetGolden:  // ✅ 추가
+                    {
+                        OnSetGolden();
+                    }
+                    break;
                 case ToolbarButton.ChannelColor:
-                    _currentImageChannel = eImageChannel.Color;
-                    UpdateDisplay();
-                    break;
                 case ToolbarButton.ChannelGray:
-                    _currentImageChannel = eImageChannel.Gray;
-                    UpdateDisplay();
-                    break;
                 case ToolbarButton.ChannelRed:
-                    _currentImageChannel = eImageChannel.Red;
-                    UpdateDisplay();
-                    break;
                 case ToolbarButton.ChannelGreen:
-                    _currentImageChannel = eImageChannel.Green;
-                    UpdateDisplay();
-                    break;
                 case ToolbarButton.ChannelBlue:
-                    _currentImageChannel = eImageChannel.Blue;
-                    UpdateDisplay();
+                    {
+                        eImageChannel channel = eImageChannel.Color;
+                        if (e.Button == ToolbarButton.ChannelGray)
+                            channel = eImageChannel.Gray;
+                        else if (e.Button == ToolbarButton.ChannelRed)
+                            channel = eImageChannel.Red;
+                        else if (e.Button == ToolbarButton.ChannelGreen)
+                            channel = eImageChannel.Green;
+                        else if (e.Button == ToolbarButton.ChannelBlue)
+                            channel = eImageChannel.Blue;
+
+                        SetImageChannel(channel);
+                        _currentImageChannel = channel;
+                    }
                     break;
             }
         }
@@ -347,6 +363,107 @@ namespace PureGate
             imageViewer.Focus();
 
             SLogger.Write($"ROI 타입 선택: {_selectedRoiType}");
+        }
+
+        // 1) 다중 선택된 InspWindow 목록을 반환하는 메서드 추가
+        public List<InspWindow> GetSelectedInspWindows()
+        {
+            return imageViewer?.GetSelectedWindows() ?? new List<InspWindow>();
+        }
+
+        // 3) SetGolden 버튼 클릭 시 다중 선택된 ROI들의 Golden Reference 설정
+        private void OnSetGolden()
+        {
+            try
+            {
+                // 다중 선택된 InspWindow 목록 가져오기
+                List<InspWindow> selectedWindows = GetSelectedInspWindows();
+
+                if (selectedWindows == null || selectedWindows.Count == 0)
+                {
+                    MsgBox.Show("Golden Reference로 설정할 ROI를 선택해주세요.");
+                    return;
+                }
+
+                // 현재 표시 중인 이미지 가져오기
+                Mat currentImage = GetDisplayImage();
+                if (currentImage == null || currentImage.Empty())
+                {
+                    MsgBox.Show("현재 이미지가 없습니다. 먼저 이미지를 로드해주세요.");
+                    return;
+                }
+
+                // 선택된 각 ROI에 대해 Golden Reference 설정
+                int successCount = 0;
+                foreach (var window in selectedWindows)
+                {
+                    if (window == null) continue;
+
+                    // ROI 유효성 체크
+                    if (window.WindowArea.Right >= currentImage.Width ||
+                        window.WindowArea.Bottom >= currentImage.Height)
+                    {
+                        SLogger.Write($"[SetGolden] ROI 범위 오류: {window.UID}");
+                        continue;
+                    }
+
+                    // RuleBasedAlgorithm만 활성화하고 나머지는 비활성화
+                    foreach (var algo in window.AlgorithmList)
+                    {
+                        if (algo.InspectType == InspectType.InspRuleBased)
+                        {
+                            algo.IsUse = true;
+
+                            // RuleBasedAlgorithm에 Golden 이미지 설정
+                            RuleBasedAlgorithm ruleAlgo = algo as RuleBasedAlgorithm;
+                            if (ruleAlgo != null)
+                            {
+                                // ROI 영역 추출
+                                using (Mat roiImage = currentImage[window.WindowArea])
+                                {
+                                    // WindowType 설정 (Body/Sub 구분)
+                                    ruleAlgo.WindowType = window.InspWindowType;
+
+                                    // Golden 이미지 주입
+                                    if (ruleAlgo.SetGoldenImage(roiImage))
+                                    {
+                                        SLogger.Write($"[SetGolden] Success: {window.UID} ({window.InspWindowType})");
+                                        successCount++;
+                                    }
+                                    else
+                                    {
+                                        SLogger.Write($"[SetGolden] Failed to set golden: {window.UID}");
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // Match, Blob, AI 등은 비활성화
+                            algo.IsUse = false;
+                        }
+                    }
+                }
+
+                // Golden 이미지 파일로도 저장 (선택 사항)
+                if (successCount > 0)
+                {
+                    // InspStage의 SaveGoldenImages 호출하여 파일로도 저장
+                    Global.Inst.InspStage.SaveGoldenImagesFromSelected(selectedWindows);
+
+                    MsgBox.Show($"{successCount}개의 ROI에 Golden Reference가 설정되었습니다.");
+                    SLogger.Write($"[SetGolden] 총 {successCount}개 ROI의 Golden Reference 설정 완료");
+                }
+                else
+                {
+                    MsgBox.Show("Golden Reference 설정에 실패했습니다.");
+                }
+            }
+            catch (Exception ex)
+            {
+                SLogger.Write($"[SetGolden] 오류: {ex.Message}");
+                MsgBox.Show($"Golden Reference 설정 중 오류가 발생했습니다.\n{ex.Message}");
+            }
         }
     }
 }

@@ -112,6 +112,7 @@ namespace PureGate.UIControl
 
         private readonly object _lock = new object();
 
+        private bool _showROI = true;
 
         private InspectStatus _currentStatus = InspectStatus.None;
 
@@ -441,9 +442,23 @@ namespace PureGate.UIControl
             }
         }
 
+        public bool ShowROI
+        {
+            get => _showROI;
+            set
+            {
+                if (_showROI != value)
+                {
+                    _showROI = value;
+                    Invalidate();
+                }
+            }
+        }
         private void DrawDiagram(Graphics g)
         {
-            
+            if (!_showROI)  
+                return;
+
             //#10_INSPWINDOW#18 ROI 그리기
             _screenSelectedRect = new Rectangle(0, 0, 0, 0);
 
@@ -1511,6 +1526,14 @@ namespace PureGate.UIControl
             Canvas = new Bitmap(Width, Height);
         }
 
+        public List<InspWindow> GetSelectedWindows()
+        {
+            return _multiSelectedEntities
+                .Where(d => d?.LinkedWindow != null)
+                .Select(d => d.LinkedWindow)
+                .Distinct()
+                .ToList();
+        }
     }
 
 
@@ -1546,5 +1569,7 @@ namespace PureGate.UIControl
             InspWindowList = inspWindowList;
             WindowType = windowType;
         }
+
+        
     }
 }
