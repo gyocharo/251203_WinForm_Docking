@@ -135,17 +135,25 @@ namespace PureGate
             Model model = Global.Inst.InspStage.CurModel;
             List<DiagramEntity> diagramEntityList = new List<DiagramEntity>();
 
+                  // ✅ 현재 작업 상태 확인 (INSPECT 중인지)
+                  // imageViewer.WorkingState는 "INSPECT\nOK" 형태이므로 "INSPECT" 포함 여부 확인
+            string workingState = imageViewer.WorkingState ?? "";
+            bool isInspecting = workingState.Contains("INSPECT");
+
             foreach (InspWindow window in model.InspWindowList)
             {
                 if (window is null)
                     continue;
 
+                        // ✅ 검사 중이면 InspArea(정렬된 위치), 아니면 WindowArea(티칭 위치)
+                Rect roiToDisplay = isInspecting ? window.InspArea : window.WindowArea;
+
                 DiagramEntity entity = new DiagramEntity()
                 {
                     LinkedWindow = window,
                     EntityROI = new Rectangle(
-                        window.WindowArea.X, window.WindowArea.Y,
-                            window.WindowArea.Width, window.WindowArea.Height),
+                        roiToDisplay.X, roiToDisplay.Y,
+                        roiToDisplay.Width, roiToDisplay.Height),
                     EntityColor = imageViewer.GetWindowColor(window.InspWindowType),
                     IsHold = window.IsTeach
                 };
@@ -434,10 +442,24 @@ namespace PureGate
                         ruleAlgo.IsUse = true;
                     }
 
-                    // 다른 알고리즘은 비활성화
+                    // ✅ Base 또는 Body 윈도우인 경우: MatchAlgorithm도 함께 설정 (Alignment용)
+                    MatchAlgorithm matchAlgo = null;
+                    if (window.InspWindowType == InspWindowType.Base ||
+                        window.InspWindowType == InspWindowType.Body)
+                    {
+                        matchAlgo = window.FindInspAlgorithm(InspectType.InspMatch) as MatchAlgorithm;
+                        if (matchAlgo != null)
+                        {
+                            matchAlgo.IsUse = true; // MatchAlgorithm 활성화
+                            SLogger.Write($"[SetGolden] {window.InspWindowType} 윈도우의 MatchAlgorithm 활성화: {window.UID}");
+                        }
+                    }
+
+                    // ✅ 중요: 다른 알고리즘은 비활성화 (RuleBased와 Match는 제외!)
                     foreach (var algo in window.AlgorithmList)
                     {
-                        if (algo.InspectType != InspectType.InspRuleBased)
+                        if (algo.InspectType != InspectType.InspRuleBased &&
+                            algo.InspectType != InspectType.InspMatch)
                         {
                             algo.IsUse = false;
                         }
@@ -450,7 +472,35 @@ namespace PureGate
                         ruleAlgo.WindowType = window.InspWindowType;
 
                         // Golden 이미지 주입
-                        if (ruleAlgo.SetGoldenImage(roiImage))
+                        bool ruleSuccess = ruleAlgo.SetGoldenImage(roiImage);
+
+                        // ✅ Base 또는 Body 윈도우면 MatchAlgorithm에도 Template 설정
+                        bool matchSuccess = true;
+                        if ((window.InspWindowType == InspWindowType.Base ||
+                             window.InspWindowType == InspWindowType.Body) &&
+                            matchAlgo != null)
+                        {
+                            // Gray 변환
+                            Mat grayImage = new Mat();
+                            if (roiImage.Channels() == 3)
+                            {
+                                Cv2.CvtColor(roiImage, grayImage, ColorConversionCodes.BGR2GRAY);
+                            }
+                            else
+                            {
+                                grayImage = roiImage.Clone();
+                            }
+
+                            // MatchAlgorithm의 Template 초기화 후 추가
+                            matchAlgo.ResetTemplateImages();
+                            matchAlgo.AddTemplateImage(grayImage);
+
+                            grayImage.Dispose();
+
+                            SLogger.Write($"[SetGolden] {window.InspWindowType} 윈도우의 MatchAlgorithm Template 설정: {window.UID}");
+                        }
+
+                        if (ruleSuccess && matchSuccess)
                         {
                             SLogger.Write($"[SetGolden] Success: {window.UID} ({window.InspWindowType})");
                             successCount++;

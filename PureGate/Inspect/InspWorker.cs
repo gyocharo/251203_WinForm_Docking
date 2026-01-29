@@ -82,10 +82,13 @@ namespace PureGate.Inspect
                 isDefect = true;
             }
 
-            // 3) 결과가 UI에 반영되기 전에 아주 짧게 대기(기존 코드 유지)
+            // ✅ 3) 검사 완료 후 ROI 위치 업데이트 (Alignment 결과 반영)
+            Global.Inst.InspStage.UpdateDiagramEntity();
+
+            // 4) 결과가 UI에 반영되기 전에 아주 짧게 대기(기존 코드 유지)
             Thread.Sleep(200);
 
-            // 4) 결과 집계
+            // 5) 결과 집계
             int totalCnt = 0;
             int okCnt = 0;
             int ngCnt = 0;
@@ -128,14 +131,14 @@ namespace PureGate.Inspect
                 DisplayResult(w, InspectType.InspNone);
             }
 
-            // 5) UI 업데이트 데이터 구성
+            // 6) UI 업데이트 데이터 구성
             List<NgClassCount> ngDetails = ngStats
                 .Select(kvp => new NgClassCount { ClassName = kvp.Key, Count = kvp.Value })
                 .ToList();
 
             System.Diagnostics.Debug.WriteLine($"[DEBUG] total={totalCnt}, ok={okCnt}, ng={ngCnt}, ngDetails={ngDetails.Count}");
 
-            // 6) ResultForm 업데이트
+            // 7) ResultForm 업데이트
             ResultForm resultForm = MainForm.GetDockForm<ResultForm>();
             if (resultForm != null)
             {
@@ -147,14 +150,14 @@ namespace PureGate.Inspect
                 SLogger.Write("[InspWorker] ResultForm is null", SLogger.LogType.Error);
             }
 
-            // 7) 통계 업데이트(한 군데로 통일)
+            // 8) 통계 업데이트(한 군데로 통일)
             MainForm.Instance?.UpdateStatisticsUI(okCnt, ngCnt, ngDetails);
 
             var sForm = MainForm.GetDockForm<StatisticForm>();
             if (sForm != null)
                 sForm.UpdateStatistics(okCnt, ngCnt, ngDetails);
 
-            // 8) CameraForm 업데이트
+            // 9) CameraForm 업데이트
             var cameraForm = MainForm.GetDockForm<CameraForm>();
             if (cameraForm != null)
             {

@@ -63,7 +63,14 @@ namespace PureGate.Core
         private string _lotNumber;
         private string _serialID;
 
-        private bool _isInspectMode = false;
+        private bool _isInspectMode = false;       
+
+            // ✅ 추가: public 프로퍼티로 노출
+        public bool IsInspectMode
+        {
+            get => _isInspectMode;
+            set => _isInspectMode = value;
+        }
 
         private string _loadedImageDir = "";
 
