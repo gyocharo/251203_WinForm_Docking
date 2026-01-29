@@ -21,6 +21,8 @@ namespace PureGate
     public partial class CameraForm : DockContent
     {
         eImageChannel _currentImageChannel = eImageChannel.Color;
+        // ✅ 추가: 선택된 ROI 타입 저장
+        private InspWindowType _selectedRoiType = InspWindowType.Base;
         public CameraForm()
         {
             InitializeComponent();
@@ -30,6 +32,11 @@ namespace PureGate
             imageViewer.DiagramEntityEvent += ImageViewer_DiagramEntityEvent;
 
             mainViewToolbar.ButtonChanged += Toolbar_ButtonChanged;
+
+            // ✅ 추가: ROI 타입 선택 이벤트 연결
+            mainViewToolbar.RoiTypeSelected += Toolbar_RoiTypeSelected;
+
+            imageViewer.NewRoiCanceled += (s, e) => { mainViewToolbar.SetSetRoiChecked(false); };
 
         }
 
@@ -218,6 +225,22 @@ namespace PureGate
         {
             switch (e.Button)
             {
+                case ToolbarButton.ShowROI:
+                    if (e.IsChecked)
+                        UpdateDiagramEntity();
+                    else
+                        imageViewer.ResetEntity();
+                    break;
+
+                case ToolbarButton.SetROI:
+                    // ✅ 수정: 드롭다운 메뉴 선택 시 자동으로 ROI 그리기 모드 진입
+                    // Toolbar_RoiTypeSelected에서 처리하므로 여기서는 취소만 처리
+                    if (!e.IsChecked)
+                    {
+                        imageViewer.CancelNewRoi();
+                    }
+                    break;
+
                 case ToolbarButton.ChannelColor:
                     _currentImageChannel = eImageChannel.Color;
                     UpdateDisplay();
@@ -312,6 +335,18 @@ namespace PureGate
 
             // 상태 + 결과 (2줄)
             return state + "\n" + result;
+        }
+
+        // ✅ ROI 타입 선택 이벤트 핸들러
+        private void Toolbar_RoiTypeSelected(object sender, RoiTypeSelectedEventArgs e)
+        {
+            _selectedRoiType = e.WindowType;
+
+            // ROI 그리기 모드 시작
+            imageViewer.NewRoi(_selectedRoiType);
+            imageViewer.Focus();
+
+            SLogger.Write($"ROI 타입 선택: {_selectedRoiType}");
         }
     }
 }
