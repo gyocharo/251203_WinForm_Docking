@@ -335,10 +335,23 @@ namespace PureGate.Algorithm
         {
             Point offset = new Point(0, 0);
 
-            if(IsInspected)
+            // ✅ 상세 로그 추가
+            SLogger.Write($"[GetOffset] IsInspected: {IsInspected}");
+
+            if (IsInspected)
             {
                 offset.X = OutPoint.X - InspRect.X;
                 offset.Y = OutPoint.Y - InspRect.Y;
+
+                // ✅ 계산 과정 로그
+                SLogger.Write($"[GetOffset] OutPoint: ({OutPoint.X}, {OutPoint.Y})");
+                SLogger.Write($"[GetOffset] InspRect: ({InspRect.X}, {InspRect.Y})");
+                SLogger.Write($"[GetOffset] Offset: ({offset.X}, {offset.Y})");
+                SLogger.Write($"[GetOffset] OutScore: {OutScore}");
+            }
+            else
+            {
+                SLogger.Write($"[GetOffset] ⚠️ IsInspected = false, 검사가 실행되지 않음!");
             }
 
             return offset;
