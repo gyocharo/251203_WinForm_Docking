@@ -116,6 +116,11 @@ namespace PureGate.UIControl
         private InspectStatus _currentStatus = InspectStatus.None;
 
         public event EventHandler NewRoiCanceled;
+
+        private Size _prevClientSize = Size.Empty;
+
+        // 마지막으로 "Fit" 상태인지(=창 크기 바뀌면 자동으로 Fit 재적용할지)
+        private bool _isFitMode = true;
         public ImageViewCtrl()
         {
             InitializeComponent();
@@ -243,6 +248,8 @@ namespace PureGate.UIControl
         {
             if (_bitmapImage is null)
                 return;
+
+            _isFitMode = true;
 
             RecalcZoomRatio();
 
@@ -677,6 +684,8 @@ namespace PureGate.UIControl
 
             if (e.Button == MouseButtons.Middle)
             {
+                _isFitMode = false;
+
                 _isPanning = true;
                 _panStart = e.Location;
                 _panImageStart = new PointF(ImageRect.X, ImageRect.Y);
@@ -1076,6 +1085,8 @@ namespace PureGate.UIControl
 
         private void ImageViewCtrl_MouseWheel(object sender, MouseEventArgs e)
         {
+            _isFitMode = false;
+
             if (e.Delta < 0)
                 ZoomMove(_curZoom / _zoomFactor, e.Location);
             else
@@ -1112,7 +1123,65 @@ namespace PureGate.UIControl
 
         private void ImageViewCtrl_Resize(object sender, EventArgs e)
         {
-            ResizeCanvas();
+            if (_prevClientSize == Size.Empty)
+            {
+                _prevClientSize = this.ClientSize;
+                EnsureCanvasOnly();
+                return;
+            }
+
+            if (_bitmapImage == null)
+            {
+                _prevClientSize = this.ClientSize;
+                EnsureCanvasOnly();
+                Invalidate();
+                return;
+            }
+
+            Size oldSize = _prevClientSize;
+            Size newSize = this.ClientSize;
+
+            // 0 방어
+            if (oldSize.Width <= 0 || oldSize.Height <= 0 || newSize.Width <= 0 || newSize.Height <= 0)
+            {
+                _prevClientSize = newSize;
+                EnsureCanvasOnly();
+                Invalidate();
+                return;
+            }
+
+            // 캔버스만 새 크기로 갱신(뷰 상태(ImageRect)는 아래에서 직접 계산)
+            EnsureCanvasOnly();
+
+            // 새 창 크기에 맞는 MinZoom 갱신(수동줌 유지용)
+            RecalcMinZoomOnly();
+
+            if (_isFitMode)
+            {
+                // Fit 상태면: 창 크기 바뀔 때마다 다시 Fit
+                FitImageToScreen();
+            }
+            else
+            {
+                // 수동 줌/패닝 상태면: "현재 보고 있던 중심"을 유지하면서 리스케일
+                PointF oldCenterScreen = new PointF(oldSize.Width / 2f, oldSize.Height / 2f);
+                PointF virtualCenter = ScreenToVirtual(oldCenterScreen);
+
+                float sx = (float)newSize.Width / oldSize.Width;
+                float sy = (float)newSize.Height / oldSize.Height;
+                float scale = Math.Min(sx, sy);
+
+                _curZoom *= scale;
+                _curZoom = Math.Max(MinZoom, Math.Min(MaxZoom, _curZoom));
+
+                ImageRect.Width = _bitmapImage.Width * _curZoom;
+                ImageRect.Height = _bitmapImage.Height * _curZoom;
+
+                ImageRect.X = (newSize.Width / 2f) - (virtualCenter.X * _curZoom);
+                ImageRect.Y = (newSize.Height / 2f) - (virtualCenter.Y * _curZoom);
+            }
+
+            _prevClientSize = newSize;
             Invalidate();
         }
 
@@ -1134,11 +1203,18 @@ namespace PureGate.UIControl
         private Rectangle VirtualToScreen(Rectangle virtualRect)
         {
             PointF offset = GetScreenOffset();
-            return new Rectangle(
-                (int)(virtualRect.X * _curZoom + offset.X + 0.5f),
-                (int)(virtualRect.Y * _curZoom + offset.Y + 0.5f),
-                (int)(virtualRect.Width * _curZoom + 0.5f),
-                (int)(virtualRect.Height * _curZoom + 0.5f));
+
+            int x = (int)(virtualRect.X * _curZoom + offset.X + 0.5f);
+            int y = (int)(virtualRect.Y * _curZoom + offset.Y + 0.5f);
+
+            int w = (int)(virtualRect.Width * _curZoom + 0.5f);
+            int h = (int)(virtualRect.Height * _curZoom + 0.5f);
+
+            // 원본 ROI가 유효(>0)한데 줌/반올림 때문에 0이 된 경우 최소 1로 보정
+            if (virtualRect.Width > 0 && w < 1) w = 1;
+            if (virtualRect.Height > 0 && h < 1) h = 1;
+
+            return new Rectangle(x, y, w, h);
         }
 
         private PointF ScreenToVirtual(PointF screenPos)
@@ -1403,6 +1479,36 @@ namespace PureGate.UIControl
             _isSelectingRoi = false;
             Cursor = Cursors.Arrow;
             Invalidate();
+        }
+
+        private void RecalcMinZoomOnly()
+        {
+            if (_bitmapImage == null || Width <= 0 || Height <= 0)
+                return;
+
+            Size imageSize = new Size(_bitmapImage.Width, _bitmapImage.Height);
+
+            float aspectRatio = (float)imageSize.Height / (float)imageSize.Width;
+            float clientAspect = (float)Height / (float)Width;
+
+            float ratio;
+            if (aspectRatio <= clientAspect)
+                ratio = (float)Width / (float)imageSize.Width;
+            else
+                ratio = (float)Height / (float)imageSize.Height;
+
+            MinZoom = ratio;
+        }
+
+        private void EnsureCanvasOnly()
+        {
+            if (Width <= 0 || Height <= 0)
+                return;
+
+            if (Canvas != null)
+                Canvas.Dispose();
+
+            Canvas = new Bitmap(Width, Height);
         }
 
     }
