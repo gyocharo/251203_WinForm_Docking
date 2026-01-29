@@ -35,7 +35,7 @@ namespace PureGate
                 "Loading Inspection Model",
                 "Finalizing UI"
             );
-            loading.SetProgress(null);
+            loading.SetProgress(0);
 
             // 3) 메인폼 먼저 생성 (네 구조상 필요)
             var mainForm = new MainForm(); // 생성만
@@ -43,21 +43,38 @@ namespace PureGate
             // 4) Core 초기화
             loading.SetActiveStep(0);
             loading.SetStatus("Initializing Core Services...");
+            loading.SetProgress(1);
             loading.Refresh();
             Application.DoEvents();
-            Global.Inst.Initialize();
+
+            Global.Inst.Initialize((p, s) =>
+            {
+                if (!string.IsNullOrWhiteSpace(s))
+                    loading.SetStatus(s);
+
+                loading.SetProgress(p);
+                loading.Refresh();
+                Application.DoEvents();
+            });
 
             // 5) 최근 모델 로드 (✅ 여기서만!)
             loading.SetActiveStep(1);
             loading.SetStatus("Loading Inspection Model...");
-            loading.Refresh();              // ✅ 단계 표시 먼저 강제 갱신
+            loading.SetProgress(56);
+            loading.Refresh();
             Application.DoEvents();
 
-            Global.Inst.InspStage.LastestModelOpen(loading);
+            Global.Inst.InspStage.LastestModelOpenWithProgress(loading, 55, 90);
 
             // 6) 마무리
             loading.SetActiveStep(2);
-            loading.SetStatus("Starting Runtime Services...");
+            loading.SetStatus("Finalizing UI...");
+            loading.SetProgress(92);
+            loading.Refresh();
+            Application.DoEvents();
+
+            loading.SetProgress(100);
+            loading.SetStatus("Ready");
             loading.Refresh();
             Application.DoEvents();
 

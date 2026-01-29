@@ -130,6 +130,10 @@ namespace PureGate
             private string _statusBase = "Initializing";
             private string[] _steps = new[] { "", "", "" };
             private double? _progress; // null => indeterminate
+
+            private double? _progressTarget;
+            private double _progressDisplay;
+
             private int _activeStep = 0; // 0~2 현재 강조 단계
 
             // ===== Child =====
@@ -187,6 +191,25 @@ namespace PureGate
                 {
                     _tick++;
                     if (_tick % 14 == 0) _dots = (_dots + 1) % 4;
+
+                    if (_progressTarget.HasValue)
+                    {
+                        double target = _progressTarget.Value;
+
+                        // 남은 거리 비례로 이동(프레임마다 부드럽게)
+                        double delta = (target - _progressDisplay) * 0.12;
+
+                        // 너무 느려서 멈춘 것처럼 보이지 않게 최소 이동량 보장
+                        if (Math.Abs(delta) < 0.06)
+                            delta = (target > _progressDisplay) ? 0.06 : -0.06;
+
+                        // 목표를 넘지 않도록 클램프
+                        if ((delta > 0 && _progressDisplay + delta > target) ||
+                            (delta < 0 && _progressDisplay + delta < target))
+                            _progressDisplay = target;
+                        else
+                            _progressDisplay += delta;
+                    }
 
                     Invalidate();
                 };
@@ -248,11 +271,19 @@ namespace PureGate
                     var v = percent0to100.Value;
                     if (v < 0) v = 0;
                     if (v > 100) v = 100;
-                    _progress = v;
+
+                    _progressTarget = v;
+
+                    // 처음 determinate로 전환되는 순간 표시값 초기화
+                    if (!_progress.HasValue)
+                        _progressDisplay = v;
+
+                    _progress = v; // determinate 모드 표시용 플래그 역할
                 }
                 else
                 {
                     _progress = null;
+                    _progressTarget = null;
                 }
                 Invalidate();
             }
