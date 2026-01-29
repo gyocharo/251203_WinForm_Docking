@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -407,40 +407,63 @@ namespace PureGate
                         continue;
                     }
 
-                    // RuleBasedAlgorithm만 활성화하고 나머지는 비활성화
+                    // RuleBasedAlgorithm 찾기
+                    RuleBasedAlgorithm ruleAlgo = null;
                     foreach (var algo in window.AlgorithmList)
                     {
                         if (algo.InspectType == InspectType.InspRuleBased)
                         {
-                            algo.IsUse = true;
+                            ruleAlgo = algo as RuleBasedAlgorithm;
+                            break;
+                        }
+                    }
 
-                            // RuleBasedAlgorithm에 Golden 이미지 설정
-                            RuleBasedAlgorithm ruleAlgo = algo as RuleBasedAlgorithm;
-                            if (ruleAlgo != null)
-                            {
-                                // ROI 영역 추출
-                                using (Mat roiImage = currentImage[window.WindowArea])
-                                {
-                                    // WindowType 설정 (Body/Sub 구분)
-                                    ruleAlgo.WindowType = window.InspWindowType;
+                    // RuleBasedAlgorithm이 없으면 새로 생성
+                    if (ruleAlgo == null)
+                    {
+                        ruleAlgo = new RuleBasedAlgorithm
+                        {
+                            WindowType = window.InspWindowType,
+                            IsUse = true
+                        };
+                        window.AlgorithmList.Add(ruleAlgo);
+                        SLogger.Write($"[SetGolden] RuleBasedAlgorithm 새로 생성: {window.UID}");
+                    }
+                    else
+                    {
+                        ruleAlgo.IsUse = true;
+                    }
 
-                                    // Golden 이미지 주입
-                                    if (ruleAlgo.SetGoldenImage(roiImage))
-                                    {
-                                        SLogger.Write($"[SetGolden] Success: {window.UID} ({window.InspWindowType})");
-                                        successCount++;
-                                    }
-                                    else
-                                    {
-                                        SLogger.Write($"[SetGolden] Failed to set golden: {window.UID}");
-                                    }
-                                }
-                            }
+                    // 다른 알고리즘은 비활성화
+                    foreach (var algo in window.AlgorithmList)
+                    {
+                        if (algo.InspectType != InspectType.InspRuleBased)
+                        {
+                            algo.IsUse = false;
+                        }
+                    }
+
+                    // ROI 영역 추출 및 Golden 이미지 설정
+                    using (Mat roiImage = currentImage[window.WindowArea])
+                    {
+                        // WindowType 설정 (Base/Body/Sub 구분)
+                        ruleAlgo.WindowType = window.InspWindowType;
+
+                        // Golden 이미지 주입
+                        if (ruleAlgo.SetGoldenImage(roiImage))
+                        {
+                            SLogger.Write($"[SetGolden] Success: {window.UID} ({window.InspWindowType})");
+                            successCount++;
                         }
                         else
                         {
-                            // Match, Blob, AI 등은 비활성화
-                            algo.IsUse = false;
+                            SLogger.Write($"[SetGolden] Failed to set golden: {window.UID}");
+                            // 에러 상세 로그
+                            if (ruleAlgo.ResultString != null && ruleAlgo.ResultString.Count > 0)
+                            {
+                                string lastError = ruleAlgo.ResultString[ruleAlgo.ResultString.Count - 1];
+                                SLogger.Write($"[SetGolden] Error detail: {lastError}");
+                            }
                         }
                     }
                 }

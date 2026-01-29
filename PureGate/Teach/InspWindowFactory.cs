@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -56,16 +56,19 @@ namespace PureGate.Teach
             switch(inspWindow.InspWindowType)
             {
                 case InspWindowType.Base:
+                    inspWindow.AddInspAlgorithm(InspectType.InspRuleBased);  // ✅ 추가
                     inspWindow.AddInspAlgorithm(InspectType.InspMatch);
                     inspWindow.AddInspAlgorithm(InspectType.InspBinary);
                     inspWindow.AddInspAlgorithm(InspectType.InspAIModule);
                     break;
                 case InspWindowType.Body:
+                    inspWindow.AddInspAlgorithm(InspectType.InspRuleBased);  // ✅ 추가
                     inspWindow.AddInspAlgorithm(InspectType.InspMatch);
                     inspWindow.AddInspAlgorithm(InspectType.InspBinary);
                     inspWindow.AddInspAlgorithm(InspectType.InspAIModule);
                     break;
                 case InspWindowType.Sub:
+                    inspWindow.AddInspAlgorithm(InspectType.InspRuleBased);  // ✅ 추가
                     inspWindow.AddInspAlgorithm(InspectType.InspMatch);
                     inspWindow.AddInspAlgorithm(InspectType.InspBinary);
                     inspWindow.AddInspAlgorithm(InspectType.InspAIModule);
