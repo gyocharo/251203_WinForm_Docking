@@ -200,23 +200,27 @@ namespace PureGate.UIControl
         }
         public void SetSelectButton(eImageChannel channel)
         {
-            string name = channel.ToString();
-            SelectChannel(name);
+            // 외부에서 UI 동기화용으로 호출할 때는 이벤트를 발생시키지 않음
+            SelectChannel(channel.ToString(), raiseEvent: false);
         }
 
-        private void SelectChannel(string name)
+        private void SelectChannel(string name, bool raiseEvent)
         {
-            if (_dropDownButton is null)
-                return;
+            if (_dropDownButton is null) return;
 
             var menuItem = _dropDownButton.DropDownItems
                 .OfType<ToolStripMenuItem>()
                 .FirstOrDefault(i => i.Text == name);
 
-            if (menuItem == null)
+            if (menuItem == null) return;
+
+            // 이미 같은 이미지면 불필요한 갱신/루프 방지
+            if (_dropDownButton.Image == menuItem.Image)
                 return;
 
             _dropDownButton.Image = menuItem.Image;
+
+            if (!raiseEvent) return;
 
             ToolbarButton mappedButton = ToolbarButton.ChannelGray;
             if (Enum.TryParse("Channel" + name, out ToolbarButton result))
