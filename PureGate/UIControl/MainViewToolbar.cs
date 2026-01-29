@@ -27,8 +27,6 @@ namespace PureGate.UIControl
 
     public enum ToolbarButton
     {
-        ShowROI,
-        SetROI,
         ChannelColor,
         ChannelGray,
         ChannelRed,
@@ -39,8 +37,6 @@ namespace PureGate.UIControl
     public partial class MainViewToolbar : UserControl
     {
         private ToolStripDropDownButton _dropDownButton;
-        private ToolStripButton _showROIButton;
-        private ToolStripButton _setROIButton;
 
         #region Events
 
@@ -55,7 +51,6 @@ namespace PureGate.UIControl
 
         private void BuildToolbar()
         {
-            // ───────────────── ToolStrip ─────────────────
             var bar = new ToolStrip
             {
                 Dock = DockStyle.Fill,
@@ -64,41 +59,14 @@ namespace PureGate.UIControl
                 AutoSize = false,
                 Width = 32,
                 Padding = new Padding(2),
-                ImageList = imageListToolbar   // 버튼용 ImageList 연결
+                ImageList = imageListToolbar
             };
-
-            // ───────────────── Helper ─────────────────
-            ToolStripButton IconButton(string key, string tip, EventHandler onClick = null, bool toggle = false)
-            {
-                var b = new ToolStripButton
-                {
-                    DisplayStyle = ToolStripItemDisplayStyle.Image,
-                    ImageKey = key,
-                    ImageScaling = ToolStripItemImageScaling.None,
-                    AutoSize = true,
-                    Width = 32,
-                    Height = 32,
-                    CheckOnClick = toggle,
-                    ToolTipText = tip
-                };
-                if (onClick != null) b.Click += onClick;
-                return b;
-            }
-
-            // ───────────────── Buttons ─────────────────
-            _showROIButton = IconButton("ShowROI", "ROI보기", (s, e) => OnShowROI(), toggle: true);
-            _setROIButton = IconButton("SetROI", "ROI 설정", (s, e) => OnSetROI(), toggle: true);
-                
-            _setROIButton.Image = PureGate.Properties.Resources.SetROI;
-            _setROIButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            
-
 
             // ───────────────── Channel DropDown ─────────────────
             _dropDownButton = new ToolStripDropDownButton
             {
                 DisplayStyle = ToolStripItemDisplayStyle.Image,
-                Image = imageListToolbar.Images["Color"],   // 기본 아이콘
+                Image = imageListToolbar.Images["Color"],
                 ImageScaling = ToolStripItemImageScaling.None,
                 ToolTipText = "Channel"
             };
@@ -108,21 +76,19 @@ namespace PureGate.UIControl
                 var item = new ToolStripMenuItem(name, imageListToolbar.Images[name], (s, e) =>
                 {
                     ToolbarButton toolbarButton = ToolbarButton.ChannelGray;
-                    if ("Color" == name)
-                        toolbarButton = ToolbarButton.ChannelColor;
-                    else if ("Red" == name)
-                        toolbarButton = ToolbarButton.ChannelRed;
-                    else if ("Green" == name)
-                        toolbarButton = ToolbarButton.ChannelGreen;
-                    else if ("Blue" == name)
-                        toolbarButton = ToolbarButton.ChannelBlue;
+
+                    if (name == "Color") toolbarButton = ToolbarButton.ChannelColor;
+                    else if (name == "Red") toolbarButton = ToolbarButton.ChannelRed;
+                    else if (name == "Green") toolbarButton = ToolbarButton.ChannelGreen;
+                    else if (name == "Blue") toolbarButton = ToolbarButton.ChannelBlue;
 
                     OnSelectChannel(toolbarButton);
-                    _dropDownButton.Image = imageListToolbar.Images[name]; // 선택 시 아이콘 변경
+                    _dropDownButton.Image = imageListToolbar.Images[name];
                 })
                 {
                     ImageScaling = ToolStripItemImageScaling.None
                 };
+
                 _dropDownButton.DropDownItems.Add(item);
             }
 
@@ -132,27 +98,11 @@ namespace PureGate.UIControl
             AddChannel("Blue");
             AddChannel("Green");
 
-            // ───────────────── Assemble ─────────────────
-            bar.Items.AddRange(new ToolStripItem[]
-            {
-            _showROIButton,
-            _setROIButton,
-            new ToolStripSeparator(),
-            _dropDownButton
-            });
-
+            bar.Items.Add(_dropDownButton);
             Controls.Add(bar);
         }
 
         #region Sample Handlers        
-        private void OnShowROI()
-        {
-            ButtonChanged?.Invoke(this, new ToolbarEventArgs(ToolbarButton.ShowROI, _showROIButton.Checked));
-        }
-        private void OnSetROI()
-        {
-            ButtonChanged?.Invoke(this, new ToolbarEventArgs(ToolbarButton.SetROI, _setROIButton.Checked));
-        }
         private void OnSelectChannel(ToolbarButton buttonType)
         {
             ButtonChanged?.Invoke(this, new ToolbarEventArgs(buttonType, false));
@@ -188,19 +138,6 @@ namespace PureGate.UIControl
 
             OnSelectChannel(mappedButton);
         }
-
-        public void SetSetRoiChecked(bool isChecked)
-        {
-            if (_setROIButton != null)
-                _setROIButton.Checked = isChecked;
-        }
-
-        public void SetShowRoiChecked(bool isChecked)
-        {
-            if (_showROIButton != null)
-                _showROIButton.Checked = isChecked;
-        }
-
     }
 
     public class ToolbarEventArgs : EventArgs
