@@ -726,12 +726,6 @@ namespace PureGate.Core
             {
                 cameraForm.UpdateDiagramEntity();
             }
-
-            ModelTreeForm modelTreeForm = MainForm.GetDockForm<ModelTreeForm>();
-            if (modelTreeForm != null)
-            {
-                modelTreeForm.UpdateDiagramEntity();
-            }
         }
 
         //#7_BINARY_PREVIEW#5 이진화 임계값 변경시, 프리뷰 갱신
@@ -1246,7 +1240,39 @@ namespace PureGate.Core
                 bool ok = !isDefect;
 
                 // 지금은 원인 클래스가 없으니 임시값
-                string ngClass = ok ? "" : "ROI_NG";
+                string ngClass = "";
+                if (!ok)
+                {
+                    // UpdateResultUI랑 동일 방식으로 대표 NG명 하나 뽑기
+                    foreach (var window in _model.InspWindowList)
+                    {
+                        foreach (var algo in window.AlgorithmList)
+                        {
+                            if (algo.IsUse && algo.IsDefect)
+                            {
+                                List<DrawInspectInfo> areas;
+                                if (algo.GetResultRect(out areas) > 0 && areas != null && areas.Count > 0 && !string.IsNullOrWhiteSpace(areas[0].info))
+                                {
+                                    ngClass = areas[0].info;
+                                    break;
+                                }
+
+                                if (algo.ResultString != null && algo.ResultString.Count > 0)
+                                {
+                                    ngClass = algo.ResultString[0];
+                                    break;
+                                }
+
+                                ngClass = algo.InspectType.ToString().Replace("Insp", "");
+                                break;
+                            }
+                        }
+                        if (!string.IsNullOrWhiteSpace(ngClass)) break;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(ngClass))
+                        ngClass = "Unknown";
+                }
 
                 InspHistoryRepo.Append(new InspHistoryRecord
                 {

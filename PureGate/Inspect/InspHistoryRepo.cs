@@ -1,13 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
 using Common.Util.Helpers;
 
 namespace PureGate.Inspect
 {
+    public enum InspHistoryCategory
+    {
+        Rule,
+        AI
+    }
+
     public static class InspHistoryRepo
     {
         private const string DIR = @"Setup\History";
@@ -15,15 +19,22 @@ namespace PureGate.Inspect
         private static string BaseDir
             => Path.Combine(Environment.CurrentDirectory, DIR);
 
-        private static string GetFilePath(DateTime day)
+        private static string GetFilePath(DateTime day, InspHistoryCategory cat)
         {
             Directory.CreateDirectory(BaseDir);
-            return Path.Combine(BaseDir, day.ToString("yyyyMMdd") + ".xml");
+
+            string suffix = (cat == InspHistoryCategory.AI) ? "AI" : "RULE";
+            return Path.Combine(BaseDir, $"{day:yyyyMMdd}_{suffix}.xml");
         }
 
+        // ✅ 기존 API 유지: 기본은 Rule로 저장(ROI 검사 쪽)
         public static void Append(InspHistoryRecord item)
+            => Append(InspHistoryCategory.Rule, item);
+
+        // ✅ 신규: 카테고리 지정 저장
+        public static void Append(InspHistoryCategory category, InspHistoryRecord item)
         {
-            string path = GetFilePath(item.Time.Date);
+            string path = GetFilePath(item.Time.Date, category);
 
             List<InspHistoryRecord> list;
             if (File.Exists(path))
@@ -42,7 +53,12 @@ namespace PureGate.Inspect
             catch { /* 저장 실패해도 검사 흐름은 유지 */ }
         }
 
+        // ✅ 기존 API 유지: 기본은 Rule 로드
         public static List<InspHistoryRecord> LoadRange(DateTime fromDate, DateTime toDateInclusive, string modelName = "")
+            => LoadRange(InspHistoryCategory.Rule, fromDate, toDateInclusive, modelName);
+
+        // ✅ 신규: 카테고리 지정 로드
+        public static List<InspHistoryRecord> LoadRange(InspHistoryCategory category, DateTime fromDate, DateTime toDateInclusive, string modelName = "")
         {
             var result = new List<InspHistoryRecord>();
 
@@ -51,7 +67,7 @@ namespace PureGate.Inspect
 
             while (d <= end)
             {
-                string path = GetFilePath(d);
+                string path = GetFilePath(d, category);
                 if (File.Exists(path))
                 {
                     try
@@ -64,7 +80,6 @@ namespace PureGate.Inspect
                 d = d.AddDays(1);
             }
 
-            // 시간 포함 범위 필터 (from 00:00 ~ to 다음날 00:00 전)
             DateTime from = fromDate.Date;
             DateTime toExclusive = toDateInclusive.Date.AddDays(1);
 

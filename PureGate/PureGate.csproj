@@ -95,10 +95,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Algorithm\AIModuleAlgorithm.cs" />
-    <Compile Include="Algorithm\BlobAlgorithm.cs" />
     <Compile Include="Algorithm\DrawInspectInfo.cs" />
     <Compile Include="Algorithm\InspAlgorithm.cs" />
     <Compile Include="Algorithm\MatchAlgorithm.cs" />
+    <Compile Include="Algorithm\TransistorRuleAlgorithm.cs" />
     <Compile Include="CameraForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -149,17 +149,14 @@
     <Compile Include="MainForm.Designer.cs">
       <DependentUpon>MainForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="ModelTreeForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="ModelTreeForm.Designer.cs">
-      <DependentUpon>ModelTreeForm.cs</DependentUpon>
-    </Compile>
     <Compile Include="NewModel.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="NewModel.Designer.cs">
       <DependentUpon>NewModel.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Property\TransistorRuleProp.cs">
+      <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="UIControl\RecentNGimages.cs">
       <SubType>UserControl</SubType>
@@ -196,18 +193,6 @@
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
-    </Compile>
-    <Compile Include="Property\BinaryProp.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="Property\BinaryProp.Designer.cs">
-      <DependentUpon>BinaryProp.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Property\ImageFilterProp.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="Property\ImageFilterProp.Designer.cs">
-      <DependentUpon>ImageFilterProp.cs</DependentUpon>
     </Compile>
     <Compile Include="Property\AIModuleProp.cs">
       <SubType>UserControl</SubType>
@@ -326,9 +311,6 @@
     <EmbeddedResource Include="MainForm.resx">
       <DependentUpon>MainForm.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="ModelTreeForm.resx">
-      <DependentUpon>ModelTreeForm.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="NewModel.resx">
       <DependentUpon>NewModel.cs</DependentUpon>
     </EmbeddedResource>
@@ -340,17 +322,14 @@
       <SubType>Designer</SubType>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <EmbeddedResource Include="Property\BinaryProp.resx">
-      <DependentUpon>BinaryProp.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Property\ImageFilterProp.resx">
-      <DependentUpon>ImageFilterProp.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="Property\AIModuleProp.resx">
       <DependentUpon>AIModuleProp.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Property\MatchInspProp.resx">
       <DependentUpon>MatchInspProp.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Property\TransistorRuleProp.resx">
+      <DependentUpon>TransistorRuleProp.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="ResultForm.resx">
       <DependentUpon>ResultForm.cs</DependentUpon>

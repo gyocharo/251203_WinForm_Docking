@@ -82,32 +82,24 @@ namespace PureGate
             UserControl curProp = null;
             switch (inspPropType)
             {
-                case InspectType.InspBinary:
-                    BinaryProp blobProp = new BinaryProp();
-
-                    //#7_BINARY_PREVIEW#8 이진화 속성 변경시 발생하는 이벤트 추가
-                    blobProp.RangeChanged += RangeSlider_RangeChanged;
-                    //#18_IMAGE_CHANNEL#13 이미지 채널 변경시 이벤트 추가
-                    blobProp.ImageChannelChanged += ImageChannelChanged;
-                    curProp = blobProp;
-                    break;
                 //#11_MATCHING#5 패턴매칭 속성창 추가
                 case InspectType.InspMatch:
                     MatchInspProp matchProp = new MatchInspProp();
                     matchProp.PropertyChanged += PropertyChanged;
                     curProp = matchProp;
                     break;
-                case InspectType.InspFilter:
-                    ImageFilterProp filterProp = new ImageFilterProp();
-                    curProp = filterProp;
-                    break;
                 case InspectType.InspAIModule:
                     AIModuleProp aiModuleProp = new AIModuleProp();
                     curProp = aiModuleProp;
                     break;
+                case InspectType.InspTransistorRule:
+                    var trProp = new PureGate.Property.TransistorRuleProp();
+                    trProp.PropertyChanged += PropertyChanged; // RedrawMainView 호출되는 기존 핸들러
+                    curProp = trProp;
+                    break;
                 default:
-                    MsgBox.Show("유효하지 않은 옵션입니다.");
-                    return null;
+                    // MsgBox.Show("유효하지 않은 옵션입니다.");
+                    return null; // 처리 안 하는 InspectType은 탭 생성 스킵
             }
             return curProp;
         }
@@ -142,15 +134,7 @@ namespace PureGate
                 {
                     UserControl uc = tabPage.Controls[0] as UserControl;
 
-                    if (uc is BinaryProp binaryProp)
-                    {
-                        BlobAlgorithm blobAlgo = (BlobAlgorithm)window.FindInspAlgorithm(InspectType.InspBinary);
-                        if (blobAlgo is null)
-                            continue;
-
-                        binaryProp.SetAlgorithm(blobAlgo);
-                    }
-                    else if (uc is MatchInspProp matchProp)
+                   if (uc is MatchInspProp matchProp)
                     {
                         MatchAlgorithm matchAlgo = (MatchAlgorithm)window.FindInspAlgorithm(InspectType.InspMatch);
                         if (matchAlgo is null)
@@ -160,17 +144,14 @@ namespace PureGate
 
                         matchProp.SetAlgorithm(matchAlgo);
                     }
+                    else if (uc is PureGate.Property.TransistorRuleProp trProp)
+                    {
+                        var algo = (TransistorRuleAlgorithm)window.FindInspAlgorithm(InspectType.InspTransistorRule);
+                        if (algo != null)
+                            trProp.SetAlgorithm(algo);
+                    }
                 }
             }
-        }
-
-        private void RangeSlider_RangeChanged(object sender, RangeChangedEventArgs e)
-        {
-            int lowerValue = e.LowerValue;
-            int upperValue = e.UpperValue;
-            bool invert = e.Invert;
-            ShowBinaryMode showBinMode = e.ShowBinMode;
-            Global.Inst.InspStage.PreView?.SetBinary(lowerValue, upperValue, invert, showBinMode);
         }
 
         private void PropertyChanged(object sender, EventArgs e)
@@ -178,9 +159,5 @@ namespace PureGate
             Global.Inst.InspStage.RedrawMainView();
         }
 
-        private void ImageChannelChanged(object sender, ImageChannelEventArgs e)
-        {
-            Global.Inst.InspStage.SetPreviewImage(e.Channel);
-        }
     }
 }

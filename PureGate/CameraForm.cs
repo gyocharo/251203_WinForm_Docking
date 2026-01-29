@@ -31,6 +31,7 @@ namespace PureGate
 
             mainViewToolbar.ButtonChanged += Toolbar_ButtonChanged;
 
+            imageViewer.NewRoiCanceled += (s, e) => { mainViewToolbar.SetSetRoiChecked(false); };
         }
 
         private void ImageViewer_DiagramEntityEvent(object sender, DiagramEntityEventArgs e)
@@ -218,6 +219,54 @@ namespace PureGate
         {
             switch (e.Button)
             {
+                case ToolbarButton.ShowROI:
+                    if (e.IsChecked)
+                        UpdateDiagramEntity();
+                    else
+                        imageViewer.ResetEntity();
+                    break;
+
+                case ToolbarButton.SetROI:
+                    if (e.IsChecked)
+                    {
+                        // ✅ 1) 메뉴에서 선택된 역할이 들어오면 그걸로 ROI 생성
+                        //    (MainViewToolbar에서 Base/Body/Sub 클릭 시 e.RoiRole 값이 들어옴)
+                        InspWindowType type = InspWindowType.Base; // 기본값
+
+                        if (e.RoiRole.HasValue)
+                        {
+                            switch (e.RoiRole.Value)
+                            {
+                                case TransistorRoiRole.Base:
+                                    type = InspWindowType.Base;
+                                    break;
+                                case TransistorRoiRole.Body:
+                                    type = InspWindowType.Body;
+                                    break;
+                                case TransistorRoiRole.Sub:
+                                    type = InspWindowType.Sub;
+                                    break;
+
+                                    // 필요하면 추가
+                                    // case TransistorRoiRole.Lead:
+                                    //     type = InspWindowType.Lead;
+                                    //     break;
+                                    // case TransistorRoiRole.ID:
+                                    //     type = InspWindowType.ID;
+                                    //     break;
+                            }
+                        }
+
+                        imageViewer.NewRoi(type);
+                        imageViewer.Focus();
+                    }
+                    else
+                    {
+                        // 토글 해제 시 ROI 생성 모드 종료
+                        imageViewer.CancelNewRoi();
+                    }
+                    break;
+
                 case ToolbarButton.ChannelColor:
                     _currentImageChannel = eImageChannel.Color;
                     UpdateDisplay();

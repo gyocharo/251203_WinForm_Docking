@@ -16,7 +16,7 @@ namespace PureGate.Inspect
         public InspectBoard()
         {
         }
-
+    
         public bool Inspect(InspWindow window)
         {
             if (window is null)
@@ -63,13 +63,6 @@ namespace PureGate.Inspect
                         MatchAlgorithm matchAlgo = algo as MatchAlgorithm;
                         inspResult.ResultValue = $"{matchAlgo.OutScore}";
                         break;
-                    case InspectType.InspBinary:
-                        BlobAlgorithm blobAlgo = algo as BlobAlgorithm;
-                        int min = blobAlgo.BlobFilters[blobAlgo.FILTER_COUNT].min;
-                        int max = blobAlgo.BlobFilters[blobAlgo.FILTER_COUNT].max;
-
-                        inspResult.ResultValue = $"{blobAlgo.OutBlobCount}/{min}~{max}";
-                        break;
                     case InspectType.InspAIModule:
                         {
                             AIModuleAlgorithm AIModuleAlgo = algo as AIModuleAlgorithm;
@@ -80,6 +73,14 @@ namespace PureGate.Inspect
                                 if (!string.IsNullOrWhiteSpace(AIModuleAlgo.LastClsLabel))
                                     inspResult.ResultValue = AIModuleAlgo.LastClsLabel;
                             }
+                            break;
+                        }
+                    case InspectType.InspTransistorRule:
+                        {
+                            var tr = algo as TransistorRuleAlgorithm;
+                            // ResultValue를 간단히 OK/NG 같은 문자열로만 써도 되고,
+                            // 리드 개수 등을 표시하려면 알고리즘에 public 결과값을 하나 더 두는 방식 추천.
+                            inspResult.ResultValue = algo.IsDefect ? "NG" : "OK";
                             break;
                         }
                 }

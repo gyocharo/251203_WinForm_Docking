@@ -13,6 +13,7 @@ namespace PureGate.Core
         InspMatch,
         InspFilter,
         InspAIModule,
+        InspTransistorRule, 
         InspCount
     }
 
@@ -24,6 +25,16 @@ namespace PureGate.Core
         Sub,
         ID
     }
+
+
+    public enum TransistorRoiRole
+    {
+        Base,   // 케이스 파손
+        Body,   // 다리 빠짐 / 다리 잘림
+        Sub     // 위치 불량
+    }
+
+
     public enum DecisionType
     {
         None = 0,

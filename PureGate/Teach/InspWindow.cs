@@ -1,8 +1,9 @@
-﻿using PureGate.Algorithm;
+﻿using OpenCvSharp;
+using PureGate.Algorithm;
 using PureGate.Core;
 using PureGate.Inspect;
 using PureGate.Property;
-using OpenCvSharp;
+using PureGate.UIControl;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -15,6 +16,8 @@ namespace PureGate.Teach
 {
     public class InspWindow
     {
+        public TransistorRoiRole RoiRole { get; set; }
+
         public InspWindowType InspWindowType { get; set; }
 
         public string Name { get; set; }
@@ -138,16 +141,15 @@ namespace PureGate.Teach
 
             switch (inspType)
             {
-                case InspectType.InspBinary:
-                    inspAlgo = new BlobAlgorithm();
-                    break;
-
                 case InspectType.InspMatch:
                     inspAlgo = new MatchAlgorithm();
                     break;
 
                 case InspectType.InspAIModule:
                     inspAlgo = new AIModuleAlgorithm();
+                    break;
+                case InspectType.InspTransistorRule:
+                    inspAlgo = new TransistorRuleAlgorithm();
                     break;
             }
 

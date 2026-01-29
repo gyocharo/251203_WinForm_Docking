@@ -53,26 +53,38 @@ namespace PureGate.Teach
 
         private bool AddInspAlgorithm(InspWindow inspWindow)
         {
-            switch(inspWindow.InspWindowType)
+            switch (inspWindow.InspWindowType)
             {
                 case InspWindowType.Base:
-                    inspWindow.AddInspAlgorithm(InspectType.InspMatch);
-                    inspWindow.AddInspAlgorithm(InspectType.InspBinary);
-                    inspWindow.AddInspAlgorithm(InspectType.InspAIModule);
-                    break;
+                    {
+                        inspWindow.AddInspAlgorithm(InspectType.InspMatch);
+
+                        inspWindow.AddInspAlgorithm(InspectType.InspTransistorRule);
+                        var rule = inspWindow.FindInspAlgorithm(InspectType.InspTransistorRule) as TransistorRuleAlgorithm;
+                        if (rule != null) rule.TargetRole = TransistorRoiRole.Base;
+
+                        break;
+                    }
+
                 case InspWindowType.Body:
-                    inspWindow.AddInspAlgorithm(InspectType.InspMatch);
-                    inspWindow.AddInspAlgorithm(InspectType.InspBinary);
-                    inspWindow.AddInspAlgorithm(InspectType.InspAIModule);
-                    break;
+                    {
+                        inspWindow.AddInspAlgorithm(InspectType.InspTransistorRule);
+                        var rule = inspWindow.FindInspAlgorithm(InspectType.InspTransistorRule) as TransistorRuleAlgorithm;
+                        if (rule != null) rule.TargetRole = TransistorRoiRole.Body;
+
+                        break;
+                    }
+
                 case InspWindowType.Sub:
-                    inspWindow.AddInspAlgorithm(InspectType.InspMatch);
-                    inspWindow.AddInspAlgorithm(InspectType.InspBinary);
-                    inspWindow.AddInspAlgorithm(InspectType.InspAIModule);
-                    break;
+                    {
+                        inspWindow.AddInspAlgorithm(InspectType.InspTransistorRule);
+                        var rule = inspWindow.FindInspAlgorithm(InspectType.InspTransistorRule) as TransistorRuleAlgorithm;
+                        if (rule != null) rule.TargetRole = TransistorRoiRole.Sub;
+
+                        break;
+                    }
+
                 case InspWindowType.ID:
-                    inspWindow.AddInspAlgorithm(InspectType.InspMatch);
-                    inspWindow.AddInspAlgorithm(InspectType.InspAIModule);
                     break;
             }
             return true;
