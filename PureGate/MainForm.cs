@@ -219,34 +219,24 @@ namespace PureGate
         {
             if (_isClosing) return;
 
+            // ✅ owner를 무조건 MainForm(this)로 고정
             DialogResult result = MsgBox.Show(
-                "프로그램을 종료하시겠습니까?",
-                "종료 확인",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Question);
+                owner: this,
+                text: "프로그램을 종료하시겠습니까?",
+                caption: "종료 확인",
+                buttons: MessageBoxButtons.YesNo,
+                icon: MessageBoxIcon.Question);
 
             if (result != DialogResult.Yes)
             {
-                // 종료 취소
                 e.Cancel = true;
                 return;
             }
 
-            // 여기부터는 "종료 확정" 상태로 만들고,
-            // 이후 재진입(FormClosing 재호출) 시에는 메시지박스가 절대 안 뜨게 함
             _isClosing = true;
-
-            // Dispose 과정에서 Close/Exit 등이 다시 걸려도 메시지박스 재등장 방지
-            try
-            {
-                Global.Inst.Dispose();
-            }
-            catch
-            {
-                // 필요하면 로그만 남기고 종료는 계속 진행
-                // e.Cancel = true;  // <- 이건 넣지 않는 게 보통 안전
-            }
+            try { Global.Inst.Dispose(); } catch { }
         }
+
         #endregion
 
         // DockPanel 관련 기능 함수들
@@ -268,17 +258,13 @@ namespace PureGate
             CameraForm cameraForm = new CameraForm();
             cameraForm.Show(_dockPanel, DockState.Document);
 
-            // ==========================
-            // 상단 TitleForm 
-            // ==========================
-            TitleForm titleForm = new TitleForm();
-            titleForm.Show(cameraForm.Pane, DockAlignment.Top, 0.07);
+            // 상단 2개를 하나로 합친 Header 도킹
+            var titleForm = new TitleForm();
+            var countForm = new CountForm();
 
-            // ==========================
-            // CountForm 
-            // ==========================
-            CountForm countForm = new CountForm();
-            countForm.Show(cameraForm.Pane, DockAlignment.Top, 0.17);
+            var header = new HeaderDockContent(titleForm, countForm);
+            header.Show(cameraForm.Pane, DockAlignment.Top, 0.25);
+
 
             // ==========================
             // 하단 3분할
@@ -457,7 +443,67 @@ namespace PureGate
             dropDown.Show(location);
         }
 
-       
+        private class HeaderDockContent : DockContent
+        {
+            public HeaderDockContent(DockContent titleDock, DockContent countDock)
+            {
+                Text = string.Empty;
+                FormBorderStyle = FormBorderStyle.None;
+
+                var tlp = new TableLayoutPanel
+                {
+                    Dock = DockStyle.Fill,
+                    ColumnCount = 1,
+                    RowCount = 3,
+                    Margin = Padding.Empty,
+                    Padding = Padding.Empty
+                };
+
+                tlp.RowStyles.Add(new RowStyle(SizeType.Percent, 20f)); // Title
+                tlp.RowStyles.Add(new RowStyle(SizeType.Absolute, 2f)); // Separator
+                tlp.RowStyles.Add(new RowStyle(SizeType.Percent, 80f)); // Count
+
+                var separator = new Panel
+                {
+                    Dock = DockStyle.Fill,
+                    Margin = Padding.Empty,
+                    BackColor = Color.FromArgb(180, 180, 180)
+                };
+
+                // ✅ 핵심: Add 전에 TopLevel=false + border 제거
+                PrepareDockAsChild(titleDock);
+                PrepareDockAsChild(countDock);
+
+                tlp.Controls.Add(titleDock, 0, 0);
+                tlp.Controls.Add(separator, 0, 1);
+                tlp.Controls.Add(countDock, 0, 2);
+
+                Controls.Add(tlp);
+            }
+
+            private static void PrepareDockAsChild(DockContent dc)
+            {
+                // Form이므로 TopLevel false 필수
+                dc.TopLevel = false;
+                dc.FormBorderStyle = FormBorderStyle.None;
+                dc.Dock = DockStyle.Fill;
+
+                // Show()는 부모 컨테이너에 붙인 후 호출하는 게 안전
+                // (Visible=true로도 되지만 DockContent는 Show가 더 확실한 경우가 있음)
+            }
+
+            protected override void OnShown(EventArgs e)
+            {
+                base.OnShown(e);
+
+                // 자식 DockContent를 실제로 띄움 (부모에 붙은 뒤)
+                foreach (Control c in Controls[0].Controls) // tlp
+                {
+                    if (c is DockContent dc && !dc.Visible)
+                        dc.Show(); // 여기서 TopLevel=false 상태이므로 OK
+                }
+            }
+        }
 
         // Overview 버튼을 위한 초기화 메서드
         #region

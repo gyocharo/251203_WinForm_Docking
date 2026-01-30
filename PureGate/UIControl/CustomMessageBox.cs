@@ -70,17 +70,18 @@ namespace PureGate.UIControl
 
             try
             {
-                var ownerForm = owner as Form;
-                if (ownerForm != null && !ownerForm.IsDisposed && ownerForm.Visible)
+                var ownerForm = GetSafeOwnerForm(owner);
+
+                if (ownerForm != null)
                 {
                     dim = new DimOverlayForm(ownerForm);
-                    dim.Show(ownerForm);      // owner 기준으로 딤 띄움
-                    dim.BringToFront();       // 딤을 최상단으로
+                    dim.Show(ownerForm);
+                    dim.BringToFront();
                 }
 
-                using (var dlg = new CustomMessageBox(owner, title, message, detail, buttons, finalYes, finalNo, leftIcon))
+                using (var dlg = new CustomMessageBox(ownerForm, title, message, detail, buttons, finalYes, finalNo, leftIcon))
                 {
-                    return owner != null ? dlg.ShowDialog(owner) : dlg.ShowDialog();
+                    return ownerForm != null ? dlg.ShowDialog(ownerForm) : dlg.ShowDialog();
                 }
             }
             finally
@@ -677,6 +678,21 @@ namespace PureGate.UIControl
                 cp.ClassStyle |= CS_DROPSHADOW;
                 return cp;
             }
+        }
+
+        private static Form GetSafeOwnerForm(IWin32Window owner)
+        {
+            Form f = null;
+
+            if (owner is Control c) f = c.FindForm();
+            else f = owner as Form;
+
+            if (f == null) return null;
+            if (f.IsDisposed) return null;
+            if (!f.Visible) return null;
+            if (!f.TopLevel) return null;   // ✅ DockContent(TopLevel=false) 방지
+
+            return f;
         }
     }
 }
