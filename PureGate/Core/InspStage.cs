@@ -1275,52 +1275,102 @@ namespace PureGate.Core
             // 검사 시작 전 상태 초기화
             ResetDisplay();
 
+            // ✅ 1) ROI가 없으면: Saige AI(CLS)로 검사하고 결과이미지(오버레이)를 표시
+            if (CurModel != null && (CurModel.InspWindowList == null || CurModel.InspWindowList.Count == 0))
+            {
+                if (AIModule != null && AIModule.IsEngineLoaded)
+                {
+                    // LIVE가 켜져있으면, 결과 표시가 바로 덮일 수 있으니 필요시 끄는 것을 권장
+                    // LiveMode = false;
+
+                    Bitmap bitmap = GetBitmap();
+                    if (bitmap != null)
+                    {
+                        AIModule.InspAIModule(bitmap);
+
+                        // ✅ 여기서 Good(100.0) 오버레이가 그려진 이미지가 만들어짐
+                        Bitmap resultImage = AIModule.GetResultImage();
+                        UpdateDisplay(resultImage);
+
+                        // 판정(OK/NG) 결정
+                        bool ok = true;
+                        string label = "";
+                        float score = 0;
+
+                        var modelInfo = AIModule.GetModelInfo();
+
+                        if (AIModule.TryGetLastClsTop1(out label, out score) && !string.IsNullOrWhiteSpace(label))
+                        {
+                            label = label.Trim();
+
+                            // 혹시 label에 부가 텍스트가 붙는 경우 대비 (예: "Good(…)" or "Good …")
+                            int cutIdx = label.IndexOf('(');
+                            if (cutIdx >= 0) label = label.Substring(0, cutIdx).Trim();
+
+                            cutIdx = label.IndexOf(' ');
+                            if (cutIdx >= 0) label = label.Substring(0, cutIdx).Trim();
+
+                            bool isNg = false;
+
+                            // 가능하면 모델의 ClassIsNG 매핑 사용
+                            if (modelInfo != null && modelInfo.ClassInfos != null && modelInfo.ClassIsNG != null)
+                            {
+                                int idx = Array.FindIndex(modelInfo.ClassInfos,
+                                    c => string.Equals(c.Name?.Trim(), label, StringComparison.OrdinalIgnoreCase));
+
+                                if (idx < 0)
+                                {
+                                    idx = Array.FindIndex(modelInfo.ClassInfos,
+                                        c => (label ?? "").StartsWith(c.Name?.Trim() ?? "", StringComparison.OrdinalIgnoreCase));
+                                }
+
+                                if (idx >= 0 && idx < modelInfo.ClassIsNG.Length)
+                                    isNg = modelInfo.ClassIsNG[idx];
+                            }
+                            else
+                            {
+                                // fallback: Good이면 OK, 아니면 NG
+                                isNg = !string.Equals(label, "Good", StringComparison.OrdinalIgnoreCase);
+                            }
+
+                            ok = !isNg;
+                        }
+                        else
+                        {
+                            // Top1 못 얻으면 일단 OK로 두거나 정책에 맞게 변경
+                            ok = true;
+                        }
+
+                        UpdateResultUI(ok);
+                        RaiseInspectionCompleted(ok);
+
+                        // 제어기로 결과 전송 (isDefect = !ok)
+                        VisionSequence.Inst.VisionCommand(Vision2Mmi.InspDone, !ok);
+                        SetWorkingState(WorkingState.NONE);
+                        return;
+                    }
+                }
+
+                // 엔진/이미지 없으면 기존처럼 종료
+                VisionSequence.Inst.VisionCommand(Vision2Mmi.InspDone, false);
+                SetWorkingState(WorkingState.NONE);
+                return;
+            }
+
+            // ✅ 2) ROI가 있으면: 기존 ROI 검사 경로 그대로
             bool isDefect = false;
-            // 실제 AI 검사가 실행되는 구간
             if (!_inspWorker.RunInspect(out isDefect))
             {
                 SLogger.Write("Failed to inspect", SLogger.LogType.Error);
             }
 
-            // 핵심: 검사가 끝나자마자 결과 UI 업데이트 호출
-            // 결함이 없으면(false) -> OK(true)를 UI에 보냄
             UpdateResultUI(!isDefect);
-
             RaiseInspectionCompleted(!isDefect);
 
-            // ROI 검사도 1검사=1레코드로 저장
-            try
-            {
-                string modelName = "";
-                if (CurModel != null && !string.IsNullOrWhiteSpace(CurModel.ModelPath))
-                    modelName = Path.GetFileNameWithoutExtension(CurModel.ModelPath);
-
-                bool ok = !isDefect;
-
-                // 지금은 원인 클래스가 없으니 임시값
-                string ngClass = ok ? "" : "ROI_NG";
-
-                InspHistoryRepo.Append(new InspHistoryRecord
-                {
-                    Time = DateTime.Now,
-                    ModelName = modelName,
-                    LotNumber = _lotNumber ?? "",
-                    SerialID = _serialID ?? "",
-                    Total = 1,
-                    Ok = ok ? 1 : 0,
-                    Ng = ok ? 0 : 1,
-                    NgClass = ngClass
-                });
-            }
-            catch (Exception ex)
-            {
-                SLogger.Write($"[History Save] Failed: {ex.Message}", SLogger.LogType.Error);
-            }
-
-            // 제어기로 결과 전송
             VisionSequence.Inst.VisionCommand(Vision2Mmi.InspDone, isDefect);
             SetWorkingState(WorkingState.NONE);
         }
+
 
 
         //검사를 위한 준비 작업
