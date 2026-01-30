@@ -1258,6 +1258,8 @@ namespace PureGate.Core
                         Bitmap resultImage = AIModule.GetResultImage();
                         UpdateDisplay(resultImage);
 
+                        TrySaveClsResultImage(resultImage);
+
                         // 판정(OK/NG) 결정
                         bool ok = true;
                         string label = "";
@@ -1331,13 +1333,65 @@ namespace PureGate.Core
             }
 
             UpdateResultUI(!isDefect);
+
+            TrySaveRoiResultImage(isDefect);
+
             RaiseInspectionCompleted(!isDefect);
 
             VisionSequence.Inst.VisionCommand(Vision2Mmi.InspDone, isDefect);
             SetWorkingState(WorkingState.NONE);
         }
 
+        private void TrySaveRoiResultImage(bool isDefect, string ngFolderName = "ROI_NG")
+        {
+            if (!isDefect) return;
 
+            try
+            {
+                string dateFolder = DateTime.Now.ToString("yyyy-MM-dd");
+                string safeLabel = SanitizePathSegment(ngFolderName);
+
+                // ✅ exe 폴더 기준 상위 4단계(=프로젝트 루트쪽) 경로 구하기 (CLS 저장 방식과 동일)
+                string baseDir = AppContext.BaseDirectory;
+                var di = new DirectoryInfo(baseDir);
+                for (int i = 0; i < 4 && di.Parent != null; i++)
+                    di = di.Parent;
+                string projectRoot = di.FullName;
+
+                string targetDir = Path.Combine(projectRoot, "NG", safeLabel, dateFolder);
+                Directory.CreateDirectory(targetDir);
+
+                string ts = DateTime.Now.ToString("HH.mm.ss.ff");
+                string fullPath = Path.Combine(targetDir, $"{ts}_{safeLabel}.jpg");
+
+                // ✅ 현재 버퍼 이미지를 JPG로 저장
+                using (Bitmap bmp = GetBitmap(0, eImageChannel.Color))
+                {
+                    if (bmp != null)
+                    {
+                        bmp.Save(fullPath, System.Drawing.Imaging.ImageFormat.Jpeg);
+                    }
+                    else
+                    {
+                        // Color가 없으면 Gray라도 저장 시도
+                        using (Bitmap gray = GetBitmap(0, eImageChannel.Gray))
+                        {
+                            if (gray == null) return;
+                            gray.Save(fullPath, System.Drawing.Imaging.ImageFormat.Jpeg);
+                        }
+                    }
+                }
+
+                // ✅ CountForm(RecentNGimages) 썸네일 갱신 트리거
+                NGImageSaved?.Invoke(fullPath);
+
+                SLogger.Write($"[ROI Save] NG -> {fullPath}", SLogger.LogType.Info);
+            }
+            catch (Exception ex)
+            {
+                SLogger.Write($"[ROI Save] Failed: {ex.Message}", SLogger.LogType.Error);
+            }
+        }
 
         //검사를 위한 준비 작업
         public bool InspectReady(string lotNumber, string serialID)
