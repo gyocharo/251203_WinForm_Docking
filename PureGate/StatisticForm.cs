@@ -73,12 +73,16 @@ namespace PureGate
 
         public void UpdateStatistics(int okCount, int ngCount, List<NgClassCount> ngClassDetails = null)
         {
-            System.Diagnostics.Debug.WriteLine($"넘어온 NG 종류 개수: {ngClassDetails?.Count ?? 0}");
             if (this.InvokeRequired)
             {
                 this.Invoke(new Action(() => UpdateStatistics(okCount, ngCount, ngClassDetails)));
                 return;
             }
+
+            System.Diagnostics.Debug.WriteLine($"[StatisticForm] ok={okCount}, ng={ngCount}, detailCount={ngClassDetails?.Count ?? 0}");
+            System.Diagnostics.Debug.WriteLine("[NG_RAW] " + string.Join(", ", (ngClassDetails ?? new List<NgClassCount>())
+                .Where(x => x != null)
+                .Select(x => $"{x.ClassName}:{x.Count}")));
 
             Series series = chart.Series["StatSeries"];
             series.Points.Clear();
@@ -87,16 +91,48 @@ namespace PureGate
             {
                 int idx0 = series.Points.AddXY("NoData", 1);
                 series.Points[idx0].Color = Color.LightGray;
-                series.Points[idx0].Label = "";        // % 라벨 숨김
-                series.Points[idx0].LegendText = "";   // 범례 숨김
+                series.Points[idx0].Label = "";
+                series.Points[idx0].LegendText = "";
+                lblSummary.Text = "OK: 0 / NG: 0";
                 chart.Invalidate();
                 return;
             }
 
-            // 1. 하단 라벨 즉시 갱신
+            // 하단 라벨
             lblSummary.Text = $"TOTAL: {okCount + ngCount} ( OK: {okCount} / NG: {ngCount} )";
 
-            // 2. OK 데이터 추가
+            // ✅ 1) 유효한 NG 클래스 목록 만들기
+            // - OK/GOOD/NG/NoData/Unknown 같은 값은 제거
+            // - 공백 제거 + 대소문자 무시로 그룹핑 + 합산
+            var statsList = (ngClassDetails ?? new List<NgClassCount>())
+                .Where(d => d != null && d.Count > 0)
+                .Select(d => new { Name = (d.ClassName ?? "").Trim(), d.Count })
+                .Where(x =>
+                    !string.IsNullOrWhiteSpace(x.Name) &&
+                    !x.Name.Equals("OK", StringComparison.OrdinalIgnoreCase) &&
+                    !x.Name.Equals("GOOD", StringComparison.OrdinalIgnoreCase) &&
+                    !x.Name.Equals("NG", StringComparison.OrdinalIgnoreCase) &&
+                    !x.Name.Equals("NoData", StringComparison.OrdinalIgnoreCase) &&
+                    !x.Name.Equals("Unknown", StringComparison.OrdinalIgnoreCase)
+                )
+                .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(g => new { Name = g.Key, Total = g.Sum(v => v.Count) })
+                .OrderByDescending(x => x.Total)
+                .ToList();
+
+            int detailNgSum = statsList.Sum(x => x.Total);
+            if (ngCount > 0 && detailNgSum > 0 && detailNgSum != ngCount)
+            {
+                // ✅ detail 합이 ngCount랑 다르면 어디서 중복/누락이 생긴 거라 디버그 로그로 바로 보이게
+                System.Diagnostics.Debug.WriteLine($"[StatisticForm][WARN] NG mismatch: ngCount={ngCount}, detailSum={detailNgSum} (check producer side)");
+            }
+
+            // ✅ 2) 도넛 구성 원칙
+            // - OK는 항상 OK로 1조각
+            // - NG는 statsList가 있으면 "클래스별"로 쪼개서 표시
+            // - statsList가 없으면 NG 합계 1조각으로 표시
+
+            // OK 조각
             if (okCount > 0)
             {
                 int idx = series.Points.AddXY("OK", okCount);
@@ -104,31 +140,13 @@ namespace PureGate
                 series.Points[idx].LegendText = $"OK ({okCount})";
             }
 
-            System.Diagnostics.Debug.WriteLine("[NG_RAW] " + string.Join(", ", (ngClassDetails ?? new List<NgClassCount>()).Select(x => x?.ClassName)));
-            // 3. ⭐ NG 데이터 분할 (가장 중요한 부분)
-            if (ngClassDetails != null && ngClassDetails.Any(d => d != null && d.Count > 0))
+            // NG 조각들
+            if (ngCount > 0)
             {
-                // ✅ Unknown 포함해서 들어오더라도 차트에서는 제거
-                var statsList = ngClassDetails
-                    .Where(d => d != null && d.Count > 0)
-                    .Select(d => new { Name = (d.ClassName ?? "").Trim(), d.Count })
-                    .Where(x =>
-                        !string.IsNullOrWhiteSpace(x.Name) &&
-                        !x.Name.Equals("OK", StringComparison.OrdinalIgnoreCase) &&
-                        !x.Name.Equals("GOOD", StringComparison.OrdinalIgnoreCase) &&
-                        !x.Name.Equals("NG", StringComparison.OrdinalIgnoreCase) &&
-                        !x.Name.Equals("NoData", StringComparison.OrdinalIgnoreCase) &&
-                        !x.Name.Equals("Unknown", StringComparison.OrdinalIgnoreCase)   // ✅ Unknown 제거
-                    )
-                    .GroupBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
-                    .Select(g => new { Name = g.Key, Total = g.Sum(v => v.Count) })
-                    .ToList();
-
-                // ✅ statsList가 비어있다는 건 "NG는 있는데 전부 Unknown뿐" 같은 케이스
-                // 그럼 차트에는 NG 합계 1조각으로 표시해줌(Unknown은 안보이게)
                 if (statsList.Count > 0)
                 {
-                    Color[] palette = { Color.Red, Color.Orange, Color.Magenta, Color.Brown, Color.Gold };
+                    // 클래스별 NG 표시
+                    Color[] palette = { Color.Red, Color.Orange, Color.Magenta, Color.Brown, Color.Gold, Color.DarkRed, Color.DarkOrange };
                     int i = 0;
 
                     foreach (var item in statsList)
@@ -138,22 +156,26 @@ namespace PureGate
                         series.Points[idx].LegendText = $"{item.Name} ({item.Total})";
                         i++;
                     }
+
+                    // ✅ statsList 합이 ngCount보다 작으면 남는 NG는 기타로 표시(원하면 삭제 가능)
+                    int remain = ngCount - detailNgSum;
+                    if (remain > 0)
+                    {
+                        int idx = series.Points.AddXY("NG(etc)", remain);
+                        series.Points[idx].Color = Color.Gray;
+                        series.Points[idx].LegendText = $"NG(etc) ({remain})";
+                    }
                 }
-                else if (ngCount > 0)
+                else
                 {
+                    // 유효 클래스가 없으면 NG 합계 1조각만
                     int idx = series.Points.AddXY("NG", ngCount);
                     series.Points[idx].Color = Color.Red;
                     series.Points[idx].LegendText = $"NG ({ngCount})";
                 }
             }
-            else if (ngCount > 0)
-            {
-                int idx = series.Points.AddXY("NG", ngCount);
-                series.Points[idx].Color = Color.Red;
-                series.Points[idx].LegendText = $"NG ({ngCount})";
-            }
 
-            chart.Invalidate(); // 차트 강제 다시 그리기
+            chart.Invalidate();
         }
 
     }
