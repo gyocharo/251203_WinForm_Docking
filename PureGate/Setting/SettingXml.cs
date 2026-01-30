@@ -98,6 +98,12 @@ namespace PureGate.Setting
         public string ModelDir { get; set; } = "";
         public string ImageDir { get; set; } = "";
 
+        public string WcfPartDefault { get; set; } = "";
+        public string WcfCamNo { get; set; } = "";
+        public string WcfLineNo { get; set; } = "";
+        public string WcfStationNo { get; set; } = "";
+
+
         public long ExposureTime { get; set; } = 15000; //단위 us
 
         public CameraType CamType { get; set; } = CameraType.WebCam;

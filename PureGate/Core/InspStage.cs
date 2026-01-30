@@ -1242,6 +1242,18 @@ namespace PureGate.Core
                                 errMsg = string.Format("Failed to virtual grab");
                                 SLogger.Write(errMsg, SLogger.LogType.Error);
                             }
+                            else
+                            {
+                                // ✅ UseCamera=false에서도 WCF 파일명 규칙으로 저장하여 ResultForm 파싱이 되게 함
+                                if (SettingXml.Inst.CommType == CommunicatorType.WCF)
+                                {
+                                    bool doSave = false;
+                                    lock (_wcfMetaLock) doSave = _pendingWcfSave;
+
+                                    if (doSave && CurModel != null)
+                                        SaveWcfVirtualGrabImage(CurModel.InspectImagePath);
+                                }
+                            }
                         }
                     }
                     break;
@@ -1849,16 +1861,14 @@ namespace PureGate.Core
             return dir;
         }
 
-        // ✅ 요청 형식: LOT-<현재시각>_PART-<part>_SN-<serial>_CAM-<cam>_LINE-<line>_ST-<station>.png
         private string BuildWcfFileName()
         {
-            // LOT-<현재시각> (요청사항: "LOT-현재시각")
-            // 파일명 안전하게: yyyyMMddHHmmssfff
-            string lotTime = DateTime.Now.ToString("yyyyMMddHHmmssfff");
+            // LOT-<현재날짜>
+            string lotDate = DateTime.Now.ToString("yyyyMMdd");
 
             lock (_wcfMetaLock)
             {
-                _wcfLotTime = lotTime;
+                _wcfLotTime = lotDate;
 
                 string part = SafeToken(_wcfPart);
                 string sn = SafeToken(_wcfSerial);
@@ -1866,52 +1876,59 @@ namespace PureGate.Core
                 string line = SafeToken(_wcfLine);
                 string st = SafeToken(_wcfStation);
 
-                return $"LOT-{lotTime}_PART-{part}_SN-{sn}_CAM-{cam}_LINE-{line}_ST-{st}.png";
+                return $"LOT-{lotDate}_PART-{part}_SN-{sn}_CAM-{cam}_LINE-{line}_ST-{st}.png";
             }
         }
 
-        // ✅ WCF 메시지에서 Lot/Serial 등 메타 갱신 (Part/Cam/Line/Station은 메시지에 없을 수도 있어 fallback 포함)
         private void UpdateWcfMetaFromMessage(object param)
         {
-            // 기본값(fallback)
-            string fallbackPart = "";
-            if (CurModel != null && !string.IsNullOrWhiteSpace(CurModel.ModelPath))
-                fallbackPart = Path.GetFileNameWithoutExtension(CurModel.ModelPath);
-
-            string fallbackCam = SettingXml.Inst.MachineName; // 예: VISION02
-            string fallbackLine = "0";
-            string fallbackStation = "0";
-
-            string lot = "";
-            string serial = "";
-
-            try
+            // fallback: 설정값 우선, 없으면 모델명(확장자 제거)
+            string fallbackPart = SettingXml.Inst.WcfPartDefault ?? "";
+            if (string.IsNullOrWhiteSpace(fallbackPart))
             {
-                // WCF에서 넘어오는 타입: MessagingLibrary.Message
-                if (param is MessagingLibrary.Message msg)
-                {
-                    lot = msg.LotNumber ?? "";
-                    serial = msg.SerialID ?? "";
-                }
+                if (CurModel != null && !string.IsNullOrWhiteSpace(CurModel.ModelPath))
+                    fallbackPart = Path.GetFileNameWithoutExtension(CurModel.ModelPath);
             }
-            catch { /* 무시 */ }
+
+            // fallback: 설정값 우선, 없으면 MachineName에서 숫자 추출 (VISION02 -> "02")
+            string fallbackNo = Derive2DigitFromMachineName(SettingXml.Inst.MachineName);
+            string fallbackCam = !string.IsNullOrWhiteSpace(SettingXml.Inst.WcfCamNo) ? PadNumber(SettingXml.Inst.WcfCamNo, 2) : fallbackNo;
+            string fallbackLine = !string.IsNullOrWhiteSpace(SettingXml.Inst.WcfLineNo) ? PadNumber(SettingXml.Inst.WcfLineNo, 2) : fallbackNo;
+            string fallbackSt = !string.IsNullOrWhiteSpace(SettingXml.Inst.WcfStationNo) ? PadNumber(SettingXml.Inst.WcfStationNo, 2) : fallbackNo;
+
+            // WCF 메시지에서 가능한 값 읽기
+            string lotFromMsg = TryGetMsgString(param, "LotNumber", "LOT", "Lot", "LotId");
+            string serialFromMsg = TryGetMsgString(param, "SerialID", "SerialNumber", "SN", "Serial", "Barcode");
+            string partFromMsg = TryGetMsgString(param, "PartID", "Part", "Product", "Tool", "ModelName");
+            string camFromMsg = TryGetMsgString(param, "Cam", "CamNo", "Camera", "CameraNo", "CamIndex");
+            string lineFromMsg = TryGetMsgString(param, "Line", "LineNo", "LineNumber");
+            string stFromMsg = TryGetMsgString(param, "Station", "StationNo", "StationNumber", "St");
+
+            // LOT는 "현재날짜"를 쓰는 게 기준이라, 메시지 LotNumber는 내부 기록용으로만 유지
+            string lotInternal = lotFromMsg ?? "";
+            string serial = !string.IsNullOrWhiteSpace(serialFromMsg) ? serialFromMsg : "NA";
+
+            // 숫자면 0패딩 (현장 예: 000031)
+            serial = PadNumber(serial, 6);
+
+            // PART: 메시지 우선, 없으면 설정/모델명
+            string part = !string.IsNullOrWhiteSpace(partFromMsg) ? partFromMsg : fallbackPart;
+
+            // CAM/LINE/ST: 메시지 우선, 없으면 설정값/머신명 기반
+            string cam = !string.IsNullOrWhiteSpace(camFromMsg) ? PadNumber(camFromMsg, 2) : fallbackCam;
+            string line = !string.IsNullOrWhiteSpace(lineFromMsg) ? PadNumber(lineFromMsg, 2) : fallbackLine;
+            string st = !string.IsNullOrWhiteSpace(stFromMsg) ? PadNumber(stFromMsg, 2) : fallbackSt;
 
             lock (_wcfMetaLock)
             {
-                // 프로그램 내부 history용(기존 코드가 _lotNumber/_serialID 사용)
-                _lotNumber = lot;
-                _serialID = serial;
+                _lotNumber = lotInternal;
+                _serialID = serialFromMsg ?? "";
 
-                // 요청 파일명 구성용
-                _wcfSerial = !string.IsNullOrWhiteSpace(serial) ? serial : "NA";
-
-                // PART/CAM/LINE/ST 는 WCF 메시지에 필드가 없어서 기본값 사용(필요 시 나중에 확장 가능)
-                _wcfPart = !string.IsNullOrWhiteSpace(_wcfPart) ? _wcfPart : fallbackPart;
-                if (string.IsNullOrWhiteSpace(_wcfPart)) _wcfPart = fallbackPart;
-
-                _wcfCam = fallbackCam;
-                _wcfLine = fallbackLine;
-                _wcfStation = fallbackStation;
+                _wcfPart = part;
+                _wcfSerial = serial;
+                _wcfCam = cam;
+                _wcfLine = line;
+                _wcfStation = st;
 
                 _pendingWcfSave = true;
             }
@@ -1925,6 +1942,14 @@ namespace PureGate.Core
                 string dir = GetWcfSaveDir();
                 string fileName = BuildWcfFileName();
                 string savePath = Path.Combine(dir, fileName);
+
+                if (File.Exists(savePath))
+                {
+                    string noExt = Path.GetFileNameWithoutExtension(savePath);
+                    string ext = Path.GetExtension(savePath);
+                    string uniq = DateTime.Now.ToString("HHmmssfff");
+                    savePath = Path.Combine(dir, $"{noExt}-{uniq}{ext}");
+                }
 
                 Mat curImage = GetMat(bufferIndex, eImageChannel.Color);
                 if (curImage == null || curImage.Empty())
@@ -1956,6 +1981,91 @@ namespace PureGate.Core
                 lock (_wcfMetaLock) { _pendingWcfSave = false; }
             }
         }
+
+        // ✅ 숫자면 0-padding (예: "31" -> "000031")
+        private string PadNumber(string v, int width)
+        {
+            if (string.IsNullOrWhiteSpace(v)) return "NA";
+            v = v.Trim();
+            if (long.TryParse(v, out long n))
+                return n.ToString().PadLeft(width, '0');
+            return v;
+        }
+
+        // ✅ WCF 메시지에서 임의 프로퍼티를 안전하게 읽기 (MessagingLibrary.Message에 필드가 늘어도 안전)
+        private string TryGetMsgString(object msg, params string[] propNames)
+        {
+            if (msg == null || propNames == null) return "";
+            var t = msg.GetType();
+            foreach (var name in propNames)
+            {
+                try
+                {
+                    var p = t.GetProperty(name);
+                    if (p == null) continue;
+                    var val = p.GetValue(msg, null);
+                    if (val == null) continue;
+                    string s = val.ToString();
+                    if (!string.IsNullOrWhiteSpace(s))
+                        return s.Trim();
+                }
+                catch { }
+            }
+            return "";
+        }
+
+        // ✅ MachineName(VISION02 등)에서 뒤 숫자 추출 -> 2자리로 반환 ("02")
+        private string Derive2DigitFromMachineName(string machineName)
+        {
+            if (string.IsNullOrWhiteSpace(machineName)) return "00";
+            var digits = new string(machineName.Where(char.IsDigit).ToArray());
+            if (string.IsNullOrWhiteSpace(digits)) return "00";
+            if (digits.Length >= 2) digits = digits.Substring(digits.Length - 2, 2);
+            return digits.PadLeft(2, '0');
+        }
+
+        // ✅ UseCamera=false(가상 이미지 검사)인 경우에도 WCF 규칙 파일명으로 복사 저장
+        private void SaveWcfVirtualGrabImage(string srcImagePath)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(srcImagePath) || !File.Exists(srcImagePath))
+                {
+                    SLogger.Write("[WCF Save] VirtualGrab source image not found", SLogger.LogType.Error);
+                    return;
+                }
+
+                string dir = GetWcfSaveDir();
+                string fileName = BuildWcfFileName();
+                string savePath = Path.Combine(dir, fileName);
+
+                // 파일명 충돌 시 유니크 suffix
+                if (File.Exists(savePath))
+                {
+                    string noExt = Path.GetFileNameWithoutExtension(savePath);
+                    string ext = Path.GetExtension(savePath);
+                    string uniq = DateTime.Now.ToString("HHmmssfff");
+                    savePath = Path.Combine(dir, $"{noExt}-{uniq}{ext}");
+                }
+
+                File.Copy(srcImagePath, savePath, true);
+
+                if (CurModel != null)
+                    CurModel.InspectImagePath = savePath;
+
+                SLogger.Write($"[WCF Save] Virtual saved: {savePath}", SLogger.LogType.Info);
+            }
+            catch (Exception ex)
+            {
+                SLogger.Write($"[WCF Save] Virtual failed: {ex.Message}", SLogger.LogType.Error);
+            }
+            finally
+            {
+                lock (_wcfMetaLock) { _pendingWcfSave = false; }
+            }
+        }
+
+
 
 
 
