@@ -14,6 +14,9 @@ namespace PureGate
 {
     public partial class TitleForm : DockContent
     {
+        private readonly Font _quickFontRegular = new Font("맑은 고딕", 9F, FontStyle.Regular);
+        private readonly Font _quickFontBold = new Font("맑은 고딕", 9F, FontStyle.Bold);
+
         public TitleForm()
         {
             InitializeComponent();
@@ -39,12 +42,12 @@ namespace PureGate
 
         private void lbl1Month_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            ShowResult(DateTime.Today.AddMonths(-1).AddDays(1), DateTime.Today);
+            ShowResult(DateTime.Today.AddMonths(-1), DateTime.Today);
         }
 
         private void lbl1Year_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            ShowResult(DateTime.Today.AddYears(-1).AddDays(1), DateTime.Today);
+            ShowResult(DateTime.Today.AddYears(-1), DateTime.Today);
         }
 
         private void btnShowRange_Click(object sender, EventArgs e)
@@ -64,8 +67,8 @@ namespace PureGate
             string project = "PureGate";
 
             // 4. SummaryForm 생성 후 보여주기
-            SummaryForm summaryForm = new SummaryForm(project, start, end);
-            summaryForm.Show();
+            using (var summaryForm = new SummaryForm(project, start, end))
+                summaryForm.ShowDialog();
         }
 
         private void SetupQuickRangeUI()
@@ -156,7 +159,7 @@ namespace PureGate
                 ll.Margin = new Padding(0);
                 ll.Padding = new Padding(6, 2, 6, 2);
                 ll.TextAlign = ContentAlignment.MiddleCenter;
-                ll.Font = new Font("맑은 고딕", 9F, FontStyle.Regular);
+                ll.Font = _quickFontRegular;
 
                 // 링크 밑줄 제거 + 텍스트 컬러 통일
                 ll.LinkBehavior = LinkBehavior.NeverUnderline;
@@ -191,7 +194,7 @@ namespace PureGate
                 foreach (var ll in all)
                 {
                     ll.Tag = null;
-                    ll.Font = new Font(ll.Font.FontFamily, ll.Font.Size, FontStyle.Regular);
+                    ll.Font = _quickFontRegular;
                     ll.BackColor = normalBg;
 
                     ll.LinkVisited = false;
@@ -201,7 +204,7 @@ namespace PureGate
                 }
 
                 selected.Tag = "selected";
-                selected.Font = new Font(selected.Font.FontFamily, selected.Font.Size, FontStyle.Bold);
+                selected.Font = _quickFontBold;
                 selected.BackColor = selectedBg;
 
                 selected.LinkVisited = false;
@@ -209,6 +212,16 @@ namespace PureGate
                 selected.LinkColor = text;
                 selected.VisitedLinkColor = text;
             }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                try { _quickFontRegular?.Dispose(); } catch { }
+                try { _quickFontBold?.Dispose(); } catch { }
+            }
+            base.Dispose(disposing);
         }
     }
 }
