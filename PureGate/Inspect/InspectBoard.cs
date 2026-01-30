@@ -33,7 +33,6 @@ namespace PureGate.Inspect
         {
             window.ResetInspResult();
 
-            // 현재 검사 이미지 파일명 가져오기
             string imageFileName = GetCurrentImageFileName();
 
             foreach (InspAlgorithm algo in window.AlgorithmList)
@@ -54,9 +53,7 @@ namespace PureGate.Inspect
                     ResultInfos = resultInfo
                 };
 
-                // 이미지 파일명 정보 파싱
                 inspResult.ParseImageFileName(imageFileName);
-
 
                 switch (algo.InspectType)
                 {
@@ -68,14 +65,11 @@ namespace PureGate.Inspect
                         BlobAlgorithm blobAlgo = algo as BlobAlgorithm;
                         int min = blobAlgo.BlobFilters[blobAlgo.FILTER_COUNT].min;
                         int max = blobAlgo.BlobFilters[blobAlgo.FILTER_COUNT].max;
-
                         inspResult.ResultValue = $"{blobAlgo.OutBlobCount}/{min}~{max}";
                         break;
                     case InspectType.InspAIModule:
                         {
                             AIModuleAlgorithm AIModuleAlgo = algo as AIModuleAlgorithm;
-
-                            // ✅ CLS는 NG 클래스(라벨)를 Status에 표시하기 위해 ResultValue에 저장
                             if (AIModuleAlgo != null && AIModuleAlgo.EngineType == AIEngineType.CLS && AIModuleAlgo.IsDefect)
                             {
                                 if (!string.IsNullOrWhiteSpace(AIModuleAlgo.LastClsLabel))
@@ -100,84 +94,192 @@ namespace PureGate.Inspect
             if (windowList.Count <= 0)
                 return false;
 
-            // ✅ Base 윈도우를 Alignment 기준으로 사용 (케이스 위치 찾기)
+            SLogger.Write($"========================================");
+            SLogger.Write($"[Alignment] 🔍 3단계 검사 시작 - 총 {windowList.Count}개 윈도우");
+
+            // ===== 1단계: Alignment 계산 =====
             Point alignOffset = new Point(0, 0);
-            InspWindow baseWindow = windowList.Find(w => w.InspWindowType == Core.InspWindowType.Base);
+            InspWindow alignWindow = windowList.Find(w => w.InspWindowType == Core.InspWindowType.Base);
             
-            if (baseWindow != null)
+            if (alignWindow == null)
             {
-                SLogger.Write($"[Alignment] Base 윈도우 발견: {baseWindow.UID}");
+                alignWindow = windowList.Find(w => w.InspWindowType == Core.InspWindowType.Body);
+                if (alignWindow != null)
+                    SLogger.Write($"[Alignment] Base 없음 → Body를 Alignment 기준으로 사용");
+            }
+            else
+            {
+                SLogger.Write($"[Alignment] Base를 Alignment 기준으로 사용");
+            }
+            
+            if (alignWindow != null)
+            {
+                SLogger.Write($"[Alignment] Alignment 윈도우: {alignWindow.UID} ({alignWindow.InspWindowType})");
                 
-                MatchAlgorithm matchAlgo = (MatchAlgorithm)baseWindow.FindInspAlgorithm(InspectType.InspMatch);
-                if (matchAlgo != null && matchAlgo.IsUse)
+                MatchAlgorithm matchAlgo = (MatchAlgorithm)alignWindow.FindInspAlgorithm(InspectType.InspMatch);
+                if (matchAlgo != null)
                 {
-                    SLogger.Write($"[Alignment] Base MatchAlgorithm 활성화 상태");
+                    SLogger.Write($"[Alignment] MatchAlgorithm 발견 - IsUse: {matchAlgo.IsUse}");
                     
-                    // ✅ CRITICAL: Base의 TeachRect를 WindowArea로 먼저 설정 (Golden 위치)
-                    matchAlgo.TeachRect = baseWindow.WindowArea;
-                    matchAlgo.InspRect = baseWindow.WindowArea;  // 검사 전에는 같은 위치
-                    
-                    // 검사 이미지 설정
-                    Mat srcImage = Global.Inst.InspStage.GetMat(0, matchAlgo.ImageChannel);
-                    matchAlgo.SetInspData(srcImage);
-                    
-                    SLogger.Write($"[Alignment] Base TeachRect: ({matchAlgo.TeachRect.X}, {matchAlgo.TeachRect.Y})");
-                    
-                    // Base 윈도우의 MatchAlgorithm으로 케이스 위치 찾기
-                    if (!InspectWindow(baseWindow))
+                    // ✅ 강제 최적화
+                    if (!matchAlgo.IsUse)
                     {
-                        SLogger.Write($"[Alignment] Base 검사 실패!", SLogger.LogType.Error);
+                        matchAlgo.IsUse = true;
+                        SLogger.Write($"[Alignment] → 강제 활성화");
+                    }
+                    
+                    if (matchAlgo.ExtSize.Width < 200 || matchAlgo.ExtSize.Height < 200)
+                    {
+                        int newSize = Math.Max(200, Math.Max(matchAlgo.ExtSize.Width, matchAlgo.ExtSize.Height));
+                        matchAlgo.ExtSize = new Size(newSize, newSize);
+                        SLogger.Write($"[Alignment] → 검색 범위 확장: {newSize}x{newSize}");
+                    }
+                    
+                    if (matchAlgo.MatchScore > 50)
+                    {
+                        matchAlgo.MatchScore = 35;  // 더 낮춤
+                        SLogger.Write($"[Alignment] → MatchScore 임계값: {matchAlgo.MatchScore}%");
+                    }
+                    
+                    var templates = matchAlgo.GetTemplateImages();
+                    if (templates == null || templates.Count == 0)
+                    {
+                        SLogger.Write($"[Alignment] ❌ Template 이미지 없음!", SLogger.LogType.Error);
+                        
+                        // Alignment 없이 진행
+                        foreach (InspWindow window in windowList)
+                        {
+                            window.SetInspOffset(new Point(0, 0));
+                            
+                            // 검사 데이터 갱신
+                            foreach (var algo in window.AlgorithmList)
+                            {
+                                if (!algo.IsUse) continue;
+                                algo.TeachRect = window.WindowArea;
+                                algo.InspRect = window.WindowArea;
+                                Mat algoSrcImage = Global.Inst.InspStage.GetMat(0, algo.ImageChannel);
+                                algo.SetInspData(algoSrcImage);
+                            }
+                            
+                            if (!InspectWindow(window))
+                                return false;
+                        }
+                        SLogger.Write($"========================================");
+                        return true;
+                    }
+                    
+                    SLogger.Write($"[Alignment] Template: {templates.Count}개, 크기: {templates[0].Width}x{templates[0].Height}");
+                    
+                    // ✅ 1단계: Alignment만 수행 (RuleBased 제외)
+                    SLogger.Write($"[Alignment] === 1단계: Offset 계산 ===");
+                    
+                    matchAlgo.TeachRect = alignWindow.WindowArea;
+                    matchAlgo.InspRect = alignWindow.WindowArea;
+                    
+                    Mat alignSrcImage = Global.Inst.InspStage.GetMat(0, matchAlgo.ImageChannel);
+                    if (alignSrcImage == null || alignSrcImage.Empty())
+                    {
+                        SLogger.Write($"[Alignment] ❌ 검사 이미지 없음!", SLogger.LogType.Error);
+                        SLogger.Write($"========================================");
                         return false;
                     }
-
-                    if (matchAlgo.IsInspected)
+                    matchAlgo.SetInspData(alignSrcImage);
+                    
+                    // ✅ MatchAlgorithm만 실행
+                    if (matchAlgo.DoInspect())
                     {
-                        alignOffset = matchAlgo.GetOffset();
-                        baseWindow.InspArea = baseWindow.WindowArea + alignOffset;
-                        
-                        SLogger.Write($"[Alignment] ✅ 오프셋 계산 완료!");
-                        SLogger.Write($"[Alignment] OutPoint: ({matchAlgo.OutPoint.X}, {matchAlgo.OutPoint.Y})");
-                        SLogger.Write($"[Alignment] InspRect: ({matchAlgo.InspRect.X}, {matchAlgo.InspRect.Y})");
-                        SLogger.Write($"[Alignment] Offset: ({alignOffset.X}, {alignOffset.Y})");
-                        SLogger.Write($"[Alignment] Score: {matchAlgo.OutScore}");
+                        if (matchAlgo.IsInspected)
+                        {
+                            alignOffset = matchAlgo.GetOffset();
+                            alignWindow.InspArea = alignWindow.WindowArea + alignOffset;
+                            
+                            SLogger.Write($"[Alignment] ✅ Offset 계산 완료!");
+                            SLogger.Write($"[Alignment] OutPoint: ({matchAlgo.OutPoint.X}, {matchAlgo.OutPoint.Y})");
+                            SLogger.Write($"[Alignment] TeachRect: ({matchAlgo.TeachRect.X}, {matchAlgo.TeachRect.Y})");
+                            SLogger.Write($"[Alignment] ★★★ Offset: ({alignOffset.X}, {alignOffset.Y}) ★★★");
+                            SLogger.Write($"[Alignment] MatchScore: {matchAlgo.OutScore}%");
+                            
+                            // 오프셋 검증
+                            double offsetDist = Math.Sqrt(alignOffset.X * alignOffset.X + alignOffset.Y * alignOffset.Y);
+                            if (offsetDist < 5)
+                            {
+                                SLogger.Write($"[Alignment] ⚠️ 오프셋이 매우 작습니다 (거리: {offsetDist:F1}px)");
+                            }
+                            else if (offsetDist > 500)
+                            {
+                                SLogger.Write($"[Alignment] ⚠️ 오프셋이 비정상적으로 큽니다 (거리: {offsetDist:F1}px)");
+                            }
+                            else
+                            {
+                                SLogger.Write($"[Alignment] 오프셋 거리: {offsetDist:F1}px (정상 범위)");
+                            }
+                        }
+                        else
+                        {
+                            SLogger.Write($"[Alignment] ⚠️ MatchAlgorithm 검사 실행 안됨");
+                        }
                     }
                     else
                     {
-                        SLogger.Write($"[Alignment] ⚠️ MatchAlgorithm 검사 실행 안됨", SLogger.LogType.Error);
+                        SLogger.Write($"[Alignment] ❌ MatchAlgorithm DoInspect 실패!");
                     }
                 }
                 else
                 {
-                    if (matchAlgo == null)
-                        SLogger.Write($"[Alignment] ⚠️ Base에 MatchAlgorithm 없음", SLogger.LogType.Error);
-                    else
-                        SLogger.Write($"[Alignment] ⚠️ Base MatchAlgorithm 비활성화", SLogger.LogType.Error);
+                    SLogger.Write($"[Alignment] ❌ MatchAlgorithm 없음!");
                 }
             }
             else
             {
-                SLogger.Write($"[Alignment] ⚠️ Base 윈도우 없음", SLogger.LogType.Error);
+                SLogger.Write($"[Alignment] ⚠️ Base와 Body 윈도우 둘 다 없음!");
             }
 
-            // ✅ Base를 제외한 나머지 윈도우에 오프셋 적용
+            // ===== 2단계: 모든 윈도우에 Offset 적용 =====
+            SLogger.Write($"[Alignment] === 2단계: 모든 윈도우에 Offset 적용 ===");
             foreach (InspWindow window in windowList)
             {
-                if (window == baseWindow)
-                    continue; // Base는 이미 검사했으므로 스킵
-
-                // 모든 윈도우(Body, Sub)에 오프셋 반영
                 window.SetInspOffset(alignOffset);
-                
-                SLogger.Write($"[Alignment] {window.InspWindowType} 오프셋 적용: ({window.WindowArea.X}, {window.WindowArea.Y}) → ({window.InspArea.X}, {window.InspArea.Y})");
-                
-                if (!InspectWindow(window))
-                    return false;
+                SLogger.Write($"[Alignment] {window.InspWindowType} ({window.UID}): " +
+                             $"({window.WindowArea.X}, {window.WindowArea.Y}) → " +
+                             $"({window.InspArea.X}, {window.InspArea.Y})");
             }
 
+            // ===== 3단계: 정렬된 위치에서 전체 재검사 =====
+            SLogger.Write($"[Alignment] === 3단계: 정렬된 위치에서 전체 재검사 ===");
+            
+            foreach (InspWindow window in windowList)
+            {
+                // ✅ 모든 알고리즘의 검사 위치를 InspArea로 업데이트
+                foreach (var algo in window.AlgorithmList)
+                {
+                    if (!algo.IsUse) continue;
+                    
+                    // TeachRect는 Golden 위치 유지
+                    algo.TeachRect = window.WindowArea;
+                    
+                    // ✅ InspRect는 정렬된 위치로 설정
+                    algo.InspRect = window.InspArea;
+                    
+                    // 검사 이미지 재설정
+                    Mat srcImage = Global.Inst.InspStage.GetMat(0, algo.ImageChannel);
+                    algo.SetInspData(srcImage);
+                }
+                
+                SLogger.Write($"[Alignment] 재검사: {window.InspWindowType} at ({window.InspArea.X}, {window.InspArea.Y})");
+                
+                // ✅ 정렬된 위치에서 검사 실행
+                if (!InspectWindow(window))
+                {
+                    SLogger.Write($"[Alignment] ❌ {window.InspWindowType} 재검사 실패!", SLogger.LogType.Error);
+                    return false;
+                }
+            }
+
+            SLogger.Write($"[Alignment] ✅ 3단계 검사 완료!");
+            SLogger.Write($"========================================");
             return true;
         }
 
-        // 현재 검사 중인 이미지 파일명 가져오기
         private string GetCurrentImageFileName()
         {
             try
@@ -190,7 +292,6 @@ namespace PureGate.Inspect
             }
             catch (Exception)
             {
-                // 예외 발생 시 빈 문자열 반환
             }
 
             return string.Empty;

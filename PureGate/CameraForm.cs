@@ -131,23 +131,24 @@ namespace PureGate
         public void UpdateDiagramEntity()
         {
             imageViewer.ResetEntity();
-
             Model model = Global.Inst.InspStage.CurModel;
             List<DiagramEntity> diagramEntityList = new List<DiagramEntity>();
-
-                  // ✅ 현재 작업 상태 확인 (INSPECT 중인지)
-                  // imageViewer.WorkingState는 "INSPECT\nOK" 형태이므로 "INSPECT" 포함 여부 확인
-            string workingState = imageViewer.WorkingState ?? "";
-            bool isInspecting = workingState.Contains("INSPECT");
 
             foreach (InspWindow window in model.InspWindowList)
             {
                 if (window is null)
                     continue;
 
-                        // ✅ 검사 중이면 InspArea(정렬된 위치), 아니면 WindowArea(티칭 위치)
-                Rect roiToDisplay = isInspecting ? window.InspArea : window.WindowArea;
-
+                // ✅ InspArea가 설정되어 있으면 InspArea, 아니면 WindowArea
+                // InspArea는 Alignment 후에만 값이 있고, 평소에는 Empty
+                Rect roiToDisplay = (window.InspArea.Width > 0 && window.InspArea.Height > 0)
+                    ? window.InspArea
+                    : window.WindowArea;
+                // ✅ 디버깅 로그 추가 (임시)
+                SLogger.Write($"[UpdateDiagram] {window.InspWindowType}: " +
+                             $"WindowArea=({window.WindowArea.X},{window.WindowArea.Y}), " +
+                             $"InspArea=({window.InspArea.X},{window.InspArea.Y}), " +
+                             $"Display=({roiToDisplay.X},{roiToDisplay.Y})");
                 DiagramEntity entity = new DiagramEntity()
                 {
                     LinkedWindow = window,
