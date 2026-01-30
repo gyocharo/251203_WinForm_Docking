@@ -60,7 +60,14 @@ namespace PureGate
             ClientSize = new Size(520, 260);
 
             KeyPreview = true;
-            KeyDown += (s, e) => { if (e.KeyCode == Keys.Escape) Close(); };
+            KeyDown += (s, e) =>
+            {
+                if (e.KeyCode == Keys.Escape)
+                {
+                    e.Handled = true;
+                    Close();
+                }
+            };
 
             // ✅ 이 안에서만 그라데이션 배경을 그림
             _surface = new GradientSurface(_bgTop, _bgBottom)
@@ -159,6 +166,28 @@ namespace PureGate
 
             // Enter로 로그인
             AcceptButton = _btnLogin;
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            if (!LoginSucceeded)
+            {
+                var result = MsgBox.Show(
+                    this,
+                    "정말 종료하시겠습니까?",
+                    "종료 확인",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question
+                );
+
+                if (result != DialogResult.Yes)
+                {
+                    e.Cancel = true;
+                    return;
+                }
+            }
+
+            base.OnFormClosing(e);
         }
 
         private void BtnLogin_Click(object sender, EventArgs e)
