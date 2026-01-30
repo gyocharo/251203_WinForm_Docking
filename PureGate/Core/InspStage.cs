@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Deployment.Application;
@@ -21,7 +21,6 @@ using PureGate.Util;
 using System.Windows.Forms;
 using PureGate.Sequence;
 using PureGate.UIControl;
-using MessagingLibrary;
 
 namespace PureGate.Core
 {
@@ -124,31 +123,12 @@ namespace PureGate.Core
         public eImageChannel SelImageChannel { get; set; } = eImageChannel.Gray;
 
         public event Action<bool> InspectionCompleted;
-
-        private readonly object _wcfMetaLock = new object();
-        private bool _pendingWcfSave = false;
-
-        private string _wcfPart = "";
-        private string _wcfSerial = "";
-        private string _wcfCam = "";
-        private string _wcfLine = "";
-        private string _wcfStation = "";
-        private string _wcfLotTime = "";
-
-        private readonly object _wcfLock = new object();
-        // 고정/기본값(요청 예시 기준)
-        private const string WCF_DEFAULT_PART = "TRN001";
-        private const string WCF_DEFAULT_LINE = "02";
-        private const string WCF_DEFAULT_STATION = "02";
-        private const string WCF_DEFAULT_CAM = "01";
-
         public void SetSaigeModelInfo(string saigeModelPath, AIEngineType engineType)
         {
             if (_model == null) return;
             _model.SaigeModelPath = saigeModelPath ?? string.Empty;
             _model.SaigeEngineType = engineType;
         }
-
 
         /// <summary>
         /// 모델(.xml)에 저장된 Saige AI 정보를 기반으로 엔진을 자동 로드합니다.
@@ -703,24 +683,6 @@ namespace PureGate.Core
 
             _imageSpace.Split(bufferIndex);
 
-            if (_isInspectMode && SettingXml.Inst.CommType == CommunicatorType.WCF)
-            {
-                bool doSave = false;
-                lock (_wcfLock) doSave = _pendingWcfSave;
-
-                if (doSave)
-                    SaveWcfGrabImageAndSetInspectPath(bufferIndex);
-            }
-
-            if (SettingXml.Inst.CommType == CommunicatorType.WCF)
-            {
-                bool doSave = false;
-                lock (_wcfMetaLock) doSave = _pendingWcfSave;
-
-                if (doSave)
-                    SaveWcfGrabImage(bufferIndex);
-            }
-
             if (SaveCamImage && Directory.Exists(_capturePath))
             {
                 Mat curImage = GetMat(0, eImageChannel.Color);
@@ -965,8 +927,11 @@ namespace PureGate.Core
 
         public bool OneCycle()
         {
+            // ✅ 카메라 모드에서는 매 검사마다 새 SN 생성
             if (UseCamera)
             {
+                _serialID = $"SN{DateTime.Now:HHmmss}";
+                
                 if (!Grab(0)) return false;
             }
             else
@@ -1238,9 +1203,6 @@ namespace PureGate.Core
                     {
                         SLogger.Write("MMI : InspStart", SLogger.LogType.Info);
 
-                        if (SettingXml.Inst.CommType == CommunicatorType.WCF)
-                            PrepareWcfSaveMeta(Param);
-
                         string errMsg;
 
                         if (UseCamera)
@@ -1298,8 +1260,6 @@ namespace PureGate.Core
                         // ✅ 여기서 Good(100.0) 오버레이가 그려진 이미지가 만들어짐
                         Bitmap resultImage = AIModule.GetResultImage();
                         UpdateDisplay(resultImage);
-
-                        TrySaveClsResultImage(resultImage);
 
                         // 판정(OK/NG) 결정
                         bool ok = true;
@@ -1373,72 +1333,27 @@ namespace PureGate.Core
                 SLogger.Write("Failed to inspect", SLogger.LogType.Error);
             }
 
+
+            // ✅ 검사 완료 후 이미지 저장 (OK/NG 폴더)
+            SaveInspectionImage(!isDefect);
+
             UpdateResultUI(!isDefect);
-
-            TrySaveRoiResultImage(isDefect);
-
             RaiseInspectionCompleted(!isDefect);
 
             VisionSequence.Inst.VisionCommand(Vision2Mmi.InspDone, isDefect);
             SetWorkingState(WorkingState.NONE);
         }
 
-        private void TrySaveRoiResultImage(bool isDefect, string ngFolderName = "ROI_NG")
-        {
-            if (!isDefect) return;
 
-            try
-            {
-                string dateFolder = DateTime.Now.ToString("yyyy-MM-dd");
-                string safeLabel = SanitizePathSegment(ngFolderName);
-
-                // ✅ exe 폴더 기준 상위 4단계(=프로젝트 루트쪽) 경로 구하기 (CLS 저장 방식과 동일)
-                string baseDir = AppContext.BaseDirectory;
-                var di = new DirectoryInfo(baseDir);
-                for (int i = 0; i < 4 && di.Parent != null; i++)
-                    di = di.Parent;
-                string projectRoot = di.FullName;
-
-                string targetDir = Path.Combine(projectRoot, "NG", safeLabel, dateFolder);
-                Directory.CreateDirectory(targetDir);
-
-                string ts = DateTime.Now.ToString("HH.mm.ss.ff");
-                string fullPath = Path.Combine(targetDir, $"{ts}_{safeLabel}.jpg");
-
-                // ✅ 현재 버퍼 이미지를 JPG로 저장
-                using (Bitmap bmp = GetBitmap(0, eImageChannel.Color))
-                {
-                    if (bmp != null)
-                    {
-                        bmp.Save(fullPath, System.Drawing.Imaging.ImageFormat.Jpeg);
-                    }
-                    else
-                    {
-                        // Color가 없으면 Gray라도 저장 시도
-                        using (Bitmap gray = GetBitmap(0, eImageChannel.Gray))
-                        {
-                            if (gray == null) return;
-                            gray.Save(fullPath, System.Drawing.Imaging.ImageFormat.Jpeg);
-                        }
-                    }
-                }
-
-                // ✅ CountForm(RecentNGimages) 썸네일 갱신 트리거
-                NGImageSaved?.Invoke(fullPath);
-
-                SLogger.Write($"[ROI Save] NG -> {fullPath}", SLogger.LogType.Info);
-            }
-            catch (Exception ex)
-            {
-                SLogger.Write($"[ROI Save] Failed: {ex.Message}", SLogger.LogType.Error);
-            }
-        }
 
         //검사를 위한 준비 작업
         public bool InspectReady(string lotNumber, string serialID)
         {
-            _lotNumber = lotNumber;
-            _serialID = serialID;
+            // ✅ LOT, SN 정보 저장 (없으면 자동 생성)
+            _lotNumber = !string.IsNullOrEmpty(lotNumber) ? lotNumber : $"LOT{DateTime.Now:yyyyMMdd}";
+            _serialID = !string.IsNullOrEmpty(serialID) ? serialID : $"SN{DateTime.Now:HHmmss}";
+            
+            SLogger.Write($"[InspectReady] LOT: {_lotNumber}, SN: {_serialID}");
 
             LiveMode = false;
             UseCamera = SettingXml.Inst.CamType != CameraType.None ? true : false;
@@ -1453,6 +1368,20 @@ namespace PureGate.Core
         public bool StartAutoRun()
         {
             SLogger.Write("Action : StartAutoRun");
+
+            // ✅ LOT/SN이 설정되지 않았으면 자동 생성
+            if (string.IsNullOrEmpty(_lotNumber))
+            {
+                _lotNumber = $"LOT{DateTime.Now:yyyyMMdd}";
+                SLogger.Write($"[StartAutoRun] Auto-generated LOT: {_lotNumber}");
+            }
+            
+            if (string.IsNullOrEmpty(_serialID))
+            {
+                _serialID = $"SN{DateTime.Now:HHmmss}";
+                SLogger.Write($"[StartAutoRun] Auto-generated SN: {_serialID}");
+            }
+
 
             if (SaveCamImage && _model != null)
             {
@@ -1829,255 +1758,6 @@ namespace PureGate.Core
             return okFallback;
         }
 
-        // ✅ 파일명 토큰에서 '_' 들어가면 ResultForm 정규식( [^_]+ ) 파싱이 깨짐
-        private string SafeToken(string v)
-        {
-            if (string.IsNullOrWhiteSpace(v)) return "NA";
-
-            // 파일명에 위험한 문자 제거/치환
-            foreach (char c in Path.GetInvalidFileNameChars())
-                v = v.Replace(c, '-');
-
-            // ParseImageFileName()이 '_'를 구분자로 쓰므로, 값 내부 '_'는 치환
-            v = v.Replace('_', '-').Trim();
-
-            if (v.Length > 80) v = v.Substring(0, 80);
-            return v;
-        }
-
-        // ✅ WCF 메시지에서 Lot/Serial 등 메타 갱신 (Part/Cam/Line/Station은 메시지에 없을 수도 있어 fallback 포함)
-        private void UpdateWcfMetaFromMessage(object param)
-        {
-            // 기본값(fallback)
-            string fallbackPart = "";
-            if (CurModel != null && !string.IsNullOrWhiteSpace(CurModel.ModelPath))
-                fallbackPart = Path.GetFileNameWithoutExtension(CurModel.ModelPath);
-
-            string fallbackCam = SettingXml.Inst.MachineName; // 예: VISION02
-            string fallbackLine = "0";
-            string fallbackStation = "0";
-
-            string lot = "";
-            string serial = "";
-
-            try
-            {
-                // WCF에서 넘어오는 타입: MessagingLibrary.Message
-                if (param is MessagingLibrary.Message msg)
-                {
-                    lot = msg.LotNumber ?? "";
-                    serial = msg.SerialID ?? "";
-                }
-            }
-            catch { /* 무시 */ }
-
-            lock (_wcfMetaLock)
-            {
-                // 프로그램 내부 history용(기존 코드가 _lotNumber/_serialID 사용)
-                _lotNumber = lot;
-                _serialID = serial;
-
-                // 요청 파일명 구성용
-                _wcfSerial = !string.IsNullOrWhiteSpace(serial) ? serial : "NA";
-
-                // PART/CAM/LINE/ST 는 WCF 메시지에 필드가 없어서 기본값 사용(필요 시 나중에 확장 가능)
-                _wcfPart = !string.IsNullOrWhiteSpace(_wcfPart) ? _wcfPart : fallbackPart;
-                if (string.IsNullOrWhiteSpace(_wcfPart)) _wcfPart = fallbackPart;
-
-                _wcfCam = fallbackCam;
-                _wcfLine = fallbackLine;
-                _wcfStation = fallbackStation;
-
-                _pendingWcfSave = true;
-            }
-        }
-
-        // ✅ Grab 완료 시점(TransferCompleted)에서 버퍼 이미지를 지정 파일명으로 저장하고 ResultForm 표시용 InspectImagePath도 세팅
-        private void SaveWcfGrabImage(int bufferIndex)
-        {
-            try
-            {
-                string dir = GetWcfSaveDir();
-                string fileName = BuildWcfFileName();
-                string savePath = Path.Combine(dir, fileName);
-
-                Mat curImage = GetMat(bufferIndex, eImageChannel.Color);
-                if (curImage == null || curImage.Empty())
-                {
-                    // Color가 없으면 Gray라도 저장 시도
-                    curImage = GetMat(bufferIndex, eImageChannel.Gray);
-                }
-
-                if (curImage == null || curImage.Empty())
-                {
-                    SLogger.Write("[WCF Save] No image in buffer", SLogger.LogType.Error);
-                    return;
-                }
-
-                curImage.SaveImage(savePath);
-
-                // ✅ ResultForm이 파일명에서 LOT/PART/SN/CAM/LINE/ST 파싱하도록 경로 주입
-                if (CurModel != null)
-                    CurModel.InspectImagePath = savePath;
-
-                SLogger.Write($"[WCF Save] Saved: {savePath}", SLogger.LogType.Info);
-            }
-            catch (Exception ex)
-            {
-                SLogger.Write($"[WCF Save] Failed: {ex.Message}", SLogger.LogType.Error);
-            }
-            finally
-            {
-                lock (_wcfMetaLock) { _pendingWcfSave = false; }
-            }
-        }
-
-        // 파일명에 들어갈 토큰 정리(정규식 파싱이 '_' 기준이므로 '_'는 제거)
-        private string SafeToken(string v, string fallback = "NA")
-        {
-            if (string.IsNullOrWhiteSpace(v)) v = fallback;
-
-            foreach (char c in Path.GetInvalidFileNameChars())
-                v = v.Replace(c, '-');
-
-            v = v.Replace('_', '-').Trim();
-            return v;
-        }
-
-        private string Pad2(string s)
-        {
-            if (string.IsNullOrWhiteSpace(s)) return "00";
-            // 숫자만 남기기
-            string digits = new string(s.Where(char.IsDigit).ToArray());
-            if (digits.Length == 0) return "00";
-            if (digits.Length == 1) return "0" + digits;
-            return digits.Substring(digits.Length - 2, 2);
-        }
-
-        private string ExtractCamFromMachineName()
-        {
-            // 예: VISION02 -> "02"
-            string machine = Setting.SettingXml.Inst.MachineName ?? "";
-            string digits = new string(machine.Where(char.IsDigit).ToArray());
-            if (digits.Length == 0) return WCF_DEFAULT_CAM;
-            if (digits.Length == 1) return "0" + digits;
-            return digits.Substring(digits.Length - 2, 2);
-        }
-
-        private string GetWcfSaveDir()
-        {
-            // ✅ 사용자가 설정한 ImageDir 우선, 없으면 모델폴더\WcfCapture
-            string dir = Setting.SettingXml.Inst.ImageDir;
-
-            if (string.IsNullOrWhiteSpace(dir))
-            {
-                string modelDir = "";
-                if (CurModel != null && !string.IsNullOrWhiteSpace(CurModel.ModelPath))
-                    modelDir = Path.GetDirectoryName(CurModel.ModelPath);
-
-                dir = string.IsNullOrWhiteSpace(modelDir)
-                    ? Path.Combine(AppContext.BaseDirectory, "WcfCapture")
-                    : Path.Combine(modelDir, "WcfCapture");
-            }
-
-            Directory.CreateDirectory(dir);
-            return dir;
-        }
-
-        // ✅ 요청 형식: LOT-현재날짜_PART-TRN001_SN-000031_CAM-01_LINE-02_ST-02.png
-        private string BuildWcfFileName()
-        {
-            string lotDate = DateTime.Now.ToString("yyyyMMdd"); // "현재날짜"
-
-            string part = WCF_DEFAULT_PART;
-            string serial;
-            lock (_wcfLock)
-                serial = _wcfSerial;
-
-            // serial이 숫자라면 6자리 0패딩(예: 31 -> 000031)
-            string digits = new string((serial ?? "").Where(char.IsDigit).ToArray());
-            if (!string.IsNullOrWhiteSpace(digits))
-                serial = digits.PadLeft(6, '0');
-
-            string cam = ExtractCamFromMachineName();
-            string line = WCF_DEFAULT_LINE;
-            string st = WCF_DEFAULT_STATION;
-
-            part = SafeToken(part, WCF_DEFAULT_PART);
-            serial = SafeToken(serial, "000000");
-            cam = SafeToken(Pad2(cam), WCF_DEFAULT_CAM);
-            line = SafeToken(Pad2(line), WCF_DEFAULT_LINE);
-            st = SafeToken(Pad2(st), WCF_DEFAULT_STATION);
-
-            return $"LOT-{lotDate}_PART-{part}_SN-{serial}_CAM-{cam}_LINE-{line}_ST-{st}.png";
-        }
-
-        // ✅ WCF InspStart 들어왔을 때 Serial 메타 저장 + (기존 통계용 lot/serial도 갱신)
-        private void PrepareWcfSaveMeta(object param)
-        {
-            string serial = "";
-
-            try
-            {
-                if (param is MessagingLibrary.Message msg)
-                {
-                    // control에서 SerialID를 준다고 가정(현재 VisionSequence가 InspStart에 e를 넘김)
-                    serial = msg.SerialID ?? "";
-                    // 통계/히스토리용 필드도 같이 갱신
-                    _lotNumber = msg.LotNumber ?? "";
-                    _serialID = msg.SerialID ?? "";
-                }
-            }
-            catch { /* 무시 */ }
-
-            lock (_wcfLock)
-            {
-                _wcfSerial = serial;
-                _pendingWcfSave = true;
-            }
-        }
-
-        // ✅ Grab 완료(TransferCompleted)에서 실제 저장 + InspectImagePath 세팅
-        private void SaveWcfGrabImageAndSetInspectPath(int bufferIndex)
-        {
-            try
-            {
-                string dir = GetWcfSaveDir();
-                string fileName = BuildWcfFileName();
-                string savePath = Path.Combine(dir, fileName);
-
-                Mat img = GetMat(bufferIndex, eImageChannel.Color);
-                if (img == null || img.Empty())
-                    img = GetMat(bufferIndex, eImageChannel.Gray);
-
-                if (img == null || img.Empty())
-                {
-                    SLogger.Write("[WCF Save] Buffer image is empty", SLogger.LogType.Error);
-                    return;
-                }
-
-                img.SaveImage(savePath);
-
-                // ✅ ResultForm이 파일명 파싱하도록 InspectImagePath를 “저장된 파일”로 교체
-                if (CurModel != null)
-                    CurModel.InspectImagePath = savePath;
-
-                SLogger.Write($"[WCF Save] Saved: {Path.GetFileName(savePath)}", SLogger.LogType.Info);
-            }
-            catch (Exception ex)
-            {
-                SLogger.Write($"[WCF Save] Failed: {ex.Message}", SLogger.LogType.Error);
-            }
-            finally
-            {
-                lock (_wcfLock) { _pendingWcfSave = false; }
-            }
-        }
-
-
-
-
-
 
 
         #region Disposable
@@ -2114,6 +1794,134 @@ namespace PureGate.Core
 
                 disposed = true;
             }
+        }
+
+
+        // ===== 이미지 저장 함수 추가 =====
+        /// <summary>
+        /// 검사 완료 후 이미지를 OK/NG 폴더에 저장
+        /// </summary>
+        private void SaveInspectionImage(bool isOK)
+        {
+            try
+            {
+                if (CurModel == null || string.IsNullOrEmpty(CurModel.ModelPath))
+                {
+                    SLogger.Write("[SaveInspImage] Model path is null", SLogger.LogType.Warning);
+                    return;
+                }
+
+                // 현재 검사 이미지 가져오기
+                Mat currentImage = GetMat(0, eImageChannel.Color);
+                if (currentImage == null || currentImage.Empty())
+                {
+                    SLogger.Write("[SaveInspImage] Current image is null", SLogger.LogType.Warning);
+                    return;
+                }
+
+                // 모델 경로 기준으로 저장 폴더 생성
+                string modelDir = Path.GetDirectoryName(CurModel.ModelPath);
+                string resultFolder = isOK ? "OK" : "NG";
+                
+                // 날짜별 폴더
+                string dateFolder = DateTime.Now.ToString("yyyy-MM-dd");
+                string saveDir = Path.Combine(modelDir, resultFolder, dateFolder);
+                
+                if (!Directory.Exists(saveDir))
+                {
+                    Directory.CreateDirectory(saveDir);
+                    SLogger.Write($"[SaveInspImage] Created directory: {saveDir}");
+                }
+
+                // 파일명 생성
+                string fileName = GenerateInspectionFileName();
+                string fullPath = Path.Combine(saveDir, fileName);
+
+                // 이미지 저장
+                Bitmap bitmap = BitmapConverter.ToBitmap(currentImage);
+                if (bitmap != null)
+                {
+                    bitmap.Save(fullPath, System.Drawing.Imaging.ImageFormat.Png);
+                    bitmap.Dispose();
+                    
+                    SLogger.Write($"[SaveInspImage] Saved: {fullPath}");
+
+                    // NG 이미지인 경우 RecentNGimages 이벤트 발생
+                    if (!isOK)
+                    {
+                        NGImageSaved?.Invoke(fullPath);
+                        SLogger.Write($"[SaveInspImage] NG image event raised: {fullPath}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                SLogger.Write($"[SaveInspImage] Error: {ex.Message}", SLogger.LogType.Error);
+            }
+        }
+
+        /// <summary>
+        /// 검사 이미지 파일명 생성
+        /// 형식: LOT-xxx_PART-xxx_SN-xxx_CAM-xx_LINE-xx_ST-xx_timestamp.png
+        /// </summary>
+        private string GenerateInspectionFileName()
+        {
+            // LOT 정보
+            string lot = !string.IsNullOrEmpty(_lotNumber) ? _lotNumber : $"LOT{DateTime.Now:yyyyMMdd}";
+            
+            // PART 정보 (모델명 사용)
+            string part = "PART001";
+            if (CurModel != null && !string.IsNullOrEmpty(CurModel.ModelName))
+            {
+                part = SanitizeFileNameSegment(CurModel.ModelName);
+            }
+            
+            // SN 정보
+            string serial = !string.IsNullOrEmpty(_serialID) ? _serialID : $"SN{DateTime.Now:HHmmss}";
+            
+            // CAM 정보
+            string cam = "01";
+            if (SettingXml.Inst.CamType == CameraType.HikRobot)
+                cam = "01";
+            else if (SettingXml.Inst.CamType == CameraType.WebCam)
+                cam = "02";
+            else
+                cam = "00";
+            
+            // LINE, ST 정보 (기본값)
+            string line = "01";
+            string station = "02";
+            
+            // 타임스탬프
+            string timestamp = DateTime.Now.ToString("HHmmss_fff");
+            
+            // 파일명 조합
+            string fileName = $"LOT-{lot}_PART-{part}_SN-{serial}_CAM-{cam}_LINE-{line}_ST-{station}_{timestamp}.png";
+            
+            // 파일명 정리
+            fileName = SanitizeFileNameSegment(fileName);
+            
+            return fileName;
+        }
+
+        /// <summary>
+        /// 파일명에서 허용되지 않는 문자 제거
+        /// </summary>
+        private string SanitizeFileNameSegment(string fileName)
+        {
+            if (string.IsNullOrEmpty(fileName))
+                return "Unknown";
+            
+            // 파일명에 허용되지 않는 문자 제거
+            foreach (char c in Path.GetInvalidFileNameChars())
+            {
+                fileName = fileName.Replace(c, '_');
+            }
+            
+            // 공백도 언더스코어로 변경
+            fileName = fileName.Replace(' ', '_');
+            
+            return fileName;
         }
 
 
