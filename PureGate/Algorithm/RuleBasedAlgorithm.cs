@@ -9,7 +9,7 @@ using System.Xml.Serialization;
 
 namespace PureGate.Algorithm
 {
-    internal class RuleBasedAlgorithm : InspAlgorithm
+    public class RuleBasedAlgorithm : InspAlgorithm
     {// ===== Golden (Teach) =====
         [XmlIgnore] private Mat _goldenImage = null;      // gray
         [XmlIgnore] private Mat _goldenTemplate = null;   // base/body compare
