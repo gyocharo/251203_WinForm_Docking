@@ -29,6 +29,10 @@ namespace PureGate.Property
 
         public static AIModuleProp saigeaiprop;
 
+        // 요약용(진짜 OK/NG) 카운트
+        private int _okInspections = 0;
+        private int _ngInspections = 0;
+
         // 누적 통계 필드
         private int _totalInspections = 0; // 합계(전체 검사 횟수)
         private readonly Dictionary<string, int> _countByClass =
@@ -104,16 +108,16 @@ namespace PureGate.Property
         {
             if (_saigeAI == null)
                 _saigeAI = Global.Inst.InspStage.AIModule;
-
             if (_saigeAI == null) return;
 
-            if (lv_ClassInfos.Items.Count == 0)
-            {
-                var mi = _saigeAI.GetModelInfo();
-                if (mi != null)
-                    SetModelInfo(mi, _engineType.ToString());
-            }
+            // ✅ 요약 카운트는 isOk 기준으로 누적(여기가 핵심)
+            if (isOk) _okInspections++;
+            else _ngInspections++;
 
+            // ✅ total은 여기서 계산 (또는 _totalInspections++ 없애기)
+            _totalInspections = _okInspections + _ngInspections;
+
+            // 클래스 분포는 기존처럼 result로 누적해도 됨
             var result = _saigeAI.GetResult();
             AccumulateStatsFromResult(result);
 
@@ -431,11 +435,7 @@ namespace PureGate.Property
         // 검사 1회 결과에서 NG 클래스 뽑아서 누적
         private void AccumulateStatsFromResult(object result)
         {
-            _totalInspections++;
-
-            // 이번 검사에서 카운트할 클래스들(DET/SEG/IAD는 여러 개 가능, CLS는 보통 1개)
             var classesThisRun = GetClassesFromResult(result);
-
             foreach (var cls in classesThisRun)
             {
                 if (_countByClass.ContainsKey(cls)) _countByClass[cls]++;
@@ -512,10 +512,9 @@ namespace PureGate.Property
         {
             if (_summaryIndex < 0 || _summaryIndex >= lv_ClassInfos.Items.Count) return;
 
-            int total = _totalInspections;
-
-            _countByClass.TryGetValue(_okClassName, out int okCount);
-            int ngCount = Math.Max(0, total - okCount);
+            int total = _okInspections + _ngInspections;
+            int okCount = _okInspections;
+            int ngCount = _ngInspections;
 
             double okPct = total > 0 ? okCount * 100.0 / total : 0.0;
             double ngPct = total > 0 ? ngCount * 100.0 / total : 0.0;
@@ -523,7 +522,6 @@ namespace PureGate.Property
             _summaryText =
                 $"합계: {total} / OK: {okCount} ({okPct:0.00}%) / NG: {ngCount} ({ngPct:0.00}%)";
 
-            // 요약행 내용은 OwnerDraw로 그리므로 다시 그리기 요청
             lv_ClassInfos.Invalidate();
         }
 
