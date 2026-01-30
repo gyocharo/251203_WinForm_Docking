@@ -464,7 +464,7 @@ namespace PureGate.Core
         {
             UpdateDiagramEntity();
 
-            // ✅ ROI가 없거나 선택된 ROI가 없을 때도 검사 + OK/NG 표시
+            // ROI가 없거나 선택된 ROI가 없을 때도 검사 + OK/NG 표시
             if (inspWindow == null)
             {
                 // 1) 모델에 ROI 자체가 0개면: CLS(전체 이미지) 검사로 처리
@@ -476,27 +476,47 @@ namespace PureGate.Core
                         if (bitmap != null)
                         {
                             AIModule.InspAIModule(bitmap);
+
                             Bitmap resultImage = AIModule.GetResultImage();
                             UpdateDisplay(resultImage);
 
-                            if (AIModule.TryGetLastClsTop1(out string label, out float score) && !string.IsNullOrWhiteSpace(label))
+                            // Top1 기반으로 OK/NG 통일 판정 (실패는 NG)
+                            string label = "";
+                            float score = 0f;
+                            bool hasCls = AIModule.TryGetLastClsTop1(out label, out score) && !string.IsNullOrWhiteSpace(label);
+
+                            bool ok = hasCls && DecideOkFromClsTop1(label, score);
+                            if (!hasCls)
                             {
-                                bool ok = string.Equals(label, "Good", StringComparison.OrdinalIgnoreCase);
-                                UpdateResultUI(ok);   // ✅ 여기서 무조건 OK/NG 뜸(검사 실행된 경우)
+                                label = "Unknown";
+                                ok = false;
+                                SLogger.Write("[CLS] Top1 FAIL (TryInspection) -> Unknown => NG", SLogger.LogType.Error);
                             }
+                            else
+                            {
+                                SLogger.Write($"[CLS] (TryInspection) label='{label}', score={score:0.000}, ok={ok}");
+                            }
+
+                            UpdateResultUI(ok);
+                            RaiseInspectionCompleted(ok);
                         }
                     }
-                    return; // 여기서 끝 (엔진/이미지 없으면 표시 안 함)
+                    return; // 여기서 끝
                 }
 
                 // 2) ROI는 있는데 "선택만 안 된 상태"면: ROI 전체 검사로 처리
                 bool isDefect;
                 if (_inspWorker.RunInspect(out isDefect))
-                    UpdateResultUI(!isDefect);
+                {
+                    bool ok = !isDefect;
+                    UpdateResultUI(ok);
+                    RaiseInspectionCompleted(ok);
+                }
 
                 return;
             }
 
+            // ROI 하나 선택되어 있으면 기존 로직 유지
             InspWorker.TryInspect(inspWindow, InspectType.InspNone);
         }
 
@@ -929,72 +949,38 @@ namespace PureGate.Core
                     if (bitmap != null)
                     {
                         AIModule.InspAIModule(bitmap);
+
                         Bitmap resultImage = AIModule.GetResultImage();
                         UpdateDisplay(resultImage);
 
-                        // Saige CLS 분류 결과에 따라 저장 (실패해도 검사 흐름엔 영향 없게)
+                        // CLS 분류 결과 이미지 저장(있으면)
                         TrySaveClsResultImage(resultImage);
 
-                        // 통계 저장(1검사=1레코드)
                         try
                         {
-                            bool ok = true;
+                            // Top1 기반 OK/NG 통일 판정 (실패는 NG)
                             string label = "";
-                            float score = 0;
+                            float score = 0f;
+                            bool hasCls = AIModule.TryGetLastClsTop1(out label, out score) && !string.IsNullOrWhiteSpace(label);
 
-                            var modelInfo = AIModule.GetModelInfo();
-
-                            if (AIModule.TryGetLastClsTop1(out label, out score) && !string.IsNullOrWhiteSpace(label))
+                            bool ok = hasCls && DecideOkFromClsTop1(label, score);
+                            if (!hasCls)
                             {
-                                string rawLabel = label;
-                                label = label.Trim();
-
-                                int cutIdx = label.IndexOf('(');
-                                if (cutIdx >= 0) label = label.Substring(0, cutIdx).Trim();
-
-                                cutIdx = label.IndexOf(' ');
-                                if (cutIdx >= 0) label = label.Substring(0, cutIdx).Trim();
-
-                                bool isNg = false;
-
-                                if (modelInfo != null && modelInfo.ClassInfos != null && modelInfo.ClassIsNG != null)
-                                {
-                                    int idx = Array.FindIndex(modelInfo.ClassInfos,
-                                        c => string.Equals(c.Name?.Trim(), label, StringComparison.OrdinalIgnoreCase));
-
-                                    if (idx < 0)
-                                    {
-                                        idx = Array.FindIndex(modelInfo.ClassInfos,
-                                            c => (label ?? "").StartsWith(c.Name?.Trim() ?? "", StringComparison.OrdinalIgnoreCase));
-                                    }
-
-                                    if (idx >= 0 && idx < modelInfo.ClassIsNG.Length)
-                                        isNg = modelInfo.ClassIsNG[idx];
-
-                                    SLogger.Write($"[CLS] raw='{rawLabel}' -> norm='{label}', idx={idx}, isNg={isNg}, score={score:0.0}");
-                                }
-                                else
-                                {
-                                    isNg = !string.Equals(label, "Good", StringComparison.OrdinalIgnoreCase);
-                                    SLogger.Write($"[CLS] modelInfo null -> label='{label}', isNg={isNg}, score={score:0.0}");
-                                }
-
-                                ok = !isNg;
+                                label = "Unknown";
+                                ok = false;
+                                SLogger.Write("[CLS] Top1 FAIL (OneCycle) -> Unknown => NG", SLogger.LogType.Error);
                             }
                             else
                             {
-                                label = "Unknown";
-                                ok = true;
-                                SLogger.Write("[CLS] Top1 FAIL -> Unknown");
+                                SLogger.Write($"[CLS] (OneCycle) label='{label}', score={score:0.000}, ok={ok}");
                             }
 
-                                UpdateResultUI(ok);
+                            UpdateResultUI(ok);
+                            RaiseInspectionCompleted(ok);
 
-                                RaiseInspectionCompleted(ok);
-
-                               string modelName = "";
-                                if (CurModel != null && !string.IsNullOrWhiteSpace(CurModel.ModelPath))
-                                    modelName = Path.GetFileNameWithoutExtension(CurModel.ModelPath);
+                            string modelName = "";
+                            if (CurModel != null && !string.IsNullOrWhiteSpace(CurModel.ModelPath))
+                                modelName = Path.GetFileNameWithoutExtension(CurModel.ModelPath);
 
                             InspHistoryRepo.Append(new InspHistoryRecord
                             {
@@ -1009,15 +995,9 @@ namespace PureGate.Core
                                 Score = score
                             });
 
-                            // --- StatisticForm / Donut 갱신 ---
-                            var details = new List<NgClassCount>();
-                            if (!ok && !string.IsNullOrWhiteSpace(label) && label != "Unknown")
-                                details.Add(new NgClassCount { ClassName = label, Count = 1 });
+                            // 도넛(OK + NG 클래스)=
 
-                            //MainForm.Instance?.UpdateStatisticsUI(ok ? 1 : 0, ok ? 0 : 1, details);
-                            PushDonutStatsAndUpdateUI(ok, ok ? "" : label);
-
-                            // ✅ 여기로 옮겨야 함 (ROI 없는 AIModule 검사 결과를 ResultForm에 누적)
+                            // ResultForm에도 반영
                             TryUpdateResultFormForAIModuleOnly();
 
                             var cForm = MainForm.GetDockForm<CameraForm>();
@@ -1057,20 +1037,17 @@ namespace PureGate.Core
                     return;
                 }
 
-                // 현재 검사 중인 이미지 파일명 (ResultForm도 내부에서 가져오지만, 여기서도 안전하게 확보)
                 string imageFileName = "";
                 if (CurModel != null && !string.IsNullOrEmpty(CurModel.InspectImagePath))
                     imageFileName = Path.GetFileName(CurModel.InspectImagePath);
 
-                // ✅ CLS Top1 결과 얻기 (라벨/스코어)
                 string label = "";
                 float score = 0f;
-                bool hasCls = (AIModule != null) && AIModule.TryGetLastClsTop1(out label, out score);
+                bool hasCls = (AIModule != null) && AIModule.TryGetLastClsTop1(out label, out score) && !string.IsNullOrWhiteSpace(label);
 
-                bool isOk = hasCls && IsOkClsLabel(label);
-                bool isDefect = hasCls ? !isOk : false;  // CLS 결과가 없으면 일단 OK로 취급(원하면 Unknown 처리로 바꿔도 됨)
+                bool isOk = hasCls && DecideOkFromClsTop1(label, score);
+                bool isDefect = !isOk; // Top1 없으면 NG 처리(안전)
 
-                // ✅ ResultForm에 들어갈 "가짜 Window 1개 + Result 1개" 생성
                 var window = new InspWindow(InspWindowType.None, "AIModule");
                 window.UID = "AIModule";
 
@@ -1080,34 +1057,23 @@ namespace PureGate.Core
                 res.InspType = InspectType.InspAIModule;
                 res.IsDefect = isDefect;
 
-                // ⭐ Status를 CLS 결과대로 보이게 하려면(네가 만든 GetStatusString 로직 기준)
-                // - NG면 라벨명을 ResultValue에 넣어두는 게 핵심
-                res.ResultValue = hasCls ? label : "";
+                // NG면 라벨을 남겨서 ResultForm에서 상태가 보이게
+                res.ResultValue = hasCls ? label : "Unknown";
 
-                // 상세창용 텍스트
                 if (hasCls)
                     res.ResultInfos = $"CLS: {(isDefect ? "NG" : "OK")}, Label={label}, Score={score:0.000}";
                 else
-                    res.ResultInfos = "AIModule inspected (no CLS top1 info)";
+                    res.ResultInfos = "CLS: NG (no top1 info)";
 
-                // 파일명 파싱(LOT/PART/SN/CAM/LINE/ST)
                 res.ParseImageFileName(imageFileName);
 
                 window.AddInspResult(res);
-
-                // ✅ ResultForm에 “윈도우 1개 결과”로 추가 (내부에서 이력 누적 + TreeListView 갱신)
                 resultForm.AddWindowResult(window);
             }
             catch (Exception ex)
             {
                 SLogger.Write($"[InspStage] TryUpdateResultFormForAIModuleOnly failed: {ex.Message}", SLogger.LogType.Error);
             }
-        }
-
-        // ✅ 정상 라벨 규칙
-        public static bool IsOkClsLabel(string label)
-        {
-            return string.Equals(label?.Trim(), "Good", StringComparison.OrdinalIgnoreCase);
         }
 
         private void TrySaveClsResultImage(Bitmap resultImage)
@@ -1668,6 +1634,57 @@ namespace PureGate.Core
 
             return false;
         }
+
+        private bool DecideOkFromClsTop1(string rawLabel, float score)
+        {
+            if (AIModule == null) return false;
+            if (string.IsNullOrWhiteSpace(rawLabel)) return false;
+
+            string label = rawLabel.Trim();
+
+            // "Good (0.98)" 같은 케이스 정리
+            int cutIdx = label.IndexOf('(');
+            if (cutIdx >= 0) label = label.Substring(0, cutIdx).Trim();
+
+            // 혹시 공백으로 뒤에 더 붙는 형태도 정리
+            cutIdx = label.IndexOf(' ');
+            if (cutIdx >= 0) label = label.Substring(0, cutIdx).Trim();
+
+            var modelInfo = AIModule.GetModelInfo();
+
+            // modelInfo 기준이 가장 신뢰도 높음
+            if (modelInfo?.ClassInfos != null && modelInfo.ClassIsNG != null)
+            {
+                int idx = Array.FindIndex(modelInfo.ClassInfos,
+                    c => string.Equals(c.Name?.Trim(), label, StringComparison.OrdinalIgnoreCase));
+
+                if (idx < 0)
+                {
+                    idx = Array.FindIndex(modelInfo.ClassInfos,
+                        c => (label ?? "").StartsWith(c.Name?.Trim() ?? "", StringComparison.OrdinalIgnoreCase));
+                }
+
+                if (idx >= 0 && idx < modelInfo.ClassIsNG.Length)
+                {
+                    bool isNg = modelInfo.ClassIsNG[idx];
+                    return !isNg;
+                }
+
+                // modelInfo에 없는 라벨이면 안전하게 NG
+                SLogger.Write($"[CLS] label '{label}' not found in modelInfo.ClassInfos -> NG (score={score:0.000})", SLogger.LogType.Error);
+                return false;
+            }
+
+            // fallback: modelInfo 없을 때만 임시로 Good=OK 처리
+            bool okFallback = string.Equals(label, "Good", StringComparison.OrdinalIgnoreCase);
+            SLogger.Write(
+     $"[CLS] modelInfo null -> fallback label='{label}', ok={okFallback}, score={score:0.000}",
+     okFallback ? SLogger.LogType.Info : SLogger.LogType.Error
+ );
+            return okFallback;
+        }
+
+
 
         #region Disposable
 
