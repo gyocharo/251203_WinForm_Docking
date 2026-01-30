@@ -21,6 +21,7 @@ using PureGate.Util;
 using System.Windows.Forms;
 using PureGate.Sequence;
 using PureGate.UIControl;
+using MessagingLibrary;
 
 namespace PureGate.Core
 {
@@ -123,12 +124,24 @@ namespace PureGate.Core
         public eImageChannel SelImageChannel { get; set; } = eImageChannel.Gray;
 
         public event Action<bool> InspectionCompleted;
+
+        private readonly object _wcfMetaLock = new object();
+        private bool _pendingWcfSave = false;
+
+        private string _wcfPart = "";
+        private string _wcfSerial = "";
+        private string _wcfCam = "";
+        private string _wcfLine = "";
+        private string _wcfStation = "";
+        private string _wcfLotTime = "";
+
         public void SetSaigeModelInfo(string saigeModelPath, AIEngineType engineType)
         {
             if (_model == null) return;
             _model.SaigeModelPath = saigeModelPath ?? string.Empty;
             _model.SaigeEngineType = engineType;
         }
+
 
         /// <summary>
         /// 모델(.xml)에 저장된 Saige AI 정보를 기반으로 엔진을 자동 로드합니다.
@@ -683,6 +696,15 @@ namespace PureGate.Core
 
             _imageSpace.Split(bufferIndex);
 
+            if (SettingXml.Inst.CommType == CommunicatorType.WCF)
+            {
+                bool doSave = false;
+                lock (_wcfMetaLock) doSave = _pendingWcfSave;
+
+                if (doSave)
+                    SaveWcfGrabImage(bufferIndex);
+            }
+
             if (SaveCamImage && Directory.Exists(_capturePath))
             {
                 Mat curImage = GetMat(0, eImageChannel.Color);
@@ -1199,6 +1221,9 @@ namespace PureGate.Core
                 case SeqCmd.InspStart:
                     {
                         SLogger.Write("MMI : InspStart", SLogger.LogType.Info);
+
+                        if (SettingXml.Inst.CommType == CommunicatorType.WCF)
+                            UpdateWcfMetaFromMessage(Param);
 
                         string errMsg;
 
@@ -1787,6 +1812,151 @@ namespace PureGate.Core
  );
             return okFallback;
         }
+
+        // ✅ 파일명 토큰에서 '_' 들어가면 ResultForm 정규식( [^_]+ ) 파싱이 깨짐
+        private string SafeToken(string v)
+        {
+            if (string.IsNullOrWhiteSpace(v)) return "NA";
+
+            // 파일명에 위험한 문자 제거/치환
+            foreach (char c in Path.GetInvalidFileNameChars())
+                v = v.Replace(c, '-');
+
+            // ParseImageFileName()이 '_'를 구분자로 쓰므로, 값 내부 '_'는 치환
+            v = v.Replace('_', '-').Trim();
+
+            if (v.Length > 80) v = v.Substring(0, 80);
+            return v;
+        }
+
+        // ✅ WCF 저장 폴더: SettingXml.ImageDir 우선, 없으면 모델 폴더 아래 WcfCapture
+        private string GetWcfSaveDir()
+        {
+            string dir = SettingXml.Inst.ImageDir;
+
+            if (string.IsNullOrWhiteSpace(dir))
+            {
+                string modelDir = "";
+                if (CurModel != null && !string.IsNullOrWhiteSpace(CurModel.ModelPath))
+                    modelDir = Path.GetDirectoryName(CurModel.ModelPath);
+
+                dir = string.IsNullOrWhiteSpace(modelDir)
+                    ? Path.Combine(AppContext.BaseDirectory, "WcfCapture")
+                    : Path.Combine(modelDir, "WcfCapture");
+            }
+
+            Directory.CreateDirectory(dir);
+            return dir;
+        }
+
+        // ✅ 요청 형식: LOT-<현재시각>_PART-<part>_SN-<serial>_CAM-<cam>_LINE-<line>_ST-<station>.png
+        private string BuildWcfFileName()
+        {
+            // LOT-<현재시각> (요청사항: "LOT-현재시각")
+            // 파일명 안전하게: yyyyMMddHHmmssfff
+            string lotTime = DateTime.Now.ToString("yyyyMMddHHmmssfff");
+
+            lock (_wcfMetaLock)
+            {
+                _wcfLotTime = lotTime;
+
+                string part = SafeToken(_wcfPart);
+                string sn = SafeToken(_wcfSerial);
+                string cam = SafeToken(_wcfCam);
+                string line = SafeToken(_wcfLine);
+                string st = SafeToken(_wcfStation);
+
+                return $"LOT-{lotTime}_PART-{part}_SN-{sn}_CAM-{cam}_LINE-{line}_ST-{st}.png";
+            }
+        }
+
+        // ✅ WCF 메시지에서 Lot/Serial 등 메타 갱신 (Part/Cam/Line/Station은 메시지에 없을 수도 있어 fallback 포함)
+        private void UpdateWcfMetaFromMessage(object param)
+        {
+            // 기본값(fallback)
+            string fallbackPart = "";
+            if (CurModel != null && !string.IsNullOrWhiteSpace(CurModel.ModelPath))
+                fallbackPart = Path.GetFileNameWithoutExtension(CurModel.ModelPath);
+
+            string fallbackCam = SettingXml.Inst.MachineName; // 예: VISION02
+            string fallbackLine = "0";
+            string fallbackStation = "0";
+
+            string lot = "";
+            string serial = "";
+
+            try
+            {
+                // WCF에서 넘어오는 타입: MessagingLibrary.Message
+                if (param is MessagingLibrary.Message msg)
+                {
+                    lot = msg.LotNumber ?? "";
+                    serial = msg.SerialID ?? "";
+                }
+            }
+            catch { /* 무시 */ }
+
+            lock (_wcfMetaLock)
+            {
+                // 프로그램 내부 history용(기존 코드가 _lotNumber/_serialID 사용)
+                _lotNumber = lot;
+                _serialID = serial;
+
+                // 요청 파일명 구성용
+                _wcfSerial = !string.IsNullOrWhiteSpace(serial) ? serial : "NA";
+
+                // PART/CAM/LINE/ST 는 WCF 메시지에 필드가 없어서 기본값 사용(필요 시 나중에 확장 가능)
+                _wcfPart = !string.IsNullOrWhiteSpace(_wcfPart) ? _wcfPart : fallbackPart;
+                if (string.IsNullOrWhiteSpace(_wcfPart)) _wcfPart = fallbackPart;
+
+                _wcfCam = fallbackCam;
+                _wcfLine = fallbackLine;
+                _wcfStation = fallbackStation;
+
+                _pendingWcfSave = true;
+            }
+        }
+
+        // ✅ Grab 완료 시점(TransferCompleted)에서 버퍼 이미지를 지정 파일명으로 저장하고 ResultForm 표시용 InspectImagePath도 세팅
+        private void SaveWcfGrabImage(int bufferIndex)
+        {
+            try
+            {
+                string dir = GetWcfSaveDir();
+                string fileName = BuildWcfFileName();
+                string savePath = Path.Combine(dir, fileName);
+
+                Mat curImage = GetMat(bufferIndex, eImageChannel.Color);
+                if (curImage == null || curImage.Empty())
+                {
+                    // Color가 없으면 Gray라도 저장 시도
+                    curImage = GetMat(bufferIndex, eImageChannel.Gray);
+                }
+
+                if (curImage == null || curImage.Empty())
+                {
+                    SLogger.Write("[WCF Save] No image in buffer", SLogger.LogType.Error);
+                    return;
+                }
+
+                curImage.SaveImage(savePath);
+
+                // ✅ ResultForm이 파일명에서 LOT/PART/SN/CAM/LINE/ST 파싱하도록 경로 주입
+                if (CurModel != null)
+                    CurModel.InspectImagePath = savePath;
+
+                SLogger.Write($"[WCF Save] Saved: {savePath}", SLogger.LogType.Info);
+            }
+            catch (Exception ex)
+            {
+                SLogger.Write($"[WCF Save] Failed: {ex.Message}", SLogger.LogType.Error);
+            }
+            finally
+            {
+                lock (_wcfMetaLock) { _pendingWcfSave = false; }
+            }
+        }
+
 
 
 
