@@ -1310,6 +1310,9 @@ namespace PureGate.Core
                             ok = true;
                         }
 
+                        // ✅ CLS 검사 완료 후 이미지 저장 (OK/NG 폴더)
+                        SaveInspectionImage(ok);
+
                         UpdateResultUI(ok);
                         RaiseInspectionCompleted(ok);
 
@@ -1332,41 +1335,10 @@ namespace PureGate.Core
             {
                 SLogger.Write("Failed to inspect", SLogger.LogType.Error);
             }
-            // ✅ 디버깅: 검사 결과 확인
-            SLogger.Write($"========================================");
-            SLogger.Write($"[DEBUG] RunInspect 완료!");
-            SLogger.Write($"[DEBUG] isDefect: {isDefect}");
-            SLogger.Write($"[DEBUG] isOK: {!isDefect}");
-            SLogger.Write($"[DEBUG] CurModel: {(CurModel != null ? "OK" : "NULL")}");
-            if (CurModel != null)
-            {
-                SLogger.Write($"[DEBUG] ModelPath: {CurModel.ModelPath}");
-                SLogger.Write($"[DEBUG] ModelName: {CurModel.ModelName}");
-            }
-            SLogger.Write($"[DEBUG] _lotNumber: {_lotNumber}");
-            SLogger.Write($"[DEBUG] _serialID: {_serialID}");
 
-            Mat testImage = GetMat(0, eImageChannel.Color);
-            SLogger.Write($"[DEBUG] Image: {(testImage != null ? "OK" : "NULL")}");
-            if (testImage != null)
-            {
-                SLogger.Write($"[DEBUG] Image.Empty: {testImage.Empty()}");
-                SLogger.Write($"[DEBUG] Image.Size: {testImage.Width}x{testImage.Height}");
-            }
-            SLogger.Write($"========================================");
 
             // ✅ 검사 완료 후 이미지 저장 (OK/NG 폴더)
-            try
-            {
-                SLogger.Write($"[DEBUG] SaveInspectionImage 호출 시작...");
-                SaveInspectionImage(!isDefect);
-                SLogger.Write($"[DEBUG] SaveInspectionImage 호출 완료!");
-            }
-            catch (Exception ex)
-            {
-                SLogger.Write($"[DEBUG] SaveInspectionImage 예외: {ex.Message}", SLogger.LogType.Error);
-                SLogger.Write($"[DEBUG] StackTrace: {ex.StackTrace}", SLogger.LogType.Error);
-            }
+            SaveInspectionImage(!isDefect);
 
             UpdateResultUI(!isDefect);
             RaiseInspectionCompleted(!isDefect);
@@ -1834,23 +1806,11 @@ namespace PureGate.Core
         /// </summary>
         private void SaveInspectionImage(bool isOK)
         {
-            SLogger.Write($"========================================");
-            SLogger.Write($"[SaveInspImage] 함수 진입!");
-            SLogger.Write($"[SaveInspImage] isOK: {isOK}");
-
             try
             {
-                SLogger.Write($"[SaveInspImage] CurModel 체크...");
-                if (CurModel == null)
+                if (CurModel == null || string.IsNullOrEmpty(CurModel.ModelPath))
                 {
-                    SLogger.Write("[SaveInspImage] CurModel is NULL!", SLogger.LogType.Error);
-                    return;
-                }
-
-                SLogger.Write($"[SaveInspImage] ModelPath: {CurModel.ModelPath}");
-                if (string.IsNullOrEmpty(CurModel.ModelPath))
-                {
-                    SLogger.Write("[SaveInspImage] ModelPath is empty!", SLogger.LogType.Error);
+                    SLogger.Write("[SaveInspImage] Model path is null", SLogger.LogType.Error);
                     return;
                 }
 
@@ -1858,7 +1818,7 @@ namespace PureGate.Core
                 Mat currentImage = GetMat(0, eImageChannel.Color);
                 if (currentImage == null || currentImage.Empty())
                 {
-                    SLogger.Write("[SaveInspImage] Current image is null", SLogger.LogType.Warning);
+                    SLogger.Write("[SaveInspImage] Current image is null", SLogger.LogType.Error);
                     return;
                 }
 
