@@ -40,6 +40,8 @@ namespace PureGate.Inspect
                 if (algo.IsUse == false)
                     continue;
 
+                BindAlgoContext(window, algo);
+
                 if (!algo.DoInspect())
                     return false;
 
@@ -88,6 +90,42 @@ namespace PureGate.Inspect
 
             return true;
         }
+
+        private static void SetPropIfExists(object obj, string propName, object value)
+        {
+            if (obj == null) return;
+
+            var p = obj.GetType().GetProperty(propName);
+            if (p == null || !p.CanWrite) return;
+
+            // 타입이 안 맞으면 변환 가능한 경우만 처리
+            if (value != null && !p.PropertyType.IsAssignableFrom(value.GetType()))
+            {
+                try { value = Convert.ChangeType(value, p.PropertyType); }
+                catch { return; }
+            }
+
+            p.SetValue(obj, value, null);
+        }
+
+        private static void BindAlgoContext(InspWindow window, InspAlgorithm algo)
+        {
+            // ✅ UID 계열(프로젝트마다 이름이 달라도 대응)
+            SetPropIfExists(algo, "UID", window.UID);
+            SetPropIfExists(algo, "ObjectID", window.UID);
+            SetPropIfExists(algo, "WindowUID", window.UID);
+
+            // ✅ window 참조/타입(있으면 넣어줌)
+            SetPropIfExists(algo, "ParentWindow", window);
+            SetPropIfExists(algo, "InspWindow", window);
+            SetPropIfExists(algo, "InspWindowType", window.InspWindowType);
+
+            // ✅ ROI 정보(프로퍼티가 존재하면 세팅)
+            SetPropIfExists(algo, "WindowArea", window.WindowArea);
+            SetPropIfExists(algo, "InspArea", window.InspArea);
+            SetPropIfExists(algo, "InspRect", window.InspArea);
+        }
+
 
         public bool InspectWindowList(List<InspWindow> windowList)
         {
@@ -150,17 +188,25 @@ namespace PureGate.Inspect
                         foreach (InspWindow window in windowList)
                         {
                             window.SetInspOffset(new Point(0, 0));
-                            
+
                             // 검사 데이터 갱신
                             foreach (var algo in window.AlgorithmList)
                             {
                                 if (!algo.IsUse) continue;
+
                                 algo.TeachRect = window.WindowArea;
                                 algo.InspRect = window.WindowArea;
+
+                                // ✅ RuleBasedAlgorithm이면 UID 주입 (Sub ROI별 Threshold용)
+                                if (algo is RuleBasedAlgorithm rbAlgo)
+                                    rbAlgo.ParentWindowUid = window.UID;
+
                                 Mat algoSrcImage = Global.Inst.InspStage.GetMat(0, algo.ImageChannel);
                                 algo.SetInspData(algoSrcImage);
                             }
-                            
+
+
+
                             if (!InspectWindow(window))
                                 return false;
                         }
@@ -243,6 +289,24 @@ namespace PureGate.Inspect
                              $"({window.WindowArea.X}, {window.WindowArea.Y}) → " +
                              $"({window.InspArea.X}, {window.InspArea.Y})");
             }
+
+            // ✅ [DEBUG] RuleBased용 최종 ROI 좌표 출력 (Alignment 적용된 InspArea 기준)
+            foreach (var window in windowList)
+            {
+                if (window == null) continue;
+
+                // 현재 window의 알고리즘 중 RuleBased 찾기
+                var rb = window.FindInspAlgorithm(InspectType.InspRuleBased) as RuleBasedAlgorithm;
+                if (rb == null || !rb.IsUse) continue;
+
+                // 지금 3단계에서 algo.InspRect = window.InspArea 로 덮어쓰니까,
+                // 실제로 배치툴에 넣을 ROI는 "window.InspArea"가 정답임.
+                var r = window.InspArea;
+
+                SLogger.Write($"[RB_ROI] Type={rb.WindowType}, Rect={r.X},{r.Y},{r.Width},{r.Height}, UID={window.UID}");
+            }
+
+
 
             // ===== 3단계: 정렬된 위치에서 전체 재검사 =====
             SLogger.Write($"[Alignment] === 3단계: 정렬된 위치에서 전체 재검사 ===");

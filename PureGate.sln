@@ -5,6 +5,8 @@ VisualStudioVersion = 17.12.35527.113
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PureGate", "PureGate\PureGate.csproj", "{6B6A9EB2-8F16-4BD3-B79D-6E9E8DEAA837}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PureGate.RuleBasedBatch", "PureGate.RuleBasedBatch\PureGate.RuleBasedBatch.csproj", "{B1DF0FCA-4FFF-4A3A-AF6D-BA71CA273765}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,8 +23,19 @@ Global
 		{6B6A9EB2-8F16-4BD3-B79D-6E9E8DEAA837}.Release|Any CPU.Build.0 = Release|Any CPU
 		{6B6A9EB2-8F16-4BD3-B79D-6E9E8DEAA837}.Release|x64.ActiveCfg = Release|x64
 		{6B6A9EB2-8F16-4BD3-B79D-6E9E8DEAA837}.Release|x64.Build.0 = Release|x64
+		{B1DF0FCA-4FFF-4A3A-AF6D-BA71CA273765}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B1DF0FCA-4FFF-4A3A-AF6D-BA71CA273765}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B1DF0FCA-4FFF-4A3A-AF6D-BA71CA273765}.Debug|x64.ActiveCfg = Debug|x64
+		{B1DF0FCA-4FFF-4A3A-AF6D-BA71CA273765}.Debug|x64.Build.0 = Debug|x64
+		{B1DF0FCA-4FFF-4A3A-AF6D-BA71CA273765}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B1DF0FCA-4FFF-4A3A-AF6D-BA71CA273765}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B1DF0FCA-4FFF-4A3A-AF6D-BA71CA273765}.Release|x64.ActiveCfg = Release|Any CPU
+		{B1DF0FCA-4FFF-4A3A-AF6D-BA71CA273765}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F68F8E07-5B97-4195-B081-19D7E1EB0108}
 	EndGlobalSection
 EndGlobal

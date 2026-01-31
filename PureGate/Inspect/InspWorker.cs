@@ -81,6 +81,21 @@ namespace PureGate.Inspect
                 SLogger.Write("Vision Server Error: " + ex.Message, SLogger.LogType.Error);
                 isDefect = true;
             }
+            // ✅ [DEBUG] 최종 ROI 출력 (Alignment 반영된 InspArea 확인용)
+            foreach (var w in inspWindowList)
+            {
+                if (w == null) continue;
+
+                var wa = w.WindowArea;
+                var ia = w.InspArea;
+
+                System.Diagnostics.Debug.WriteLine(
+                    $"[ROI_DEBUG] Type={w.InspWindowType} UID={w.UID} " +
+                    $"WindowArea={wa.X},{wa.Y},{wa.Width},{wa.Height} " +
+                    $"InspArea={ia.X},{ia.Y},{ia.Width},{ia.Height}"
+                );
+            }
+
 
             // ✅ 3) 검사 완료 후 ROI 위치 업데이트 (Alignment 결과 반영)
             Global.Inst.InspStage.UpdateDiagramEntity();
@@ -153,9 +168,9 @@ namespace PureGate.Inspect
             // 8) 통계 업데이트(한 군데로 통일)
             MainForm.Instance?.UpdateStatisticsUI(okCnt, ngCnt, ngDetails);
 
-            var sForm = MainForm.GetDockForm<StatisticForm>();
-            if (sForm != null)
-                sForm.UpdateStatistics(okCnt, ngCnt, ngDetails);
+          //  var sForm = MainForm.GetDockForm<StatisticForm>();
+          //  if (sForm != null)
+          //      sForm.UpdateStatistics(okCnt, ngCnt, ngDetails);
 
             // 9) CameraForm 업데이트
             var cameraForm = MainForm.GetDockForm<CameraForm>();
@@ -175,33 +190,51 @@ namespace PureGate.Inspect
         }
 
         // ✅ 윈도우에서 대표 NG 이름 뽑기: area.info 우선, 그 다음 ResultString, 그 다음 InspectType
-        private string ExtractNgName(InspWindow inspWindow)
+        private string ExtractNgName(InspWindow w)
         {
-            if (inspWindow?.AlgorithmList == null) return "Unknown";
+            if (w == null) return "Unknown";
 
-            foreach (var algo in inspWindow.AlgorithmList)
+            // 1) NG 결과 문자열 가져오기
+            string raw = "";
+
+            var ngRes = w.InspResultList?.FirstOrDefault(r => r != null && r.IsDefect);
+            if (ngRes != null)
             {
-                if (algo == null) continue;
-                if (!algo.IsUse || !algo.IsDefect) continue;
-
-                try
-                {
-                    List<DrawInspectInfo> areas;
-                    int cnt = algo.GetResultRect(out areas);
-
-                    if (cnt > 0 && areas != null && areas.Count > 0 && !string.IsNullOrWhiteSpace(areas[0].info))
-                        return areas[0].info;
-
-                    if (algo.ResultString != null && algo.ResultString.Count > 0 && !string.IsNullOrWhiteSpace(algo.ResultString[0]))
-                        return algo.ResultString[0];
-                }
-                catch { }
-
-                return algo.InspectType.ToString().Replace("Insp", "");
+                raw = !string.IsNullOrWhiteSpace(ngRes.ResultValue) ? ngRes.ResultValue : ngRes.ResultInfos;
+            }
+            else
+            {
+                var ngAlgo = w.AlgorithmList?.FirstOrDefault(a => a != null && a.IsUse && a.IsDefect);
+                if (ngAlgo != null)
+                    raw = string.Join(" / ", ngAlgo.ResultString ?? new List<string>());
             }
 
-            return "Unknown";
+            raw = (raw ?? "").Replace("\r", " ").Replace("\n", " ").Trim();
+            if (string.IsNullOrWhiteSpace(raw)) raw = "Unknown";
+
+            // 2) 정규화: 좌표/사이즈 포함된 Blob은 전부 "Blob"으로 묶기
+            string norm = NormalizeNgName(raw);
+
+            // 3) UID는 항상 앞에 붙여서 "ROI별"로 구분 가능하게
+            return $"{w.UID}:{norm}";
         }
+
+        private string NormalizeNgName(string raw)
+        {
+            // Blob 계열: 좌표/사이즈 때문에 키 폭발하니 하나로 묶음
+            if (raw.IndexOf("blob x:", StringComparison.OrdinalIgnoreCase) >= 0)
+                return "Blob";
+
+            // 너 로그에 있는 "리드 잘림"은 그대로 유지
+            if (raw.Contains("리드 잘림"))
+                return "리드 잘림";
+
+            // 기타: 너무 길면 앞부분만
+            if (raw.Length > 60) raw = raw.Substring(0, 60);
+
+            return raw;
+        }
+
 
         public bool TryInspect(InspWindow inspObj, InspectType inspType)
         {

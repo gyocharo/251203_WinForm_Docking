@@ -25,21 +25,29 @@ namespace PureGate.Algorithm
         public InspWindowType WindowType { get; set; } = InspWindowType.None;
 
         // ===== Thresholds =====
-        public double MisplacedMatchScoreThreshold { get; set; } = 0.70;
-        public int MisplacedHolePixelThreshold { get; set; } = 500;
+        public double MisplacedMatchScoreThreshold { get; set; } = 0.30;
+        public int MisplacedHolePixelThreshold { get; set; } = 40000;
         public int DamagedCaseDiffPixelThreshold { get; set; } = 5000;
 
         public double CutLeadAreaRatioThreshold { get; set; } = 0.50;
         public double BentLeadCentroidXThreshold { get; set; } = 15.0;
 
         public int MetalThreshold { get; set; } = 120;
-        public int CaseDiffThreshold { get; set; } = 30;
+        public int CaseDiffThreshold { get; set; } = 45;
         public int HoleDarkThreshold { get; set; } = 80;
+        public double DamagedCaseRatioThreshold { get; set; } = 0.36;
+
+
+        private int _goldenHolePixels = 0;
 
         public RuleBasedAlgorithm()
         {
             InspectType = InspectType.InspRuleBased;
         }
+
+        [XmlIgnore]
+        public string ParentWindowUid { get; set; } = "";
+
 
         public override InspAlgorithm Clone()
         {
@@ -104,6 +112,12 @@ namespace PureGate.Algorithm
                 {
                     if (_goldenTemplate != null) _goldenTemplate.Dispose();
                     _goldenTemplate = gray.Clone();
+                }
+
+                if (WindowType == InspWindowType.Base)
+                {
+                    _goldenHolePixels = CountHolePixels(gray);
+                    ResultString.Add("[Golden] BaseHolePixels=" + _goldenHolePixels);
                 }
 
                 if (WindowType == InspWindowType.Sub)
@@ -255,14 +269,17 @@ namespace PureGate.Algorithm
             double score = CalcTemplateMatchScore(gray, _goldenTemplate);
             ResultString.Add("[Base] MatchScore=" + score.ToString("F3"));
 
-            bool byMatch = (score < MisplacedMatchScoreThreshold);
-
             int holePixels = CountHolePixels(gray);
-            ResultString.Add("[Base] HolePixels=" + holePixels);
+            int holeDelta = Math.Abs(holePixels - _goldenHolePixels);
+            ResultString.Add($"[Base] HolePixels={holePixels}, Golden={_goldenHolePixels}, Delta={holeDelta}");
 
-            bool byHole = (holePixels > MisplacedHolePixelThreshold);
+            bool byHole = (holeDelta > MisplacedHolePixelThreshold);
 
-            if (byMatch || byHole)
+            // ✅ 오탐 방지 결합 규칙
+            bool byMatchWeak = (score < MisplacedMatchScoreThreshold);
+            bool byMatchStrong = (score < 0.25); // 강한 불일치(고정값/추가 튜닝 가능)
+
+            if (byMatchStrong || (byMatchWeak && byHole))
             {
                 DetectedNgType = NgType.Misplaced;
                 ResultString.Add("[NG] Misplaced");
@@ -273,6 +290,7 @@ namespace PureGate.Algorithm
             }
         }
 
+
         private void InspectBody(Mat gray)
         {
             Mat diff = null;
@@ -282,22 +300,20 @@ namespace PureGate.Algorithm
             {
                 diff = new Mat();
                 Cv2.Absdiff(gray, _goldenTemplate, diff);
+                Cv2.GaussianBlur(diff, diff, new Size(3, 3), 0);
 
                 bin = new Mat();
                 Cv2.Threshold(diff, bin, CaseDiffThreshold, 255, ThresholdTypes.Binary);
 
                 int diffPixels = Cv2.CountNonZero(bin);
-                ResultString.Add("[Body] DiffPixels=" + diffPixels);
+                double ratio = (double)diffPixels / (bin.Rows * bin.Cols);
+                ResultString.Add($"[Body] DiffPixels={diffPixels}, Ratio={ratio:F4}");
 
-                if (diffPixels > DamagedCaseDiffPixelThreshold)
-                {
+                if (ratio > DamagedCaseRatioThreshold)
                     DetectedNgType = NgType.DamagedCase;
-                    ResultString.Add("[NG] DamagedCase");
-                }
                 else
-                {
                     DetectedNgType = NgType.Good;
-                }
+
             }
             finally
             {
@@ -314,19 +330,25 @@ namespace PureGate.Algorithm
             double areaRatio = (_goldenMetalArea > 0) ? (curArea / _goldenMetalArea) : 1.0;
             double cxShift = Math.Abs(curCx - _goldenCentroidX);
 
-            ResultString.Add("[Sub] Area=" + curArea.ToString("F0") +
+            // ✅ UID별 threshold 가져오기
+            double cutTh, bentTh;
+            GetSubThresholdsByUid(out cutTh, out bentTh);
+
+            ResultString.Add("[Sub] UID=" + ParentWindowUid +
+                             ", Area=" + curArea.ToString("F0") +
                              ", AreaRatio=" + areaRatio.ToString("F3") +
                              ", CX=" + curCx.ToString("F1") +
-                             ", Shift=" + cxShift.ToString("F1"));
+                             ", Shift=" + cxShift.ToString("F1") +
+                             $", CutTh={cutTh:F3}, BentTh={bentTh:F1}");
 
-            if (areaRatio < CutLeadAreaRatioThreshold)
+            if (areaRatio < cutTh)
             {
                 DetectedNgType = NgType.CutLead;
                 ResultString.Add("[NG] CutLead");
                 return;
             }
 
-            if (cxShift > BentLeadCentroidXThreshold)
+            if (cxShift > bentTh)
             {
                 DetectedNgType = NgType.BentLead;
                 ResultString.Add("[NG] BentLead");
@@ -335,6 +357,7 @@ namespace PureGate.Algorithm
 
             DetectedNgType = NgType.Good;
         }
+
 
         // ===================== Helpers =====================
 
@@ -430,6 +453,35 @@ namespace PureGate.Algorithm
 
             return ng.ToString();
         }
+
+        private void GetSubThresholdsByUid(out double cutAreaRatioTh, out double bentCxShiftTh)
+        {
+            // 기본값(혹시 UID 못 받으면 이 값 사용)
+            cutAreaRatioTh = CutLeadAreaRatioThreshold;
+            bentCxShiftTh = BentLeadCentroidXThreshold;
+
+            string uid = (ParentWindowUid ?? "").Trim();
+            if (uid.Length == 0) return;
+
+            switch (uid)
+            {
+                case "SUB_000001":
+                    cutAreaRatioTh = 0.282;
+                    bentCxShiftTh = 71.6;
+                    break;
+
+                case "SUB_000002":
+                    cutAreaRatioTh = 0.575;
+                    bentCxShiftTh = 28.4;
+                    break;
+
+                case "SUB_000003":
+                    cutAreaRatioTh = 0.370;
+                    bentCxShiftTh = 40.3;
+                    break;
+            }
+        }
+
     }
 }
 

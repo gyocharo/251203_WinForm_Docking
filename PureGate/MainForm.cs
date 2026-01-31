@@ -59,6 +59,9 @@ namespace PureGate
 
         private bool _modelUiAppliedOnce = false;
 
+        private readonly Dictionary<string, int> _ngTotalByClass
+    = new Dictionary<string, int>(StringComparer.Ordinal);
+
         public MainForm()
         {
             InitializeComponent();
@@ -804,28 +807,41 @@ namespace PureGate
                 return;
             }
 
-            // 누적은 당연히 해야 하고
+            // ✅ 누적 OK/NG
             _totalOkCount += ok;
             _totalNgCount += ng;
 
-            // 🔴 [테스트] 로그에 '개수 0'이라고 찍히니까, 강제로 데이터를 넣어봅니다.
-            // 만약 진짜 NG가 발생했는데 details가 비어있다면 여기서 가짜로라도 만들어줍니다.
-            if (ng > 0 && (details == null || details.Count == 0))
+            // ✅ (중요) 가짜 데이터 넣는 거 제거
+            // if (ng > 0 && (details == null || details.Count == 0)) { ... }  <-- 삭제
+
+            // ✅ 누적 details 합치기
+            if (details != null)
             {
-                details = new List<NgClassCount>
-        {
-            new NgClassCount { ClassName = "Defect_A", Count = 1 }
-        };
+                foreach (var d in details)
+                {
+                    if (d == null) continue;
+
+                    var key = (d.ClassName ?? "").Trim();
+                    if (key.Length == 0) continue;
+                    if (d.Count <= 0) continue;
+
+                    if (_ngTotalByClass.ContainsKey(key)) _ngTotalByClass[key] += d.Count;
+                    else _ngTotalByClass[key] = d.Count;
+                }
             }
+
+            // ✅ 누적 dict -> 누적 list로 변환해서 전달
+            var mergedDetails = _ngTotalByClass
+                .Select(kv => new NgClassCount { ClassName = kv.Key, Count = kv.Value })
+                .ToList();
 
             var statForm = GetDockForm<StatisticForm>();
             if (statForm != null)
             {
-                // 1. MainForm의 누적 변수를 보낸다
-                // 2. details가 비어있으면 위에서 만든 가짜라도 보낸다
-                statForm.UpdateStatistics(_totalOkCount, _totalNgCount, details);
+                statForm.UpdateStatistics(_totalOkCount, _totalNgCount, mergedDetails);
             }
         }
+
 
 
         #endregion
