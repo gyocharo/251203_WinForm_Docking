@@ -13,12 +13,14 @@ using PureGate.Util;
 
 namespace PureGate.Inspect
 {
+
     public class InspectBoard
     {
         public InspectBoard()
         {
         }
 
+        private OpenCvSharp.Point _lastGoodAlignOffset = new OpenCvSharp.Point(0, 0);
         public bool Inspect(InspWindow window)
         {
             if (window is null)
@@ -242,6 +244,22 @@ namespace PureGate.Inspect
                             alignWindow.InspArea = alignWindow.WindowArea + alignOffset;
 
                             Debug.WriteLine($"[ALIGN] FINAL offset=({alignOffset.X},{alignOffset.Y}), outScore={matchAlgo.OutScore}");
+
+                            const double MIN_ALIGN_SCORE = 75.0;
+                            const double MAX_ALIGN_DIST = 60.0;
+
+                            double dist = Math.Sqrt(alignOffset.X * alignOffset.X + alignOffset.Y * alignOffset.Y);
+
+                            if (matchAlgo.OutScore < MIN_ALIGN_SCORE || dist > MAX_ALIGN_DIST)
+                            {
+                                Debug.WriteLine($"[ALIGN] WEAK (score={matchAlgo.OutScore}, dist={dist:F1}) -> use LAST ({_lastGoodAlignOffset.X},{_lastGoodAlignOffset.Y})");
+                                alignOffset = _lastGoodAlignOffset;
+                                alignWindow.InspArea = alignWindow.WindowArea + alignOffset;
+                            }
+                            else
+                            {
+                                _lastGoodAlignOffset = alignOffset; // ✅ 이번 오프셋을 저장
+                            }
 
                             SLogger.Write($"[Alignment] ✅ Offset 계산 완료!");
                             SLogger.Write($"[Alignment] OutPoint: ({matchAlgo.OutPoint.X}, {matchAlgo.OutPoint.Y})");

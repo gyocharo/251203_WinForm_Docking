@@ -382,8 +382,8 @@ namespace PureGate.Core
             if (curImage is null)
                 return;
 
-            if (inspWindow.WindowArea.Right >= curImage.Width ||
-                inspWindow.WindowArea.Bottom >= curImage.Height)
+            if (inspWindow.WindowArea.Right > curImage.Width ||
+                inspWindow.WindowArea.Bottom > curImage.Height)
             {
                 SLogger.Write("ROI 영역이 잘못되었습니다!");
                 return;
@@ -1705,6 +1705,7 @@ namespace PureGate.Core
                         var ruleAlgo = window.FindInspAlgorithm(InspectType.InspRuleBased) as RuleBasedAlgorithm;
                         if (ruleAlgo != null)
                         {
+                            ruleAlgo.ParentWindowUid = window.UID;
                             ruleAlgo.WindowType = window.InspWindowType;
                             ruleAlgo.IsUse = true; // RuleBased 활성화
 
@@ -1723,6 +1724,7 @@ namespace PureGate.Core
                             // RuleBasedAlgorithm이 없으면 새로 생성해서 추가
                             ruleAlgo = new RuleBasedAlgorithm
                             {
+                                ParentWindowUid = window.UID,
                                 WindowType = window.InspWindowType,
                                 IsUse = true
                             };

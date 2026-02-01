@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Serialization;
 using OpenCvSharp;
 using PureGate.Core;
-using System.Xml.Serialization;
+using PureGate.Util;
 
 namespace PureGate.Algorithm
 {
@@ -42,6 +43,8 @@ namespace PureGate.Algorithm
 
         public double GoldenMetalArea => _goldenMetalArea;
         public double GoldenCentroidX => _goldenCentroidX;
+
+        public const string BUILD_TAG = "RB_fix_20260201_1";
 
 
         private int _goldenHolePixels = 0;
@@ -130,11 +133,26 @@ namespace PureGate.Algorithm
                 {
                     double area, cx;
                     ExtractSubFeatures(gray, out area, out cx);
+
+                    // ✅ UID 확보 (골든 저장 키)
+                    string uid = (ParentWindowUid ?? "").Trim();
+                    if (uid.Length == 0) uid = "__NO_UID__"; // UID 안 들어오면 로그로 바로 티나게
+
+                    // ✅ (핵심) UID별 골든 저장
+                    SetSubGolden(uid, area, cx);
+
+                    // (옵션) 기존 필드도 마지막 값으로 유지(디버그용)
                     _goldenMetalArea = area;
                     _goldenCentroidX = cx;
 
-                    ResultString.Add($"[GoldenSub] Area={_goldenMetalArea:F0}, Cx={_goldenCentroidX:F1}, MetalTh={MetalThreshold}");
+                    int objId = System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(this);
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[SUB_GOLDEN_SAVE] UID={uid} objId={objId} " +
+                        $"goldenArea={area:F0} goldenCx={cx:F1} InspRect={InspRect.X},{InspRect.Y},{InspRect.Width},{InspRect.Height}");
+
+                    ResultString.Add($"[GoldenSub] UID={uid}, Area={area:F0}, Cx={cx:F1}, MetalTh={MetalThreshold}");
                 }
+
 
                 ResultString.Add("[Golden Set] " + WindowType + " OK");
                 return true;
@@ -152,9 +170,10 @@ namespace PureGate.Algorithm
 
         public override bool DoInspect()
         {
+            ResultString.Clear();
+            DetectedNgType = NgType.Good;
+            
             ResetResult();
-
-
 
             if (!IsUse)
                 return false;
@@ -176,12 +195,16 @@ namespace PureGate.Algorithm
             }
             if (WindowType == InspWindowType.Sub)
             {
-                if (_goldenMetalArea <= 0)
+                string uid = (ParentWindowUid ?? "").Trim();
+
+                double gArea, gCx;
+                if (!TryGetSubGolden(uid, out gArea, out gCx) || gArea <= 0)
                 {
-                    ResultString.Add("골든 특징값 없음(Sub) - 골든 Set 필요");
+                    ResultString.Add($"골든 특징값 없음(Sub) - UID={uid} 골든 Set 필요");
                     return false;
                 }
             }
+
 
             // ROI 체크
             if (InspRect.Width <= 0 || InspRect.Height <= 0)
@@ -334,47 +357,52 @@ namespace PureGate.Algorithm
 
         private void InspectSub(Mat gray)
         {
+            // ✅ UID로 골든값 꺼내서 사용
+            string uid = (ParentWindowUid ?? "").Trim();
+            if (uid.Length == 0) uid = "__NO_UID__";
+
+            if (!TryGetSubGolden(uid, out double gArea, out double gCx) || gArea <= 0)
+            {
+                ResultString.Add($"[Sub] Golden 없음 UID={uid} (SetGolden 필요)");
+                DetectedNgType = NgType.None;
+                return;
+            }
+
             double curArea, curCx;
             ExtractSubFeatures(gray, out curArea, out curCx);
 
-            double areaRatio = (_goldenMetalArea > 0) ? (curArea / _goldenMetalArea) : 1.0;
-            double cxShift = Math.Abs(curCx - _goldenCentroidX);
+            double areaRatio = curArea / gArea;
+            double cxShift = Math.Abs(curCx - gCx);
 
-            // ✅ UID별 threshold 가져오기
             double cutTh, bentTh;
             GetSubThresholdsByUid(out cutTh, out bentTh);
 
-            /*
-            ResultString.Add("[Sub] UID=" + ParentWindowUid +
-                             ", Area=" + curArea.ToString("F0") +
-                             ", AreaRatio=" + areaRatio.ToString("F3") +
-                             ", CX=" + curCx.ToString("F1") +
-                             ", Shift=" + cxShift.ToString("F1") +
-                             $", CutTh={cutTh:F3}, BentTh={bentTh:F1}");
-            */
+            ResultString.Add(
+                $"[Sub] UID={uid}, CurArea={curArea:F0}, GoldenArea={gArea:F0}, " +
+                $"AreaRatio={areaRatio:F3} (CutTh={cutTh:F3}), " +
+                $"CurCx={curCx:F1}, GoldenCx={gCx:F1}, Shift={cxShift:F1} (BentTh={bentTh:F1})"
+            );
 
-            ResultString.Add("[Sub] UID=" + ParentWindowUid +
-                 $", CurArea={curArea:F0}, GoldenArea={_goldenMetalArea:F0}" +
-                 $", AreaRatio={areaRatio:F3}, CutTh={cutTh:F3}" +
-                 $", CurCx={curCx:F1}, GoldenCx={_goldenCentroidX:F1}, Shift={cxShift:F1}, BentTh={bentTh:F1}");
+            System.Diagnostics.Debug.WriteLine(
+                $"[SUB_DECIDE] UID={uid} ratio={areaRatio:F3} (cutTh={cutTh:F3}) " +
+                $"shift={cxShift:F1} (bentTh={bentTh:F1}) curArea={curArea:F0}, goldenArea={gArea:F0}, " +
+                $"curCx={curCx:F1}, goldenCx={gCx:F1}, InspRect={InspRect}"
+            );
+
+            System.Diagnostics.Debug.WriteLine(
+    $"[SUB_DECIDE] tag={BUILD_TAG} UID={ParentWindowUid} " +
+    $"ratio={areaRatio:F3} (cutTh={cutTh:F3}) " +
+    $"shift={cxShift:F1} (bentTh={bentTh:F1}) ..."
+);
 
 
-            if (areaRatio < cutTh)
-            {
-                DetectedNgType = NgType.CutLead;
-                ResultString.Add("[NG] CutLead");
-                return;
-            }
-
-            if (cxShift > bentTh)
-            {
-                DetectedNgType = NgType.BentLead;
-                ResultString.Add("[NG] BentLead");
-                return;
-            }
+            if (areaRatio < cutTh) { DetectedNgType = NgType.CutLead; ResultString.Add("[NG] CutLead"); return; }
+            if (cxShift > bentTh) { DetectedNgType = NgType.BentLead; ResultString.Add("[NG] BentLead"); return; }
 
             DetectedNgType = NgType.Good;
         }
+
+
 
 
         // ===================== Helpers =====================
@@ -390,38 +418,36 @@ namespace PureGate.Algorithm
             try
             {
                 bin = new Mat();
-
-                // (선택) 약간 블러 후 이진화하면 안정적일 때가 많음
-                // Cv2.GaussianBlur(gray, gray, new Size(3,3), 0);
-
                 Cv2.Threshold(gray, bin, MetalThreshold, 255, ThresholdTypes.Binary);
 
                 kernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(3, 3));
                 Cv2.MorphologyEx(bin, bin, MorphTypes.Open, kernel);
+                Cv2.MorphologyEx(bin, bin, MorphTypes.Close, kernel);
 
                 labels = new Mat();
                 stats = new Mat();
                 centroids = new Mat();
                 int n = Cv2.ConnectedComponentsWithStats(bin, labels, stats, centroids);
 
-                // 0번은 배경. 1..n-1 중 area 최대 선택
-                int bestLabel = -1;
-                int bestArea = 0;
+                // ✅ 여기부터가 핵심 변경점
+                const int MIN_COMP_AREA = 80; // 노이즈 컷(필요시 50~200 사이 튜닝)
+                int sumArea = 0;
+                double sumWeightedCx = 0.0;
 
-                for (int i = 1; i < n; i++)
+                for (int i = 1; i < n; i++) // 0은 배경
                 {
                     int area = stats.Get<int>(i, (int)ConnectedComponentsTypes.Area);
-                    if (area > bestArea)
-                    {
-                        bestArea = area;
-                        bestLabel = i;
-                    }
+                    if (area < MIN_COMP_AREA) continue;
+
+                    double cx = centroids.Get<double>(i, 0);
+                    sumArea += area;
+                    sumWeightedCx += cx * area;
                 }
 
-                if (bestLabel >= 0)
+                if (sumArea > 0)
                 {
-                    metalArea = bestArea;
-                    centroidX = centroids.Get<double>(bestLabel, 0); // X
+                    metalArea = sumArea;
+                    centroidX = sumWeightedCx / sumArea;
                 }
                 else
                 {
@@ -438,6 +464,7 @@ namespace PureGate.Algorithm
                 bin?.Dispose();
             }
         }
+
 
 
         private double CalcTemplateMatchScore(Mat gray, Mat templ)
@@ -522,7 +549,7 @@ namespace PureGate.Algorithm
                     break;
 
                 case "SUB_000002":
-                    cutAreaRatioTh = 0.50;   // 기존 0.575 -> 낮춤
+                    cutAreaRatioTh = 0.20;   // 기존 0.575 -> 낮춤
                     bentCxShiftTh = 28.4;
                     break;
 
@@ -532,6 +559,28 @@ namespace PureGate.Algorithm
                     break;
             }
         }
+
+        private readonly Dictionary<string, (double area, double cx)> _subGolden
+    = new Dictionary<string, (double area, double cx)>();
+
+        private void SetSubGolden(string uid, double area, double cx)
+        {
+            _subGolden[uid] = (area, cx);
+        }
+
+        private bool TryGetSubGolden(string uid, out double area, out double cx)
+        {
+            if (_subGolden.TryGetValue(uid, out var g))
+            {
+                area = g.area;
+                cx = g.cx;
+                return true;
+            }
+            area = 0;
+            cx = 0;
+            return false;
+        }
+
 
     }
 }
