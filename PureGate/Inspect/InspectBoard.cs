@@ -1,14 +1,15 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using OpenCvSharp;
 using PureGate.Algorithm;
 using PureGate.Core;
 using PureGate.Teach;
 using PureGate.Util;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace PureGate.Inspect
 {
@@ -129,6 +130,7 @@ namespace PureGate.Inspect
 
         public bool InspectWindowList(List<InspWindow> windowList)
         {
+            System.Diagnostics.Debug.WriteLine("[ALGO_DUMP] InspectWindowList ENTER");
             if (windowList.Count <= 0)
                 return false;
 
@@ -238,7 +240,9 @@ namespace PureGate.Inspect
                         {
                             alignOffset = matchAlgo.GetOffset();
                             alignWindow.InspArea = alignWindow.WindowArea + alignOffset;
-                            
+
+                            Debug.WriteLine($"[ALIGN] FINAL offset=({alignOffset.X},{alignOffset.Y}), outScore={matchAlgo.OutScore}");
+
                             SLogger.Write($"[Alignment] ✅ Offset 계산 완료!");
                             SLogger.Write($"[Alignment] OutPoint: ({matchAlgo.OutPoint.X}, {matchAlgo.OutPoint.Y})");
                             SLogger.Write($"[Alignment] TeachRect: ({matchAlgo.TeachRect.X}, {matchAlgo.TeachRect.Y})");
@@ -306,6 +310,26 @@ namespace PureGate.Inspect
                 SLogger.Write($"[RB_ROI] Type={rb.WindowType}, Rect={r.X},{r.Y},{r.Width},{r.Height}, UID={window.UID}");
             }
 
+            // ✅ 여기 추가: alignWindow 외에는 MatchAlgorithm 비활성화(임시)
+            foreach (var w in windowList)
+            {
+                var m = w.FindInspAlgorithm(InspectType.InspMatch) as MatchAlgorithm;
+                if (m == null) continue;
+
+                if (alignWindow != null && w.UID != alignWindow.UID)
+                {
+                    m.IsUse = false;
+                    SLogger.Write($"[Alignment] MatchAlgorithm OFF (judge용 차단): {w.InspWindowType} {w.UID}");
+                }
+                else
+                {
+                    // alignWindow는 alignment에 필요하니 켜두기 + 임계값 보정
+                    m.IsUse = true;
+                    if (m.MatchScore > 35) m.MatchScore = 35;
+                    if (m.ExtSize.Width < 200 || m.ExtSize.Height < 200)
+                        m.ExtSize = new Size(Math.Max(200, m.ExtSize.Width), Math.Max(200, m.ExtSize.Height));
+                }
+            }
 
 
             // ===== 3단계: 정렬된 위치에서 전체 재검사 =====
@@ -313,6 +337,30 @@ namespace PureGate.Inspect
             
             foreach (InspWindow window in windowList)
             {
+                System.Diagnostics.Debug.WriteLine($"[ALGO_DUMP] window={window.UID}");
+                SLogger.Write($"[ALGO_DUMP] window={window.UID}");
+
+                SLogger.Write($"[ALGO_DUMP] {window.InspWindowType} {window.UID} WindowArea={window.WindowArea.X},{window.WindowArea.Y},{window.WindowArea.Width},{window.WindowArea.Height} " +
+                $"InspArea={window.InspArea.X},{window.InspArea.Y},{window.InspArea.Width},{window.InspArea.Height}");
+
+                foreach (var algo in window.AlgorithmList)
+                {
+                    SLogger.Write($"[ALGO_DUMP]   - {algo.GetType().Name} IsUse={algo.IsUse} Ch={algo.ImageChannel}");
+
+                    var m = algo as MatchAlgorithm;
+                    if (m != null)
+                    {
+                        int tmplCount = m.GetTemplateImages()?.Count ?? 0;
+                        SLogger.Write($"[ALGO_DUMP]     Match: ScoreLimit={m.MatchScore}, Ext={m.ExtSize.Width}x{m.ExtSize.Height}, Templates={tmplCount}");
+                    }
+
+                    var rb = algo as RuleBasedAlgorithm;
+                    if (rb != null)
+                    {
+                        SLogger.Write($"[ALGO_DUMP]     RuleBased: ParentWindowUid='{rb.ParentWindowUid}' WindowType={rb.WindowType}");
+                    }
+                }
+
                 // ✅ 모든 알고리즘의 검사 위치를 InspArea로 업데이트
                 foreach (var algo in window.AlgorithmList)
                 {
@@ -323,12 +371,29 @@ namespace PureGate.Inspect
                     
                     // ✅ InspRect는 정렬된 위치로 설정
                     algo.InspRect = window.InspArea;
-                    
+
+                    // ✅ (추가) RuleBasedAlgorithm이면 UID 주입 (Sub ROI별)
+                    if (algo is RuleBasedAlgorithm rbAlgo)
+                        rbAlgo.ParentWindowUid = window.UID;
+
                     // 검사 이미지 재설정
                     Mat srcImage = Global.Inst.InspStage.GetMat(0, algo.ImageChannel);
                     algo.SetInspData(srcImage);
+                    if (algo is RuleBasedAlgorithm rb)
+                    {
+                        rb.ParentWindowUid = window.UID;  // <-- 이거 반드시! (너 지금 정상경로엔 없음)
+
+                        // 인스턴스 공유 확인용: "객체 identity hash"
+                        // GetHashCode()는 override될 수 있으니 RuntimeHelpers가 더 안전
+                        int objId = System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(rb);
+
+                        SLogger.Write(
+                            $"[RB_DBG] WinType={window.InspWindowType}, UID={window.UID}, ObjId={objId}, " +
+                            $"Teach=({algo.TeachRect.X},{algo.TeachRect.Y},{algo.TeachRect.Width},{algo.TeachRect.Height}), " +
+                            $"Insp=({algo.InspRect.X},{algo.InspRect.Y},{algo.InspRect.Width},{algo.InspRect.Height})"
+                        );
+                    }
                 }
-                
                 SLogger.Write($"[Alignment] 재검사: {window.InspWindowType} at ({window.InspArea.X}, {window.InspArea.Y})");
                 
                 // ✅ 정렬된 위치에서 검사 실행

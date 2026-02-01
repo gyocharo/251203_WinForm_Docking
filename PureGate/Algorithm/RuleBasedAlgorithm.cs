@@ -18,6 +18,7 @@ namespace PureGate.Algorithm
         private double _goldenMetalArea = 0;
         private double _goldenCentroidX = 0;
 
+
         // ===== Result =====
         [XmlIgnore]
         public NgType DetectedNgType { get; private set; } = NgType.None;
@@ -36,6 +37,11 @@ namespace PureGate.Algorithm
         public int CaseDiffThreshold { get; set; } = 45;
         public int HoleDarkThreshold { get; set; } = 80;
         public double DamagedCaseRatioThreshold { get; set; } = 0.36;
+
+        public Guid InstanceId { get; } = Guid.NewGuid();
+
+        public double GoldenMetalArea => _goldenMetalArea;
+        public double GoldenCentroidX => _goldenCentroidX;
 
 
         private int _goldenHolePixels = 0;
@@ -126,6 +132,8 @@ namespace PureGate.Algorithm
                     ExtractSubFeatures(gray, out area, out cx);
                     _goldenMetalArea = area;
                     _goldenCentroidX = cx;
+
+                    ResultString.Add($"[GoldenSub] Area={_goldenMetalArea:F0}, Cx={_goldenCentroidX:F1}, MetalTh={MetalThreshold}");
                 }
 
                 ResultString.Add("[Golden Set] " + WindowType + " OK");
@@ -145,6 +153,8 @@ namespace PureGate.Algorithm
         public override bool DoInspect()
         {
             ResetResult();
+
+
 
             if (!IsUse)
                 return false;
@@ -334,12 +344,20 @@ namespace PureGate.Algorithm
             double cutTh, bentTh;
             GetSubThresholdsByUid(out cutTh, out bentTh);
 
+            /*
             ResultString.Add("[Sub] UID=" + ParentWindowUid +
                              ", Area=" + curArea.ToString("F0") +
                              ", AreaRatio=" + areaRatio.ToString("F3") +
                              ", CX=" + curCx.ToString("F1") +
                              ", Shift=" + cxShift.ToString("F1") +
                              $", CutTh={cutTh:F3}, BentTh={bentTh:F1}");
+            */
+
+            ResultString.Add("[Sub] UID=" + ParentWindowUid +
+                 $", CurArea={curArea:F0}, GoldenArea={_goldenMetalArea:F0}" +
+                 $", AreaRatio={areaRatio:F3}, CutTh={cutTh:F3}" +
+                 $", CurCx={curCx:F1}, GoldenCx={_goldenCentroidX:F1}, Shift={cxShift:F1}, BentTh={bentTh:F1}");
+
 
             if (areaRatio < cutTh)
             {
@@ -365,29 +383,62 @@ namespace PureGate.Algorithm
         {
             Mat bin = null;
             Mat kernel = null;
+            Mat labels = null;
+            Mat stats = null;
+            Mat centroids = null;
 
             try
             {
                 bin = new Mat();
+
+                // (선택) 약간 블러 후 이진화하면 안정적일 때가 많음
+                // Cv2.GaussianBlur(gray, gray, new Size(3,3), 0);
+
                 Cv2.Threshold(gray, bin, MetalThreshold, 255, ThresholdTypes.Binary);
 
                 kernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(3, 3));
                 Cv2.MorphologyEx(bin, bin, MorphTypes.Open, kernel);
 
-                metalArea = Cv2.CountNonZero(bin);
+                labels = new Mat();
+                stats = new Mat();
+                centroids = new Mat();
+                int n = Cv2.ConnectedComponentsWithStats(bin, labels, stats, centroids);
 
-                Moments m = Cv2.Moments(bin, true);
-                if (m.M00 > 0)
-                    centroidX = m.M10 / m.M00;
+                // 0번은 배경. 1..n-1 중 area 최대 선택
+                int bestLabel = -1;
+                int bestArea = 0;
+
+                for (int i = 1; i < n; i++)
+                {
+                    int area = stats.Get<int>(i, (int)ConnectedComponentsTypes.Area);
+                    if (area > bestArea)
+                    {
+                        bestArea = area;
+                        bestLabel = i;
+                    }
+                }
+
+                if (bestLabel >= 0)
+                {
+                    metalArea = bestArea;
+                    centroidX = centroids.Get<double>(bestLabel, 0); // X
+                }
                 else
+                {
+                    metalArea = 0;
                     centroidX = gray.Width / 2.0;
+                }
             }
             finally
             {
-                if (kernel != null) kernel.Dispose();
-                if (bin != null) bin.Dispose();
+                centroids?.Dispose();
+                stats?.Dispose();
+                labels?.Dispose();
+                kernel?.Dispose();
+                bin?.Dispose();
             }
         }
+
 
         private double CalcTemplateMatchScore(Mat gray, Mat templ)
         {
@@ -471,12 +522,12 @@ namespace PureGate.Algorithm
                     break;
 
                 case "SUB_000002":
-                    cutAreaRatioTh = 0.575;
+                    cutAreaRatioTh = 0.50;   // 기존 0.575 -> 낮춤
                     bentCxShiftTh = 28.4;
                     break;
 
                 case "SUB_000003":
-                    cutAreaRatioTh = 0.370;
+                    cutAreaRatioTh = 0.24; // 기존 0.370 -> 낮춤 (로그에 0.245가 OK인데 NG였음)
                     bentCxShiftTh = 40.3;
                     break;
             }
