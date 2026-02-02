@@ -1355,6 +1355,31 @@ namespace PureGate.Core
                         UpdateResultUI(ok);
                         RaiseInspectionCompleted(ok);
 
+                        // ✅ 히스토리 저장 추가
+                        try
+                        {
+                            string modelName = "";
+                            if (CurModel != null && !string.IsNullOrWhiteSpace(CurModel.ModelPath))
+                                modelName = Path.GetFileNameWithoutExtension(CurModel.ModelPath);
+
+                            InspHistoryRepo.Append(new InspHistoryRecord
+                            {
+                                Time = DateTime.Now,
+                                ModelName = modelName,
+                                LotNumber = _lotNumber ?? "",
+                                SerialID = _serialID ?? "",
+                                Total = 1,
+                                Ok = ok ? 1 : 0,
+                                Ng = ok ? 0 : 1,
+                                NgClass = ok ? "" : label,
+                                Score = score
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            SLogger.Write($"[History Save] Failed: {ex.Message}", SLogger.LogType.Error);
+                        }
+
                         // 제어기로 결과 전송 (isDefect = !ok)
                         VisionSequence.Inst.VisionCommand(Vision2Mmi.InspDone, !ok);
                         SetWorkingState(WorkingState.NONE);
@@ -1380,6 +1405,60 @@ namespace PureGate.Core
             TrySaveRoiResultImage(isDefect);
 
             RaiseInspectionCompleted(!isDefect);
+
+            // ✅ 히스토리 저장 추가
+            try
+            {
+                string modelName = "";
+                if (CurModel != null && !string.IsNullOrWhiteSpace(CurModel.ModelPath))
+                    modelName = Path.GetFileNameWithoutExtension(CurModel.ModelPath);
+
+                // ROI 검사의 경우 NG 클래스명 추출
+                string ngClass = "";
+                if (isDefect && CurModel != null && CurModel.InspWindowList != null)
+                {
+                    foreach (var window in CurModel.InspWindowList)
+                    {
+                        if (window.AlgorithmList != null)
+                        {
+                            foreach (var algo in window.AlgorithmList)
+                            {
+                                if (algo.IsUse && algo.IsDefect)
+                                {
+                                    // 알고리즘에서 NG 클래스명 추출
+                                    if (algo.ResultString != null && algo.ResultString.Count > 0)
+                                    {
+                                        ngClass = algo.ResultString[0];
+                                        break;
+                                    }
+
+                                    // Fallback: InspectType 이름
+                                    ngClass = algo.InspectType.ToString().Replace("Insp", "");
+                                    break;
+                                }
+                            }
+                            if (!string.IsNullOrWhiteSpace(ngClass)) break;
+                        }
+                    }
+                }
+
+                InspHistoryRepo.Append(new InspHistoryRecord
+                {
+                    Time = DateTime.Now,
+                    ModelName = modelName,
+                    LotNumber = _lotNumber ?? "",
+                    SerialID = _serialID ?? "",
+                    Total = 1,
+                    Ok = isDefect ? 0 : 1,
+                    Ng = isDefect ? 1 : 0,
+                    NgClass = ngClass,
+                    Score = 0 // ROI 검사는 스코어 없음
+                });
+            }
+            catch (Exception ex)
+            {
+                SLogger.Write($"[History Save] Failed: {ex.Message}", SLogger.LogType.Error);
+            }
 
             VisionSequence.Inst.VisionCommand(Vision2Mmi.InspDone, isDefect);
             SetWorkingState(WorkingState.NONE);
