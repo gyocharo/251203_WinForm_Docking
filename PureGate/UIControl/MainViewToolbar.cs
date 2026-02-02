@@ -90,13 +90,18 @@ namespace PureGate.UIControl
             // ✅ SetROI를 DropDown으로 변경
             _setROIButton = new ToolStripDropDownButton
             {
+
                 DisplayStyle = ToolStripItemDisplayStyle.Image,
                 Image = PureGate.Properties.Resources.SetROI,
                 ImageScaling = ToolStripItemImageScaling.None,
                 ToolTipText = "ROI 타입 선택",
-                AutoSize = true,
-                Width = 32,
-                Height = 32
+
+                AutoSize = false,                 // 중요: 크기 강제 적용
+                Size = new Size(80, 60),          // 필요하면 36, 40으로
+                Margin = Padding.Empty,
+                Padding = Padding.Empty,
+
+                ShowDropDownArrow = false         // 중요: 화살표 영역 제거
             };
 
             // ✅ InspWindowType enum의 모든 값을 메뉴로 추가

@@ -103,6 +103,12 @@ namespace PureGate
             SideMenu.Controls.Add(checkBoxHide);
             checkBoxHide.Dock = DockStyle.Bottom;
             checkBoxHide.Text = "<";
+
+            // 초기 텍스트(펼침 상태 기준)
+            btnModel.Text = "모델";
+            btnImage.Text = "이미지";
+            btnCycleMode.Text = "사이클 모드";
+            btnSetUp.Text = "설정";
         }
 
         private void InitializeEvents()
@@ -128,13 +134,21 @@ namespace PureGate
         {
             // 버튼 텍스트/아이콘 매핑
             var btnIconMap = new Dictionary<Button, Image>
-        {
-          //  { btnOverview, Properties.Resources.Overview },
-            { btnModel, Properties.Resources.Model },
-            { btnImage, Properties.Resources.Image },
-            { btnCycleMode, Properties.Resources.CycleMode },
-            { btnSetUp, Properties.Resources.SetUp }
-        };
+    {
+        { btnModel, Properties.Resources.Model },
+        { btnImage, Properties.Resources.Image },
+        { btnCycleMode, Properties.Resources.CycleMode },
+        { btnSetUp, Properties.Resources.SetUp }
+    };
+
+            // ✅ 텍스트 매핑(펼침 상태)
+            var btnTextMap = new Dictionary<Button, string>
+    {
+        { btnModel, "모델" },
+        { btnImage, "이미지" },
+        { btnCycleMode, "사이클 모드" },
+        { btnSetUp, "설정" }
+    };
 
             if (checkBoxHide.Checked)
             {
@@ -149,7 +163,7 @@ namespace PureGate
             {
                 foreach (var kvp in btnIconMap)
                 {
-                    kvp.Key.Text = kvp.Key == btnCycleMode ? "Cycle Mode" : kvp.Key.Name.Replace("btn", "");
+                    kvp.Key.Text = btnTextMap[kvp.Key];   // ✅ 한국어로
                     kvp.Key.Image = null;
                 }
                 checkBoxHide.Text = "<";
@@ -368,15 +382,20 @@ namespace PureGate
         {
             ToolStripDropDown dropDown = new ToolStripDropDown();
 
-            string[] tabNames = { "Model New", "Model Open", "Model Save", "Model Save As" };
+            // ✅ 표시 텍스트를 짧게 (동작은 index로 결정되니 영향 없음)
+            string[] tabNames = { "새 모델", "모델 열기", "모델 저장", "모델 다른 이름으로 저장" };
+
+            // ✅ 항목 크기 고정(길이 때문에 혼자 커지는 현상 방지)
+            int itemW = 170;
+            int itemH = 30;
 
             for (int i = 0; i < tabNames.Length; i++)
             {
                 Button btn = new Button()
                 {
                     Text = tabNames[i],
-                    Width = 120,
-                    Height = 30,
+                    Width = itemW,
+                    Height = itemH,
                     BackColor = Color.FromArgb(224, 224, 224),
                     FlatStyle = FlatStyle.Flat,
                     ForeColor = Color.Black,
@@ -388,24 +407,24 @@ namespace PureGate
                 {
                     switch (index)
                     {
-                        case 0:
-                            modelNewMenuItem_Click(s, EventArgs.Empty);
-                            break;
-                        case 1:
-                            modelOpenMenuItem_Click(s, EventArgs.Empty);
-                            break;
-                        case 2:
-                            modelSaveMenuItem_Click(s, EventArgs.Empty);
-                            break;
-                        case 3:
-                            modelSaveAsMenuItem_Click(s, EventArgs.Empty);
-                            break;
+                        case 0: modelNewMenuItem_Click(s, EventArgs.Empty); break;
+                        case 1: modelOpenMenuItem_Click(s, EventArgs.Empty); break;
+                        case 2: modelSaveMenuItem_Click(s, EventArgs.Empty); break;
+                        case 3: modelSaveAsMenuItem_Click(s, EventArgs.Empty); break;
                     }
 
                     dropDown.Close();
                 };
 
-                ToolStripControlHost host = new ToolStripControlHost(btn);
+                // ✅ Host AutoSize 끄고 동일 사이즈 강제
+                ToolStripControlHost host = new ToolStripControlHost(btn)
+                {
+                    AutoSize = false,
+                    Size = new Size(itemW, itemH),
+                    Margin = Padding.Empty,
+                    Padding = Padding.Empty
+                };
+
                 dropDown.Items.Add(host);
             }
 
@@ -417,7 +436,7 @@ namespace PureGate
         {
             ToolStripDropDown dropDown = new ToolStripDropDown();
 
-            string[] tabNames = { "Image Open", "Image Save" };
+            string[] tabNames = { "이미지 열기", "이미지 저장" };
 
             for (int i = 0; i < tabNames.Length; i++)
             {
