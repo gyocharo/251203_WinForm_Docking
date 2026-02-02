@@ -257,21 +257,38 @@ namespace PureGate
         private void UpdateNGResultChart(List<NgClassCount> ngByClass)
         {
             NGResultChart.Series.Clear();
+            NGResultChart.Titles.Clear();
 
             var series = new Series("NG")
             {
                 ChartType = SeriesChartType.Pie,
                 IsValueShownAsLabel = true,
-
-                // 도넛 안에는 퍼센트만
                 Label = "#PERCENT{P1}",
-
-                // 범례(오른쪽)에는 클래스명
                 LegendText = "#VALX"
             };
 
             series["DoughnutRadius"] = "60";
 
+            // ✅ 데이터가 없을 때 "No data" 표시
+            if (ngByClass == null || ngByClass.Count == 0)
+            {
+                int idx = series.Points.AddXY("No data", 1);
+                series.Points[idx].Color = Color.LightGray;
+                series.Points[idx].Label = "No data";
+                series.Points[idx].LegendText = "";
+                series.Points[idx].Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                NGResultChart.Series.Add(series);
+
+                // 범례 숨기기
+                if (NGResultChart.Legends.Count > 0)
+                    NGResultChart.Legends[0].Enabled = false;
+
+                NGResultChart.Invalidate();
+                return;
+            }
+
+            // ✅ 데이터가 있을 때 정상 표시
             foreach (var item in ngByClass)
             {
                 series.Points.AddXY(item.ClassName, item.Count);
@@ -280,12 +297,12 @@ namespace PureGate
             NGResultChart.Series.Add(series);
 
             if (NGResultChart.Legends.Count > 0)
+            {
+                NGResultChart.Legends[0].Enabled = true;  // 범례 활성화
                 NGResultChart.Legends[0].Docking = Docking.Right;
+            }
 
-            // 아래(차트 밖)에 4개 클래스 개수 전부 표시
-            NGResultChart.Titles.Clear();
-
-            // 4개니까 전부 넣되, 보기 좋게 정렬만
+            // 아래(차트 밖)에 클래스 개수 전부 표시
             var all = ngByClass
                 .OrderByDescending(x => x.Count)
                 .Select(x => $"{x.ClassName}:{x.Count}")
@@ -293,7 +310,7 @@ namespace PureGate
 
             var t = new Title
             {
-                Text = string.Join("   ", all),   // 예: misplaced:12   cut_lead:10 ...
+                Text = string.Join("   ", all),
                 Docking = Docking.Bottom,
                 Alignment = ContentAlignment.BottomRight,
                 Font = new Font("Segoe UI", 9, FontStyle.Bold),
@@ -310,6 +327,7 @@ namespace PureGate
             OkNgChart.Series.Clear();
             OkNgChart.ChartAreas.Clear();
             OkNgChart.Legends.Clear();
+            OkNgChart.Titles.Clear();
 
             OkNgChart.ChartAreas.Add(new ChartArea("Main"));
             OkNgChart.Legends.Add(new Legend("Legend") { Docking = Docking.Right });
@@ -324,21 +342,50 @@ namespace PureGate
 
             s["DoughnutRadius"] = "60";
 
+            // ✅ 데이터가 없을 때 "No data" 표시
+            if (ok == 0 && ng == 0)
+            {
+                int idx = s.Points.AddXY("No data", 1);
+                s.Points[idx].Color = Color.LightGray;
+                s.Points[idx].Label = "No data";
+                s.Points[idx].LegendText = "";
+                s.Points[idx].Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                OkNgChart.Series.Add(s);
+
+                // 범례 숨기기
+                OkNgChart.Legends[0].Enabled = false;
+
+                // 하단 텍스트
+                var tNoData = new Title
+                {
+                    Text = "OK : 0   NG : 0",
+                    Docking = Docking.Bottom,
+                    Alignment = ContentAlignment.BottomRight,
+                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                    ForeColor = Color.Gray,
+                    IsDockedInsideChartArea = false,
+                };
+                OkNgChart.Titles.Add(tNoData);
+                OkNgChart.Invalidate();
+                return;
+            }
+
+            // ✅ 데이터가 있을 때 정상 표시
             int idxOk = s.Points.AddXY("OK", ok);
             int idxNg = s.Points.AddXY("NG", ng);
 
-            // 색 지정은 인덱스로 접근해서 설정
             s.Points[idxOk].Color = Color.FromArgb(76, 175, 80);
             s.Points[idxNg].Color = Color.FromArgb(244, 67, 54);
 
             OkNgChart.Series.Add(s);
-            // ===== 퍼센트 텍스트 계산 =====
+
+            // 범례 활성화
+            OkNgChart.Legends[0].Enabled = true;
+
             double total = ok + ng;
             double okPct = total > 0 ? ok * 100.0 / total : 0;
             double ngPct = total > 0 ? ng * 100.0 / total : 0;
-
-            // 오른쪽 아래 텍스트를 Title로 표시 (가장 안정적)
-            OkNgChart.Titles.Clear();
 
             var t = new Title
             {
@@ -347,7 +394,7 @@ namespace PureGate
                 Alignment = ContentAlignment.BottomRight,
                 Font = new Font("Segoe UI", 9, FontStyle.Bold),
                 ForeColor = Color.Black,
-                IsDockedInsideChartArea = false, // 차트 바깥(아래)에 붙임 (잘 보임)
+                IsDockedInsideChartArea = false,
             };
 
             OkNgChart.Titles.Add(t);
