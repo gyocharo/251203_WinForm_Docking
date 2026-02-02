@@ -65,7 +65,7 @@ namespace PureGate
 
             // 4. SummaryForm 생성 후 보여주기
             SummaryForm summaryForm = new SummaryForm(project, start, end);
-            summaryForm.Show();
+            summaryForm.ShowDialog();
         }
 
         private void SetupQuickRangeUI()

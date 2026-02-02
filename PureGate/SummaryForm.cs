@@ -46,7 +46,7 @@ namespace PureGate
 
         private void InitializeUI()
         {
-            this.Text = "Inspection Summary";
+            this.Text = "기간별 OK/NG 비율";
             this.DockAreas = DockAreas.Document;
 
             // 기존 컨트롤(디자이너가 넣어둔 ResultChart 포함) 레이아웃 정리
