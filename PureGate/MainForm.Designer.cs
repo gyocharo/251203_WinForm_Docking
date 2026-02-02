@@ -132,7 +132,8 @@
             this.checkBoxHide.Click += new System.EventHandler(this.checkBoxHide_CheckedChanged);
             // 
             // btnOverview
-            // 
+            //
+            /*
             this.btnOverview.Dock = System.Windows.Forms.DockStyle.Top;
             this.btnOverview.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnOverview.Font = new System.Drawing.Font("굴림", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(129)));
@@ -144,6 +145,7 @@
             this.btnOverview.Text = "Overview";
             this.btnOverview.UseVisualStyleBackColor = true;
             this.btnOverview.Click += new System.EventHandler(this.btnOverview_Click);
+            */
             // 
             // pictureBox1
             // 
