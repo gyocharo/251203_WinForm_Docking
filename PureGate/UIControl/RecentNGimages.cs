@@ -136,7 +136,7 @@ namespace PureGate.UIControl
                 }
 
                 // 모든 NG 이미지 파일 수집 (최신순)
-                var imageFiles = Directory.GetFiles(ngRootPath, "*.jpg", SearchOption.AllDirectories)
+                var imageFiles = Directory.GetFiles(ngRootPath, "*.png", SearchOption.AllDirectories)
                     .Select(f => new FileInfo(f))
                     .OrderByDescending(fi => fi.LastWriteTime)
                     .Take(MAX_THUMBNAILS)
