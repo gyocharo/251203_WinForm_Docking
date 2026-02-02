@@ -151,14 +151,22 @@ namespace PureGate
             Controls.Add(_splitContainer);
         }
 
-        public void AddModelResult(Model curModel)
+        
+        /// 검사 결과를 ResultForm에 추가하고 표시합니다.
+        /// ⚠️ 중요: 이 메서드는 이미지가 NG/OK 폴더에 저장된 후 호출되어야 합니다.
+        /// 저장된 파일명(LOT-<lot>_PART-<part>_SN-<serial>_CAM-<cam>_LINE-<line>_ST-<station>.png)에서
+        /// 정보를 파싱하여 컬럼에 표시합니다.
+        
+        /// <param name="savedImagePath">저장된 이미지의 전체 경로</param>
+        /// <param name="inspWindow">검사 윈도우 객체 (복사본 전달 권장)</param>
+        public void AddInspectionResult(string savedImagePath, InspWindow inspWindow)
         {
             // ✅ UI 스레드 체크
             if (InvokeRequired)
             {
                 try
                 {
-                    Invoke(new Action(() => AddModelResult(curModel)));
+                    Invoke(new Action(() => AddInspectionResult(savedImagePath, inspWindow)));
                 }
                 catch (ObjectDisposedException)
                 {
@@ -167,120 +175,31 @@ namespace PureGate
                 return;
             }
 
-            if (curModel is null)
+            if (inspWindow == null)
             {
-                SLogger.Write("[ResultForm] AddModelResult - curModel is null", SLogger.LogType.Error);
+                SLogger.Write("[ResultForm] AddInspectionResult - inspWindow is null", SLogger.LogType.Error);
                 return;
             }
 
-            SLogger.Write($"[ResultForm] AddModelResult - Model: {curModel.ModelName}, Windows: {curModel.InspWindowList.Count}");
+            SLogger.Write($"[ResultForm] AddInspectionResult - SavedPath: {savedImagePath}, Window: {inspWindow.UID}, Results: {inspWindow.InspResultList.Count}");
 
-            // 현재 모델의 검사 이미지 경로에서 파일명 추출
+            // 저장된 파일명에서 파일명만 추출
             string imageFileName = string.Empty;
-            if (!string.IsNullOrEmpty(curModel.InspectImagePath))
+            if (!string.IsNullOrEmpty(savedImagePath))
             {
-                imageFileName = Path.GetFileName(curModel.InspectImagePath);
-                SLogger.Write($"[ResultForm] Image FileName: {imageFileName}");
+                imageFileName = Path.GetFileName(savedImagePath);
+                SLogger.Write($"[ResultForm] Image FileName from saved path: {imageFileName}");
             }
 
-            // 현재 검사 시간을 UID에 추가하여 각 검사를 구분
-            string timestamp = DateTime.Now.ToString("HH:mm:ss");
-            
-            // 검사 이력에 추가할 윈도우 복사본 생성
-            foreach (var window in curModel.InspWindowList)
-            {
-                // 깊은 복사를 위해 새 InspWindow 생성
-                var historyWindow = new InspWindow(window.InspWindowType, window.Name);
-                historyWindow.UID = $"{timestamp} - {window.UID}";
-                historyWindow.WindowArea = window.WindowArea;
-                historyWindow.InspArea = window.InspArea;
-                
-                SLogger.Write($"[ResultForm] Window: {window.UID}, Results: {window.InspResultList.Count}");
-                
-                // InspResult 복사 및 파일명 파싱
-                foreach (var result in window.InspResultList)
-                {
-                    var historyResult = new InspResult
-                    {
-                        ObjectID = result.ObjectID,
-                        InspType = result.InspType,
-                        IsDefect = result.IsDefect,
-                        ResultValue = result.ResultValue,
-                        ResultInfos = result.ResultInfos,
-                        ResultRectList = result.ResultRectList,
-                        GroupID = result.GroupID
-                    };
-                    
-                    historyResult.ParseImageFileName(imageFileName);
-                    SLogger.Write($"[ResultForm] Parsed - Lot: {historyResult.LotNumber}, Part: {historyResult.PartID}, Status: {historyResult.GetStatusString()}");
-                    
-                    historyWindow.AddInspResult(historyResult);
-                }
-                
-                // 이력에 추가 (맨 앞에 추가하여 최신 항목이 위에 표시되도록)
-                _inspectionHistory.Insert(0, historyWindow);
-            }
-
-            // 최대 30개까지만 유지 (오래된 것부터 제거 - 마지막 항목 제거)
-            while (_inspectionHistory.Count > MaxHistoryCount)
-            {
-                var oldest = _inspectionHistory[_inspectionHistory.Count - 1];
-                _inspectionHistory.RemoveAt(_inspectionHistory.Count - 1);
-                SLogger.Write($"[ResultForm] Removed oldest history: {oldest.UID}");
-            }
-
-            // TreeListView 업데이트
-            _treeListView.SetObjects(_inspectionHistory);
-
-            // 최근 추가된 항목들만 펼치기 (이제 맨 위에 있음)
-            foreach (var window in curModel.InspWindowList)
-            {
-                var lastAdded = _inspectionHistory.FirstOrDefault(w => w.UID.EndsWith(window.UID));
-                if (lastAdded != null)
-                {
-                    _treeListView.Expand(lastAdded);
-                }
-            }
-            
-            SLogger.Write($"[ResultForm] Total inspection history: {_inspectionHistory.Count}/{MaxHistoryCount} windows");
-        }
-
-        public void AddWindowResult(InspWindow inspWindow)
-        {
-            // ✅ UI 스레드 체크
-            if (InvokeRequired)
-            {
-                try
-                {
-                    Invoke(new Action(() => AddWindowResult(inspWindow)));
-                }
-                catch (ObjectDisposedException)
-                {
-                    SLogger.Write("[ResultForm] Form disposed, skipping update");
-                }
-                return;
-            }
-
-            if (inspWindow is null)
-            {
-                SLogger.Write("[ResultForm] AddWindowResult - inspWindow is null", SLogger.LogType.Error);
-                return;
-            }
-
-            SLogger.Write($"[ResultForm] AddWindowResult - Window: {inspWindow.UID}, Results: {inspWindow.InspResultList.Count}");
-
-            // 현재 검사 이미지 파일명 가져오기
-            string imageFileName = GetCurrentImageFileName();
-            
             // 검사 시간 추가
             string timestamp = DateTime.Now.ToString("HH:mm:ss");
-            
+
             // 이력에 추가할 윈도우 복사본 생성
             var historyWindow = new InspWindow(inspWindow.InspWindowType, inspWindow.Name);
             historyWindow.UID = $"{timestamp} - {inspWindow.UID}";
             historyWindow.WindowArea = inspWindow.WindowArea;
             historyWindow.InspArea = inspWindow.InspArea;
-            
+
             // InspResult 복사 및 파일명 파싱
             foreach (var result in inspWindow.InspResultList)
             {
@@ -294,15 +213,16 @@ namespace PureGate
                     ResultRectList = result.ResultRectList,
                     GroupID = result.GroupID
                 };
-                
+
+                // ✅ 저장된 파일명에서 정보 파싱 (LOT-<lot>_PART-<part>_SN-<serial>_CAM-<cam>_LINE-<line>_ST-<station>.png)
                 historyResult.ParseImageFileName(imageFileName);
                 historyWindow.AddInspResult(historyResult);
             }
-            
+
             // 이력에 추가 (맨 앞에 추가하여 최신 항목이 위에 표시되도록)
             _inspectionHistory.Insert(0, historyWindow);
 
-            // 최대 30개까지만 유지 (오래된 것부터 제거 - 마지막 항목 제거)
+            // 최대 개수까지만 유지 (오래된 것부터 제거 - 마지막 항목 제거)
             while (_inspectionHistory.Count > MaxHistoryCount)
             {
                 var oldest = _inspectionHistory[_inspectionHistory.Count - 1];
@@ -317,14 +237,16 @@ namespace PureGate
             if (historyWindow.InspResultList.Count > 0)
             {
                 InspResult inspResult = historyWindow.InspResultList[0];
-                ShowDedtail(inspResult);
+                ShowDetail(inspResult);
             }
-        }
+
+            SLogger.Write($"[ResultForm] Total inspection history: {_inspectionHistory.Count}/{MaxHistoryCount} windows");
+        }        
 
         //실제 검사가 되었을때, 검사 결과를 추가하는 함수
         public void AddInspResult(InspResult inspResult)
         {
-            if (inspResult is null)
+            if (inspResult == null)
             {
                 SLogger.Write("[ResultForm] AddInspResult - inspResult is null", SLogger.LogType.Error);
                 return;
@@ -332,14 +254,10 @@ namespace PureGate
 
             SLogger.Write($"[ResultForm] AddInspResult - ObjectID: {inspResult.ObjectID}");
 
-            // 현재 검사 중인 이미지 파일명 가져오기
-            string imageFileName = GetCurrentImageFileName();
-            inspResult.ParseImageFileName(imageFileName);
-
             // 이 메서드는 원래 용도대로 사용 (현재는 사용되지 않을 수 있음)
             // 필요시 구현
         }
-        
+
         // 이력 초기화 메서드 (필요시 사용)
         public void ClearHistory()
         {
@@ -360,7 +278,7 @@ namespace PureGate
 
             if (_treeListView.SelectedObject is InspResult result)
             {
-                ShowDedtail(result);
+                ShowDetail(result);
             }
             else if (_treeListView.SelectedObject is InspWindow window)
             {
@@ -370,14 +288,14 @@ namespace PureGate
             }
         }
 
-        private void ShowDedtail(InspResult result)
+        private void ShowDetail(InspResult result)
         {
-            if (result is null)
+            if (result == null)
                 return;
 
             // 상세 정보 구성
             StringBuilder details = new StringBuilder();
-            
+
             // 이미지 파일명 정보
             if (!string.IsNullOrEmpty(result.ImageFileName))
             {
@@ -406,34 +324,6 @@ namespace PureGate
                     cameraForm.AddRect(result.ResultRectList);
                 }
             }
-        }
-
-        /// <summary>
-        /// 현재 검사 중인 이미지 파일명 가져오기
-        /// </summary>
-        private string GetCurrentImageFileName()
-        {
-            try
-            {
-                // Global.Inst.InspStage.CurModel에서 현재 검사 이미지 경로 가져오기
-                var curModel = Global.Inst?.InspStage?.CurModel;
-                if (curModel != null && !string.IsNullOrEmpty(curModel.InspectImagePath))
-                {
-                    string fileName = Path.GetFileName(curModel.InspectImagePath);
-                    SLogger.Write($"[ResultForm] GetCurrentImageFileName: {fileName}");
-                    return fileName;
-                }
-                else
-                {
-                    SLogger.Write("[ResultForm] GetCurrentImageFileName - InspectImagePath is null or empty", SLogger.LogType.Error);
-                }
-            }
-            catch (Exception ex)
-            {
-                SLogger.Write($"[ResultForm] GetCurrentImageFileName Exception: {ex.Message}", SLogger.LogType.Error);
-            }
-
-            return string.Empty;
         }
     }
 }

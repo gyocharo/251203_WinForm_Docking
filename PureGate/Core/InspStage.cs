@@ -1114,8 +1114,23 @@ namespace PureGate.Core
                 // 라벨명 폴더 안전 처리
                 string safeLabel = SanitizePathSegment(label);
 
+                // ✅ 현재 파일명 구조 정보 가져오기
+                string lot = DateTime.Now.ToString("yyyyMMddHHmmssfff"); // LOT은 현재시각으로
+                string part = "NA";
+                string serial = !string.IsNullOrWhiteSpace(_serialID) ? SafeToken(_serialID) : "NA";
+                string cam = SafeToken(SettingXml.Inst.MachineName);
+                string line = "0";
+                string station = "0";
+
+                if (CurModel != null && !string.IsNullOrWhiteSpace(CurModel.ModelPath))
+                    part = SafeToken(Path.GetFileNameWithoutExtension(CurModel.ModelPath));
+
+                // ✅ 새로운 파일명 구조: LOT-<lot>_PART-<part>_SN-<serial>_CAM-<cam>_LINE-<line>_ST-<station>.png
+                string fileName = $"LOT-{lot}_PART-{part}_SN-{serial}_CAM-{cam}_LINE-{line}_ST-{station}.png";
+
                 string root;
                 string targetDir;
+                string fullPath;
 
                 // ✅ exe 폴더 기준 상위 4단계(=프로젝트 루트쪽) 경로 구하기
                 string baseDir = AppContext.BaseDirectory; // exe 있는 폴더
@@ -1127,37 +1142,39 @@ namespace PureGate.Core
 
                 if (string.Equals(label, "Good", StringComparison.OrdinalIgnoreCase))
                 {
-                    root = Path.Combine(projectRoot, "Good");
+                    // ✅ OK 폴더에 저장
+                    root = Path.Combine(projectRoot, "OK");
                     targetDir = Path.Combine(root, dateFolder);
+                    Directory.CreateDirectory(targetDir);
+
+                    fullPath = Path.Combine(targetDir, fileName);
                 }
                 else
                 {
+                    // ✅ NG 폴더에 저장 (NG/<라벨>/<날짜>/)
                     root = Path.Combine(projectRoot, "NG");
                     targetDir = Path.Combine(root, safeLabel, dateFolder);
+                    Directory.CreateDirectory(targetDir);
+
+                    fullPath = Path.Combine(targetDir, fileName);
                 }
-
-                // 폴더 없으면 생성 (Good/NG 모두)
-                Directory.CreateDirectory(targetDir);
-
-                // 파일명: 시간_라벨.jpg (충돌 방지)
-                string ts = DateTime.Now.ToString("HH.mm.ss.ff");
-                string fileName = $"{ts}_{safeLabel}.jpg";
-                string fullPath = Path.Combine(targetDir, fileName);
 
                 // 이미지 저장 (resultImage는 화면 표시용일 수 있으니 Clone해서 저장)
                 using (Bitmap clone = (Bitmap)resultImage.Clone())
                 {
-                    clone.Save(fullPath, System.Drawing.Imaging.ImageFormat.Jpeg);
+                    clone.Save(fullPath, System.Drawing.Imaging.ImageFormat.Png);
                 }
 
                 SLogger.Write($"[AI-CLS Save] {label}({score:0.000}) -> {fullPath}", SLogger.LogType.Info);
+
+                // ✅ ResultForm에 저장된 이미지 경로와 함께 결과 전달
+                TryUpdateResultFormWithSavedImage(fullPath, label, score, !string.Equals(label, "Good", StringComparison.OrdinalIgnoreCase));
 
                 // ✅ NG 이미지인 경우에만 이벤트 발생
                 if (!string.Equals(label, "Good", StringComparison.OrdinalIgnoreCase))
                 {
                     NGImageSaved?.Invoke(fullPath);
                 }
-
             }
             catch (Exception ex)
             {
@@ -1369,32 +1386,56 @@ namespace PureGate.Core
 
         private void TrySaveRoiResultImage(bool isDefect, string ngFolderName = "ROI_NG")
         {
-            if (!isDefect) return;
-
             try
             {
                 string dateFolder = DateTime.Now.ToString("yyyy-MM-dd");
                 string safeLabel = SanitizePathSegment(ngFolderName);
 
-                // ✅ exe 폴더 기준 상위 4단계(=프로젝트 루트쪽) 경로 구하기 (CLS 저장 방식과 동일)
+                // ✅ 현재 파일명 구조 정보 가져오기
+                string lot = DateTime.Now.ToString("yyyyMMddHHmmssfff");
+                string part = "NA";
+                string serial = !string.IsNullOrWhiteSpace(_serialID) ? SafeToken(_serialID) : "NA";
+                string cam = SafeToken(SettingXml.Inst.MachineName);
+                string line = "0";
+                string station = "0";
+
+                if (CurModel != null && !string.IsNullOrWhiteSpace(CurModel.ModelPath))
+                    part = SafeToken(Path.GetFileNameWithoutExtension(CurModel.ModelPath));
+
+                // ✅ 새로운 파일명 구조: LOT-<lot>_PART-<part>_SN-<serial>_CAM-<cam>_LINE-<line>_ST-<station>.png
+                string fileName = $"LOT-{lot}_PART-{part}_SN-{serial}_CAM-{cam}_LINE-{line}_ST-{station}.png";
+
+                // ✅ exe 폴더 기준 상위 4단계(=프로젝트 루트쪽) 경로 구하기
                 string baseDir = AppContext.BaseDirectory;
                 var di = new DirectoryInfo(baseDir);
                 for (int i = 0; i < 4 && di.Parent != null; i++)
                     di = di.Parent;
                 string projectRoot = di.FullName;
 
-                string targetDir = Path.Combine(projectRoot, "NG", safeLabel, dateFolder);
-                Directory.CreateDirectory(targetDir);
+                string targetDir;
+                string fullPath;
 
-                string ts = DateTime.Now.ToString("HH.mm.ss.ff");
-                string fullPath = Path.Combine(targetDir, $"{ts}_{safeLabel}.jpg");
+                if (isDefect)
+                {
+                    // ✅ NG 폴더에 저장
+                    targetDir = Path.Combine(projectRoot, "NG", safeLabel, dateFolder);
+                    Directory.CreateDirectory(targetDir);
+                    fullPath = Path.Combine(targetDir, fileName);
+                }
+                else
+                {
+                    // ✅ OK 폴더에 저장
+                    targetDir = Path.Combine(projectRoot, "OK", dateFolder);
+                    Directory.CreateDirectory(targetDir);
+                    fullPath = Path.Combine(targetDir, fileName);
+                }
 
-                // ✅ 현재 버퍼 이미지를 JPG로 저장
+                // ✅ 현재 버퍼 이미지를 PNG로 저장
                 using (Bitmap bmp = GetBitmap(0, eImageChannel.Color))
                 {
                     if (bmp != null)
                     {
-                        bmp.Save(fullPath, System.Drawing.Imaging.ImageFormat.Jpeg);
+                        bmp.Save(fullPath, System.Drawing.Imaging.ImageFormat.Png);
                     }
                     else
                     {
@@ -1402,22 +1443,113 @@ namespace PureGate.Core
                         using (Bitmap gray = GetBitmap(0, eImageChannel.Gray))
                         {
                             if (gray == null) return;
-                            gray.Save(fullPath, System.Drawing.Imaging.ImageFormat.Jpeg);
+                            gray.Save(fullPath, System.Drawing.Imaging.ImageFormat.Png);
                         }
                     }
                 }
 
-                // ✅ CountForm(RecentNGimages) 썸네일 갱신 트리거
-                NGImageSaved?.Invoke(fullPath);
+                SLogger.Write($"[ROI Save] {(isDefect ? "NG" : "OK")} -> {fullPath}", SLogger.LogType.Info);
 
-                SLogger.Write($"[ROI Save] NG -> {fullPath}", SLogger.LogType.Info);
+                // ✅ ResultForm에 저장된 이미지 경로와 함께 결과 전달
+                TryUpdateResultFormWithSavedImageForROI(fullPath, isDefect);
+
+                // ✅ NG 이미지인 경우에만 CountForm(RecentNGimages) 썸네일 갱신 트리거
+                if (isDefect)
+                {
+                    NGImageSaved?.Invoke(fullPath);
+                }
             }
             catch (Exception ex)
             {
                 SLogger.Write($"[ROI Save] Failed: {ex.Message}", SLogger.LogType.Error);
             }
         }
+        // ✅ 3. AI Module 결과를 ResultForm에 전달하는 새로운 메서드
+        private void TryUpdateResultFormWithSavedImage(string savedImagePath, string label, float score, bool isDefect)
+        {
+            try
+            {
+                ResultForm resultForm = MainForm.GetDockForm<ResultForm>();
+                if (resultForm == null)
+                {
+                    SLogger.Write("[InspStage] ResultForm is null (cannot update).", SLogger.LogType.Error);
+                    return;
+                }
 
+                var window = new InspWindow(InspWindowType.None, "AIModule");
+                window.UID = "AIModule";
+
+                var res = new InspResult();
+                res.ObjectID = "AIModule";
+                res.ObjectType = InspWindowType.None;
+                res.InspType = InspectType.InspAIModule;
+                res.IsDefect = isDefect;
+
+                // NG면 라벨을 남겨서 ResultForm에서 상태가 보이게
+                res.ResultValue = label;
+                res.ResultInfos = $"CLS: {(isDefect ? "NG" : "OK")}, Label={label}, Score={score:0.000}";
+
+                window.AddInspResult(res);
+
+                // ✅ 저장된 이미지 경로를 전달하여 ResultForm이 파일명에서 정보를 파싱하도록 함
+                resultForm.AddInspectionResult(savedImagePath, window);
+            }
+            catch (Exception ex)
+            {
+                SLogger.Write($"[InspStage] TryUpdateResultFormWithSavedImage failed: {ex.Message}", SLogger.LogType.Error);
+            }
+        }
+
+        // ✅ 4. ROI 결과를 ResultForm에 전달하는 새로운 메서드
+        private void TryUpdateResultFormWithSavedImageForROI(string savedImagePath, bool isDefect)
+        {
+            try
+            {
+                ResultForm resultForm = MainForm.GetDockForm<ResultForm>();
+                if (resultForm == null)
+                {
+                    SLogger.Write("[InspStage] ResultForm is null (cannot update).", SLogger.LogType.Error);
+                    return;
+                }
+
+                // ✅ 현재 모델의 검사 윈도우를 복사하여 전달
+                if (CurModel != null && CurModel.InspWindowList != null && CurModel.InspWindowList.Count > 0)
+                {
+                    foreach (var window in CurModel.InspWindowList)
+                    {
+                        // 깊은 복사를 위해 새 InspWindow 생성
+                        var historyWindow = new InspWindow(window.InspWindowType, window.Name);
+                        historyWindow.UID = window.UID;
+                        historyWindow.WindowArea = window.WindowArea;
+                        historyWindow.InspArea = window.InspArea;
+
+                        // InspResult 복사
+                        foreach (var result in window.InspResultList)
+                        {
+                            var historyResult = new InspResult
+                            {
+                                ObjectID = result.ObjectID,
+                                InspType = result.InspType,
+                                IsDefect = result.IsDefect,
+                                ResultValue = result.ResultValue,
+                                ResultInfos = result.ResultInfos,
+                                ResultRectList = result.ResultRectList,
+                                GroupID = result.GroupID
+                            };
+
+                            historyWindow.AddInspResult(historyResult);
+                        }
+
+                        // ✅ 저장된 이미지 경로를 전달
+                        resultForm.AddInspectionResult(savedImagePath, historyWindow);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                SLogger.Write($"[InspStage] TryUpdateResultFormWithSavedImageForROI failed: {ex.Message}", SLogger.LogType.Error);
+            }
+        }
         //검사를 위한 준비 작업
         public bool InspectReady(string lotNumber, string serialID)
         {

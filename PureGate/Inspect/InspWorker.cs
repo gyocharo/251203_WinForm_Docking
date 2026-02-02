@@ -138,17 +138,10 @@ namespace PureGate.Inspect
 
             System.Diagnostics.Debug.WriteLine($"[DEBUG] total={totalCnt}, ok={okCnt}, ng={ngCnt}, ngDetails={ngDetails.Count}");
 
-            // 7) ResultForm 업데이트
-            ResultForm resultForm = MainForm.GetDockForm<ResultForm>();
-            if (resultForm != null)
-            {
-                SLogger.Write("[InspWorker] ResultForm found -> AddModelResult()");
-                resultForm.AddModelResult(curModel);
-            }
-            else
-            {
-                SLogger.Write("[InspWorker] ResultForm is null", SLogger.LogType.Error);
-            }
+            // ✅ 7) ResultForm 업데이트는 이제 InspStage의 이미지 저장 메서드에서 처리
+            // 이미지가 저장되면서 ResultForm.AddInspectionResult()가 호출됨
+            // 따라서 여기서는 ResultForm을 직접 호출하지 않음
+            SLogger.Write("[InspWorker] ResultForm will be updated after image save");
 
             // 8) 통계 업데이트(한 군데로 통일)
             MainForm.Instance?.UpdateStatisticsUI(okCnt, ngCnt, ngDetails);
@@ -217,12 +210,10 @@ namespace PureGate.Inspect
                 RunInspect(out isDef);
             }
 
-            ResultForm resultForm = MainForm.GetDockForm<ResultForm>();
-            if (resultForm != null)
-            {
-                if (inspObj != null) resultForm.AddWindowResult(inspObj);
-                else resultForm.AddModelResult(Global.Inst.InspStage.CurModel);
-            }
+            // ✅ ResultForm 업데이트는 이미지 저장 후 자동으로 처리되므로 여기서는 호출하지 않음            
+
+            SLogger.Write("[InspWorker] TryInspect completed - ResultForm will be updated after image save");
+
             return true;
         }
 
