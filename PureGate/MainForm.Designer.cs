@@ -35,7 +35,7 @@
             this.btnImage = new System.Windows.Forms.Button();
             this.btnModel = new System.Windows.Forms.Button();
             this.checkBoxHide = new System.Windows.Forms.CheckBox();
-            this.btnOverview = new System.Windows.Forms.Button();
+           // this.btnOverview = new System.Windows.Forms.Button();
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
             this.timerSliding = new System.Windows.Forms.Timer(this.components);
             this.SideMenu.SuspendLayout();
@@ -50,7 +50,7 @@
             this.SideMenu.Controls.Add(this.btnImage);
             this.SideMenu.Controls.Add(this.btnModel);
             this.SideMenu.Controls.Add(this.checkBoxHide);
-            this.SideMenu.Controls.Add(this.btnOverview);
+           // this.SideMenu.Controls.Add(this.btnOverview);
             this.SideMenu.Controls.Add(this.pictureBox1);
             this.SideMenu.Location = new System.Drawing.Point(0, 0);
             this.SideMenu.Name = "SideMenu";
@@ -133,6 +133,7 @@
             // 
             // btnOverview
             // 
+            /*
             this.btnOverview.Dock = System.Windows.Forms.DockStyle.Top;
             this.btnOverview.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnOverview.Font = new System.Drawing.Font("굴림", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(129)));
@@ -144,6 +145,7 @@
             this.btnOverview.Text = "Overview";
             this.btnOverview.UseVisualStyleBackColor = true;
             this.btnOverview.Click += new System.EventHandler(this.btnOverview_Click);
+            */
             // 
             // pictureBox1
             // 
@@ -183,7 +185,7 @@
         private System.Windows.Forms.Button btnSetUp;
         private System.Windows.Forms.Button btnModel;
         private System.Windows.Forms.CheckBox checkBoxHide;
-        private System.Windows.Forms.Button btnOverview;
+      //  private System.Windows.Forms.Button btnOverview;
         private System.Windows.Forms.PictureBox pictureBox1;
         private System.Windows.Forms.Timer timerSliding;
         private System.Windows.Forms.Button btnImage;
