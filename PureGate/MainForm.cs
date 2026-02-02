@@ -129,7 +129,7 @@ namespace PureGate
             // 버튼 텍스트/아이콘 매핑
             var btnIconMap = new Dictionary<Button, Image>
         {
-            { btnOverview, Properties.Resources.Overview },
+          //  { btnOverview, Properties.Resources.Overview },
             { btnModel, Properties.Resources.Model },
             { btnImage, Properties.Resources.Image },
             { btnCycleMode, Properties.Resources.CycleMode },
@@ -322,18 +322,18 @@ namespace PureGate
             }
         }
 
-        private void btnOverview_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                ResetDockLayout();
-                ResetToInitialState();
-            }
-            catch (Exception ex)
-            {
-                MsgBox.Show($"레이아웃 초기화 실패: {ex.Message}");
-            }
-        }
+        //private void btnOverview_Click(object sender, EventArgs e)
+        //{
+        //    try
+        //    {
+        //        ResetDockLayout();
+        //        ResetToInitialState();
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        MsgBox.Show($"레이아웃 초기화 실패: {ex.Message}");
+        //    }
+        //}
 
         private void btnCycleMode_Click(object sender, EventArgs e)
         {
