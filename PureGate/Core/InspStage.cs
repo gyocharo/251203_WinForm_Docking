@@ -1090,7 +1090,8 @@ namespace PureGate.Core
                 res.ParseImageFileName(imageFileName);
 
                 window.AddInspResult(res);
-                resultForm.AddWindowResult(window);
+                string savedImagePath = CurModel?.InspectImagePath ?? "";
+                resultForm.AddInspectionResult(savedImagePath, window);
             }
             catch (Exception ex)
             {
