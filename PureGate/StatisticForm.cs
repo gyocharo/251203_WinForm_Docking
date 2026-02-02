@@ -1,6 +1,7 @@
 ﻿using PureGate.Inspect;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
@@ -14,10 +15,42 @@ namespace PureGate
         private Chart chart;
         private Label lblSummary; // 하단 개수 표시용
 
+        // ✅ UPH 오버레이용
+        private Label lblUph;
+        private Panel pnlChartHost;
+
+        // ✅ UPH 계산(StatisticForm 내부에서만)
+        private readonly object _uphLock = new object();
+        private readonly Stopwatch _uphSw = new Stopwatch();
+        private readonly Queue<DateTime> _uphDoneTimesUtc = new Queue<DateTime>(4096);
+
+        private bool _uphStarted = false;
+        private int _uphLastTotal = 0;
+
+        private int _lastOk = 0;
+        private int _lastNg = 0;
+
+        private Timer _uphTimer;
+
         public StatisticForm()
         {
             InitializeComponent();
             InitializeUI();
+
+            // ✅ 1초마다 UPH 라벨 갱신(검사 이벤트 없을 때도 숫자 유지)
+            _uphTimer = new Timer { Interval = 1000 };
+            _uphTimer.Tick += (s, e) => UpdateUphLabelFromCounts(_lastOk, _lastNg, isCountUpdate: false);
+            _uphTimer.Start();
+
+            this.FormClosed += (s, e) =>
+            {
+                try
+                {
+                    _uphTimer?.Stop();
+                    _uphTimer?.Dispose();
+                }
+                catch { }
+            };
         }
 
         private void InitializeUI()
@@ -34,6 +67,13 @@ namespace PureGate
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 85f)); // 차트 비중 확대
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40f)); // 하단 텍스트 영역
             this.Controls.Add(layout);
+
+            // ✅ 2. 차트 Host 패널 (차트 + UPH 라벨 오버레이)
+            pnlChartHost = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White
+            };
 
             // 2. 차트 설정
             chart = new Chart { Dock = DockStyle.Fill, BackColor = Color.White };
@@ -56,7 +96,24 @@ namespace PureGate
                 chart.Legends.Add(new Legend("DefaultLegend"));
             }
 
-            layout.Controls.Add(chart, 0, 0);
+            // ✅ UPH 라벨 (좌상단 오버레이)
+            lblUph = new Label
+            {
+                AutoSize = true,
+                Text = "UPH(평균): -",
+                Font = new Font("맑은 고딕", 9f, FontStyle.Bold),
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                Padding = new Padding(6, 3, 6, 3),
+                Location = new Point(8, 8),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left
+            };
+
+            pnlChartHost.Controls.Add(chart);
+            pnlChartHost.Controls.Add(lblUph);
+            lblUph.BringToFront();
+
+            layout.Controls.Add(pnlChartHost, 0, 0);
 
             // 3. 하단 OK/NG 개수 표시 라벨 (표 대신 사용)
             lblSummary = new Label
@@ -79,10 +136,16 @@ namespace PureGate
                 return;
             }
 
+            _lastOk = okCount;
+            _lastNg = ngCount;
+
             System.Diagnostics.Debug.WriteLine($"[StatisticForm] ok={okCount}, ng={ngCount}, detailCount={ngClassDetails?.Count ?? 0}");
             System.Diagnostics.Debug.WriteLine("[NG_RAW] " + string.Join(", ", (ngClassDetails ?? new List<NgClassCount>())
                 .Where(x => x != null)
                 .Select(x => $"{x.ClassName}:{x.Count}")));
+
+            // ✅ UPH 라벨 갱신(카운트 변화 시점에만 큐에 기록)
+            UpdateUphLabelFromCounts(okCount, ngCount, isCountUpdate: true);
 
             Series series = chart.Series["StatSeries"];
             series.Points.Clear();
@@ -102,8 +165,6 @@ namespace PureGate
             lblSummary.Text = $"TOTAL: {okCount + ngCount} ( OK: {okCount} / NG: {ngCount} )";
 
             // ✅ 1) 유효한 NG 클래스 목록 만들기
-            // - OK/GOOD/NG/NoData/Unknown 같은 값은 제거
-            // - 공백 제거 + 대소문자 무시로 그룹핑 + 합산
             var statsList = (ngClassDetails ?? new List<NgClassCount>())
                 .Where(d => d != null && d.Count > 0)
                 .Select(d => new { Name = (d.ClassName ?? "").Trim(), d.Count })
@@ -123,14 +184,8 @@ namespace PureGate
             int detailNgSum = statsList.Sum(x => x.Total);
             if (ngCount > 0 && detailNgSum > 0 && detailNgSum != ngCount)
             {
-                // ✅ detail 합이 ngCount랑 다르면 어디서 중복/누락이 생긴 거라 디버그 로그로 바로 보이게
                 System.Diagnostics.Debug.WriteLine($"[StatisticForm][WARN] NG mismatch: ngCount={ngCount}, detailSum={detailNgSum} (check producer side)");
             }
-
-            // ✅ 2) 도넛 구성 원칙
-            // - OK는 항상 OK로 1조각
-            // - NG는 statsList가 있으면 "클래스별"로 쪼개서 표시
-            // - statsList가 없으면 NG 합계 1조각으로 표시
 
             // OK 조각
             if (okCount > 0)
@@ -145,7 +200,6 @@ namespace PureGate
             {
                 if (statsList.Count > 0)
                 {
-                    // 클래스별 NG 표시
                     Color[] palette = { Color.Red, Color.Orange, Color.Magenta, Color.Brown, Color.Gold, Color.DarkRed, Color.DarkOrange };
                     int i = 0;
 
@@ -157,7 +211,6 @@ namespace PureGate
                         i++;
                     }
 
-                    // ✅ statsList 합이 ngCount보다 작으면 남는 NG는 기타로 표시(원하면 삭제 가능)
                     int remain = ngCount - detailNgSum;
                     if (remain > 0)
                     {
@@ -168,7 +221,6 @@ namespace PureGate
                 }
                 else
                 {
-                    // 유효 클래스가 없으면 NG 합계 1조각만
                     int idx = series.Points.AddXY("NG", ngCount);
                     series.Points[idx].Color = Color.Red;
                     series.Points[idx].LegendText = $"NG ({ngCount})";
@@ -178,5 +230,70 @@ namespace PureGate
             chart.Invalidate();
         }
 
+        private void UpdateUphLabelFromCounts(int okCount, int ngCount, bool isCountUpdate)
+        {
+            if (lblUph == null) return;
+
+            int total = okCount + ngCount;
+
+            lock (_uphLock)
+            {
+                // 카운트가 0이면 세션 초기화
+                if (total <= 0)
+                {
+                    _uphStarted = false;
+                    _uphLastTotal = 0;
+                    _uphDoneTimesUtc.Clear();
+                    _uphSw.Reset();
+                    lblUph.Text = "UPH(평균): -";
+                    return;
+                }
+
+                // 최초 시작
+                if (!_uphStarted)
+                {
+                    _uphStarted = true;
+                    _uphLastTotal = 0;
+                    _uphDoneTimesUtc.Clear();
+                    _uphSw.Reset();
+                    _uphSw.Start();
+                }
+
+                // 카운트가 리셋(감소)된 경우 재시작
+                if (isCountUpdate && total < _uphLastTotal)
+                {
+                    _uphLastTotal = 0;
+                    _uphDoneTimesUtc.Clear();
+                    _uphSw.Reset();
+                    _uphSw.Start();
+                }
+
+                // 증가분 기록(현재는 avg만 쓰지만 로직은 유지)
+                if (isCountUpdate)
+                {
+                    int delta = total - _uphLastTotal;
+                    if (delta > 0)
+                    {
+                        var nowUtc = DateTime.UtcNow;
+                        for (int i = 0; i < delta; i++)
+                            _uphDoneTimesUtc.Enqueue(nowUtc);
+
+                        _uphLastTotal = total;
+                    }
+                }
+
+                double hours = _uphSw.Elapsed.TotalHours;
+                if (hours <= 1e-9)
+                {
+                    lblUph.Text = "UPH(평균): -";
+                    return;
+                }
+
+                double avgUph = total / hours;
+
+                // ✅ 소수점 없이 표시
+                lblUph.Text = $"UPH(평균): {avgUph:0}";
+            }
+        }
     }
 }
