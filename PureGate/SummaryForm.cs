@@ -353,5 +353,42 @@ namespace PureGate
             OkNgChart.Titles.Add(t);
             OkNgChart.Invalidate();
         }
+
+        private void btnOpenSaveFolder_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                string historyDir = System.IO.Path.Combine(Environment.CurrentDirectory, @"Setup\History");
+
+                if (!System.IO.Directory.Exists(historyDir))
+                {
+                    System.IO.Directory.CreateDirectory(historyDir);
+                }
+
+                // 폴더가 비어있는지 확인
+                int fileCount = System.IO.Directory.GetFiles(historyDir, "*.xml").Length;
+                if (fileCount == 0)
+                {
+                    var result = MessageBox.Show(
+                        "히스토리 폴더가 비어있습니다.\n(검사를 실행하면 기록이 저장됩니다)\n\n그래도 폴더를 여시겠습니까?",
+                        "안내",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Information);
+
+                    if (result == DialogResult.No)
+                        return;
+                }
+
+                System.Diagnostics.Process.Start("explorer.exe", historyDir);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"히스토리 폴더를 열 수 없습니다.\n{ex.Message}",
+                    "오류",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+        }
     }
 }
