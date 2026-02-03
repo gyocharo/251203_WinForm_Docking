@@ -139,8 +139,8 @@ namespace PureGate.Property
             InitClassListView();
             lv_ClassInfos.HoverSelection = false;
             lv_ClassInfos.HotTracking = false;
-            lv_ClassInfos.Activation = ItemActivation.Standard; 
-                        EnableListViewDoubleBufferStrong(lv_ClassInfos);
+            lv_ClassInfos.Activation = ItemActivation.Standard;
+            EnableListViewDoubleBufferStrong(lv_ClassInfos);
 
             // OwnerDraw 활성화 + 이벤트 연결
             lv_ClassInfos.OwnerDraw = true;
@@ -342,7 +342,7 @@ namespace PureGate.Property
                 MessageBox.Show("현재 이미지가 없습니다.", "오류", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
-           
+
 
             _saigeAI.InspAIModule(bitmap);
             Bitmap resultImage = _saigeAI.GetResultImage();
@@ -455,7 +455,7 @@ namespace PureGate.Property
             {
                 lv_ClassInfos.EndUpdate();
             }
-
+            AutoResizeClassColumn();
             Txt_ModuleInfo.Text = module;
 
             // OK 클래스명 추정(영어 원본 기준)
@@ -872,6 +872,18 @@ namespace PureGate.Property
 
             // 엔진이 이미 로드된 상태이므로 모델 정보/클래스 리스트 갱신
             UpdateModelInfoUI();
+        }
+
+
+        private void AutoResizeClassColumn()
+        {
+            if (lv_ClassInfos.Columns.Count <= 0) return;
+
+            // 내용 기준으로 0번 컬럼 자동 폭 조절
+            lv_ClassInfos.AutoResizeColumn(0, ColumnHeaderAutoResizeStyle.ColumnContent);
+
+            // 너무 작게 잡히는 경우 최소폭 보장
+            lv_ClassInfos.Columns[0].Width = Math.Max(lv_ClassInfos.Columns[0].Width, 120);
         }
     }
 }
