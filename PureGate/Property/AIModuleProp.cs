@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using PureGate.UIControl;
 using System.Runtime.InteropServices;
+using System.Reflection;
 
 namespace PureGate.Property
 {
@@ -60,6 +61,7 @@ namespace PureGate.Property
         AIModuleAlgorithm _aiAlgo;
         private bool _isUpdatingUI = false;
 
+        private bool _clearingSelection = false;
         public static AIModuleProp saigeaiprop;
 
         // 요약용(진짜 OK/NG) 카운트
@@ -94,6 +96,37 @@ namespace PureGate.Property
         private readonly Dictionary<string, string> _displayToRaw =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
+
+        private const int WM_SETREDRAW = 0x000B;
+
+        private static void SuspendRedraw(Control c)
+        {
+            if (c == null || !c.IsHandleCreated) return;
+            SendMessage(c.Handle, WM_SETREDRAW, IntPtr.Zero, IntPtr.Zero);
+        }
+
+        private static void ResumeRedraw(Control c)
+        {
+            if (c == null || !c.IsHandleCreated) return;
+            SendMessage(c.Handle, WM_SETREDRAW, (IntPtr)1, IntPtr.Zero);
+        }
+
+        // ✅ Win32 DOUBLEBUFFER + .NET DoubleBuffered(리플렉션) 둘 다 적용
+        private static void EnableListViewDoubleBufferStrong(ListView lv)
+        {
+            EnableListViewDoubleBuffer(lv); // 네가 이미 넣은 Win32 LVS_EX_DOUBLEBUFFER
+
+            try
+            {
+                var pi = typeof(Control).GetProperty("DoubleBuffered", BindingFlags.NonPublic | BindingFlags.Instance);
+                pi?.SetValue(lv, true, null);
+            }
+            catch
+            {
+                // UI 개선용이라 실패해도 기능 영향 없게 무시
+            }
+        }
+
         public AIModuleProp()
         {
             InitializeComponent();
@@ -104,13 +137,30 @@ namespace PureGate.Property
             UpdateAreaFilterUI();
 
             InitClassListView();
-            EnableListViewDoubleBuffer(lv_ClassInfos);
+            lv_ClassInfos.HoverSelection = false;
+            lv_ClassInfos.HotTracking = false;
+            lv_ClassInfos.Activation = ItemActivation.Standard; 
+                        EnableListViewDoubleBufferStrong(lv_ClassInfos);
 
             // OwnerDraw 활성화 + 이벤트 연결
             lv_ClassInfos.OwnerDraw = true;
             lv_ClassInfos.DrawColumnHeader += Lv_ClassInfos_DrawColumnHeader;
             lv_ClassInfos.DrawItem += Lv_ClassInfos_DrawItem;
             lv_ClassInfos.DrawSubItem += Lv_ClassInfos_DrawSubItem;
+
+            lv_ClassInfos.MultiSelect = false;
+            lv_ClassInfos.HideSelection = true;
+
+            lv_ClassInfos.ItemSelectionChanged += (s, e) =>
+            {
+                if (_clearingSelection) return;
+                if (e.IsSelected)
+                {
+                    _clearingSelection = true;
+                    try { e.Item.Selected = false; }
+                    finally { _clearingSelection = false; }
+                }
+            };
 
             txtMaxArea.TextChanged += (s, e) => { UpdateClassInfoResultUI(); };
             txtMinArea.TextChanged += (s, e) => { UpdateClassInfoResultUI(); };
@@ -594,6 +644,8 @@ namespace PureGate.Property
                 last = lv_ClassInfos.Items.Count - 1;
             }
 
+            var dirty = new List<int>();
+
             lv_ClassInfos.BeginUpdate();
             try
             {
@@ -603,22 +655,61 @@ namespace PureGate.Property
 
                     var item = lv_ClassInfos.Items[i];
 
-                    // 통계 key는 Tag(영어 원본) 사용
                     string rawName = item.Tag as string;
                     if (string.IsNullOrWhiteSpace(rawName))
-                        rawName = item.Text; // Tag 없을 때만 fallback
+                        rawName = item.Text;
 
                     _countByClass.TryGetValue(rawName, out int count);
                     double pct = (total > 0) ? (count * 100.0 / total) : 0.0;
 
                     EnsureSubItemCount(item, 4);
-                    item.SubItems[2].Text = count.ToString();
-                    item.SubItems[3].Text = pct.ToString("0.00") + " %";
+
+                    string newCountText = count.ToString();
+                    string newPctText = pct.ToString("0.00") + " %";
+
+                    bool changed = false;
+
+                    if (item.SubItems[2].Text != newCountText)
+                    {
+                        item.SubItems[2].Text = newCountText;
+                        changed = true;
+                    }
+
+                    if (item.SubItems[3].Text != newPctText)
+                    {
+                        item.SubItems[3].Text = newPctText;
+                        changed = true;
+                    }
+
+                    if (changed) dirty.Add(i);
                 }
             }
             finally
             {
                 lv_ClassInfos.EndUpdate();
+            }
+
+            // ✅ 바뀐 아이템만 “안전하게” 다시 그리기 (사라짐 현상 방지)
+            if (dirty.Count > 0 && lv_ClassInfos.IsHandleCreated)
+            {
+                try
+                {
+                    // RedrawItems는 범위만 받으니 dirty에서 최소~최대만 계산
+                    int min = dirty[0], max = dirty[0];
+                    for (int k = 1; k < dirty.Count; k++)
+                    {
+                        int idx = dirty[k];
+                        if (idx < min) min = idx;
+                        if (idx > max) max = idx;
+                    }
+
+                    lv_ClassInfos.RedrawItems(min, max, false);
+                }
+                catch
+                {
+                    // 최후 안전장치
+                    lv_ClassInfos.Invalidate();
+                }
             }
         }
 
@@ -655,26 +746,24 @@ namespace PureGate.Property
 
         private void Lv_ClassInfos_DrawItem(object sender, DrawListViewItemEventArgs e)
         {
-            // Details 모드에서는 SubItem에서 그리지만,
-            // 요약행은 배경만 먼저 칠해줌
             if (_enableMergedSummaryRow && e.ItemIndex == _summaryIndex)
             {
-                e.Graphics.FillRectangle(new SolidBrush(Color.Gainsboro), e.Bounds);
+                using (var bg = new SolidBrush(Color.Gainsboro))
+                    e.Graphics.FillRectangle(bg, e.Bounds);
                 return;
             }
 
-            // 일반행은 기본 흐름대로 (SubItem에서 DrawDefault=true로 처리)
+            // Details + OwnerDraw에서는 각 셀을 DrawSubItem에서 그릴 거라 여기선 아무것도 안 그림
             e.DrawDefault = false;
         }
 
         private void Lv_ClassInfos_DrawSubItem(object sender, DrawListViewSubItemEventArgs e)
         {
-            // 요약행 병합 렌더링
+            // 요약행(병합 렌더링) 유지
             if (_enableMergedSummaryRow && e.Item.Index == _summaryIndex)
             {
                 if (e.ColumnIndex == 0)
                 {
-                    // 0~마지막 컬럼 Bounds 합치기
                     Rectangle merged = e.Bounds;
                     for (int i = 1; i < lv_ClassInfos.Columns.Count; i++)
                         merged = Rectangle.Union(merged, e.Item.SubItems[i].Bounds);
@@ -682,26 +771,42 @@ namespace PureGate.Property
                     using (var bg = new SolidBrush(Color.Gainsboro))
                         e.Graphics.FillRectangle(bg, merged);
 
-                    // 텍스트 영역 패딩
                     Rectangle textRect = new Rectangle(merged.X + 6, merged.Y + 2, merged.Width - 12, merged.Height - 4);
 
-                    TextRenderer.DrawText(
-                        e.Graphics,
-                        _summaryText ?? "",
-                        new Font(lv_ClassInfos.Font, FontStyle.Bold),
-                        textRect,
-                        SystemColors.ControlText,
-                        TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis
-                    );
+                    using (var bold = new Font(lv_ClassInfos.Font, FontStyle.Bold))
+                    {
+                        TextRenderer.DrawText(
+                            e.Graphics, _summaryText ?? "", bold, textRect,
+                            SystemColors.ControlText,
+                            TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis
+                        );
+                    }
 
-                    // 구분선
                     e.Graphics.DrawLine(SystemPens.ControlDark, merged.Left, merged.Bottom - 1, merged.Right, merged.Bottom - 1);
                 }
-                return; // 나머지 컬럼은 안 그림(병합 효과)
+                return;
             }
 
-            // 일반행은 기본 렌더링(색상칸 BackColor 포함)
-            e.DrawDefault = true;
+            // ✅ 핵심: 셀 단위로 배경(선택색 포함)을 그려서 “0열만 파란 박스”를 없앰
+            e.DrawBackground();
+
+            // 색상 칸(1번 컬럼) 직접 칠하기: 선택 배경은 이미 깔렸으니 안쪽에 색만 표시
+            if (e.ColumnIndex == 1)
+            {
+                e.DrawDefault = true;
+                return;
+            }
+
+            // 나머지 텍스트(0,2,3열)는 기본 텍스트 렌더만
+            // (배경은 위에서 e.DrawBackground()로 처리됨)
+            var flags = TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis;
+
+            // 정렬 유지
+            if (e.Header.TextAlign == HorizontalAlignment.Right) flags |= TextFormatFlags.Right;
+            else flags |= TextFormatFlags.Left;
+
+            // 선택 시 글자색 자동(HighlightText) 적용되게 하려면 DrawText를 쓰는 쪽이 안전
+            e.DrawText(flags);
         }
 
         // SubItems 개수 안전 보장
