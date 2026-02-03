@@ -383,7 +383,7 @@ namespace PureGate
             ToolStripDropDown dropDown = new ToolStripDropDown();
 
             // ✅ 표시 텍스트를 짧게 (동작은 index로 결정되니 영향 없음)
-            string[] tabNames = { "새 모델", "모델 열기", "모델 저장", "모델 다른 이름으로 저장" };
+            string[] tabNames = { "새 모델", "모델 열기", "모델 저장", "모델 다른 이름으로 저장", "모델 폴더 열기" };
 
             // ✅ 항목 크기 고정(길이 때문에 혼자 커지는 현상 방지)
             int itemW = 170;
@@ -411,6 +411,7 @@ namespace PureGate
                         case 1: modelOpenMenuItem_Click(s, EventArgs.Empty); break;
                         case 2: modelSaveMenuItem_Click(s, EventArgs.Empty); break;
                         case 3: modelSaveAsMenuItem_Click(s, EventArgs.Empty); break;
+                        case 4: OpenModelFolderInExplorer(); break;
                     }
 
                     dropDown.Close();
@@ -562,7 +563,7 @@ namespace PureGate
         }
         #endregion
 
-        // 모델 버튼 클릭 시 동적으로 생성되는 4가지의 탭 기능들 
+        // 모델 버튼 클릭 시 동적으로 생성되는 5가지의 탭 기능들 
         #region 
 
         private string GetModelTitle(Model curModel)
@@ -739,6 +740,43 @@ namespace PureGate
             }
 
             return true; ;
+        }
+
+
+        private void OpenModelFolderInExplorer()
+        {
+            try
+            {
+                // 우선순위: SettingXml.ModelDir → 없으면 C:\Model
+                string dir = @"C:\Model";
+                if (SettingXml.Inst != null && !string.IsNullOrWhiteSpace(SettingXml.Inst.ModelDir))
+                    dir = SettingXml.Inst.ModelDir;
+
+                // 폴더 보장(원하는 동작에 따라 선택)
+                // 폴더가 없으면 생성되게 하려면 아래를 살려두세요.
+                try { SettingXml.Inst?.EnsureModelDir(); } catch { }
+
+                if (!Directory.Exists(dir))
+                {
+                    MsgBox.Show($"모델 폴더가 없습니다.\n{dir}", "안내",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                // ✅ .NET(특히 Core/5+/6+)에서도 안정적으로 탐색기 열기
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"\"{dir}\"",
+                    UseShellExecute = true
+                };
+                Process.Start(psi);
+            }
+            catch (Exception ex)
+            {
+                MsgBox.Show($"탐색기 열기 실패:\n{ex.Message}", "오류",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         #endregion // 모델 버튼 클릭 시 동적으로 생성되는 4가지의 탭 기능들 
