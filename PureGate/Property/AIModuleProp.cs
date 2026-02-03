@@ -16,11 +16,44 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using PureGate.UIControl;
+using System.Runtime.InteropServices;
 
 namespace PureGate.Property
 {
     public partial class AIModuleProp : UserControl
     {
+        // ✅ ListView 플리커 제거용: Win32 더블버퍼 스타일 적용
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+
+        private const int LVM_SETEXTENDEDLISTVIEWSTYLE = 0x1036;
+        private const int LVS_EX_DOUBLEBUFFER = 0x00010000;
+
+        private static void EnableListViewDoubleBuffer(ListView lv)
+        {
+            if (lv == null) return;
+
+            // Handle이 아직 없으면 HandleCreated 때 적용
+            if (!lv.IsHandleCreated)
+            {
+                lv.HandleCreated += (s, e) => EnableListViewDoubleBuffer(lv);
+                return;
+            }
+
+            // 기존 확장 스타일을 덮어쓰지 않고 DOUBLEBUFFER 비트만 켠다(마스크 사용)
+            try
+            {
+                SendMessage(lv.Handle, LVM_SETEXTENDEDLISTVIEWSTYLE,
+                    (IntPtr)LVS_EX_DOUBLEBUFFER,
+                    (IntPtr)LVS_EX_DOUBLEBUFFER);
+            }
+            catch
+            {
+                // UI 개선 목적이라 실패해도 기능엔 영향 없게 무시
+            }
+        }
+
+
         SaigeAI _saigeAI;
         string _modelPath = string.Empty;
         AIEngineType _engineType;
@@ -71,6 +104,7 @@ namespace PureGate.Property
             UpdateAreaFilterUI();
 
             InitClassListView();
+            EnableListViewDoubleBuffer(lv_ClassInfos);
 
             // OwnerDraw 활성화 + 이벤트 연결
             lv_ClassInfos.OwnerDraw = true;
@@ -522,7 +556,15 @@ namespace PureGate.Property
             _summaryText =
                 $"합계: {total} / OK: {okCount} ({okPct:0.00}%) / NG: {ngCount} ({ngPct:0.00}%)";
 
-            lv_ClassInfos.Invalidate();
+            try
+            {
+                var r = lv_ClassInfos.GetItemRect(_summaryIndex, ItemBoundsPortion.Entire);
+                lv_ClassInfos.Invalidate(r);   // ✅ 요약행만 다시 그림
+            }
+            catch
+            {
+                lv_ClassInfos.Invalidate();    // 예외 시만 전체
+            }
         }
 
         private void UpdateDistributionColumns_VisibleOnly()

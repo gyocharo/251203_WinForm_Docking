@@ -15,6 +15,33 @@ namespace PureGate
         private Chart chart;
         private Label lblSummary; // 하단 개수 표시용
 
+        // ✅ 깜빡임(플리커) 최소화를 위한 더블버퍼링 컨트롤
+        private sealed class BufferedTableLayoutPanel : TableLayoutPanel
+        {
+            public BufferedTableLayoutPanel()
+            {
+                this.DoubleBuffered = true;
+                this.ResizeRedraw = true;
+            }
+        }
+
+        private sealed class BufferedPanel : Panel
+        {
+            public BufferedPanel()
+            {
+                this.DoubleBuffered = true;
+                this.ResizeRedraw = true;
+            }
+        }
+
+        private sealed class BufferedChart : Chart
+        {
+            public BufferedChart()
+            {
+                this.DoubleBuffered = true;
+            }
+        }
+
         // ✅ UPH 오버레이용
         private Label lblUph;
         private Panel pnlChartHost;
@@ -35,6 +62,10 @@ namespace PureGate
         public StatisticForm()
         {
             InitializeComponent();
+            // ✅ 폼 레벨 더블버퍼링(차트 업데이트 시 하단 라벨 깜빡임 완화)
+            this.DoubleBuffered = true;
+            this.SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
+            this.UpdateStyles();
             InitializeUI();
 
             // ✅ 1초마다 UPH 라벨 갱신(검사 이벤트 없을 때도 숫자 유지)
@@ -58,7 +89,7 @@ namespace PureGate
             this.Text = "Statistics";
 
             // 1. 레이아웃 설정 (표 삭제, 차트와 라벨만 배치)
-            TableLayoutPanel layout = new TableLayoutPanel
+            TableLayoutPanel layout = new BufferedTableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 RowCount = 2,
@@ -69,14 +100,14 @@ namespace PureGate
             this.Controls.Add(layout);
 
             // ✅ 2. 차트 Host 패널 (차트 + UPH 라벨 오버레이)
-            pnlChartHost = new Panel
+            pnlChartHost = new BufferedPanel
             {
                 Dock = DockStyle.Fill,
                 BackColor = Color.White
             };
 
             // 2. 차트 설정
-            chart = new Chart { Dock = DockStyle.Fill, BackColor = Color.White };
+            chart = new BufferedChart { Dock = DockStyle.Fill, BackColor = Color.White };
             ChartArea chartArea = new ChartArea("MainArea");
             chart.ChartAreas.Add(chartArea);
 
